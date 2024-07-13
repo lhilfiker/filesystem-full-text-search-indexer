@@ -69,7 +69,7 @@ int index::check_files() {
 		std::ofstream { index_path \ "additional.index" };
 	}
 	if (ec) {
-		// TODO: LOG ERROR
+		log.write(4, "index: check_files: error accessing/creating index files in " + std::to_string(index_path) + ".");
 		return 1;
 	}
 	return 0;
@@ -81,12 +81,12 @@ int index::initialize() {
 	if(!mmap_paths.mapped() || !mmap_words.mapped() || !mmap_words_f.mapped() || !mmap_reversed.mapped() || !mmap_additional.mapped()) {
 		// map if not already to get actual size and resize.
 		if (mapp() == 1) { // map files
-			//TODO: LOG ERROR
+			log.write(4, "index: initialize: could not mapp, see above log message, exiting.");
 			return 1;
 		}
 	}
 	if(check_files() == 1) { // check if index files exist and create them.
-		//TODO: LOG ERROR
+		log.write(4, "index: initialize: could not check_files, see above log message, exiting.");
 		return 1;
 	}
 
@@ -97,7 +97,7 @@ int index::initialize() {
 	reversed_size = get_actual_size(mmap_reversed); 
 	additional_size = get_actual_size(mmap_additional);
 	if ( paths_size == -1 || words_size == -1 || words_f_size == -1 || reversed_size == -1 || additional_size == -1 ) {
-		//TODO: LOG ERROR
+		log.write(4, "index: initialize: could not get actual size of index files, exiting.");
 		return 1;
 	}
 }
