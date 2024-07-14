@@ -4,8 +4,6 @@
 #include <algorithm>
 #include <fstream>
 
-// config_loaded var && load_config_vals function which sets all paths. inputs index dir. removes index dir inputs in other funtions but requires this to be called first else it throws and error.
-
 class index {
 	private:
 		static bool is_mapped = false;
@@ -23,8 +21,8 @@ class index {
 		static mio::mmap_sink mmap_additional;
 		int check_files();
 		int get_actual_size(const mio::mmap_sink& mmap);
-		int mapp();
-		int unmapp();
+		int map();
+		int unmap();
 	public:
 		void save_config(std::filesystem::path config_index_path, int config_buffer_size);
 		int initialize();
@@ -38,11 +36,51 @@ void index::save_config(std::filesystem::path config_index_path, int config_buff
 }
 
 int index::unmap() {
-	// unmap
+	std::error_code ec;
+	if (mmap_paths.mapped()) {
+		mmap_paths.unmap();
+	}
+	if (mmap_words.mapped()) {
+		mmap_words.unmap();
+	}
+	if (mmap_words_f.mapped()) {
+		mmap_words_f.unmap();
+	}
+	if (mmap_reversed.mapped()) {
+		mmap_reversed.unmap();
+	}
+	if (mmap_additional.mapped()) {
+		mmap_additional.unmap();
+	}
+	if (ec) {
+		log.write(4, "index: unmap: error when unmapping index files.");
+		return 1;
+	}
+	return 0;
 }
 
 int index::mapp() {
-	//mapp
+	std::error_code ec;
+	if (!mmap_paths.mapped()) {
+		mmap_paths = mio::make_mmap_sink(std::to_string(index_path \ "paths.index"), 0, mio::map_entire_file, ec);
+	}
+	if (!mmap_words.mapped()) {
+		mmap_words = mio::make_mmap_sink(std::to_string(index_path \ "words.index"), 0, mio::map_entire_file, ec);
+	}
+	if (!mmap_words_f.mapped()) {
+		mmap_words_f = mio::make_mmap_sink(std::to_string(index_path \ "words_f.index"), 0, mio::map_entire_file, ec);
+	}
+	if (!mmap_reversed.mapped()) {
+		mmap_reversed = mio::make_mmap_sink(std::to_string(index_path \ "reversed.index"), 0, mio::map_entire_file, ec);
+	}
+	if (!mmap_additional.mapped()) {
+		mmap_additional = mio::make_mmap_sink(std::to_string(index_path \ "additional.index"), 0, mio::map_entire_file, ec);
+	}
+	if (ec) {
+		log.write(4, "index: map: error when mapping index files.");
+		return 1;
+	}
+	return 0;
 }
 
 int index::get_actual_size(const mio::mmap_sink& mmap) {
@@ -78,18 +116,15 @@ int index::check_files() {
 int index::initialize() {
 	is_mapped = false;
 	std::error_code ec;
-	if(!mmap_paths.mapped() || !mmap_words.mapped() || !mmap_words_f.mapped() || !mmap_reversed.mapped() || !mmap_additional.mapped()) {
-		// map if not already to get actual size and resize.
-		if (mapp() == 1) { // map files
-			log.write(4, "index: initialize: could not mapp, see above log message, exiting.");
-			return 1;
-		}
-	}
+	unmap(); //unmap anyway incase they are already mapped.
 	if(check_files() == 1) { // check if index files exist and create them.
 		log.write(4, "index: initialize: could not check_files, see above log message, exiting.");
 		return 1;
 	}
-
+	if (map() == 1) { // map files
+		log.write(4, "index: initialize: could not map, see above log message, exiting.");
+		return 1;
+	}
 	// get actual sizes of the files to reset buffer.
 	paths_size = get_actual_size(mmap_paths); 
 	words_size = get_actual_size(mmap_words); 
@@ -100,6 +135,11 @@ int index::initialize() {
 		log.write(4, "index: initialize: could not get actual size of index files, exiting.");
 		return 1;
 	}
+	if (unmap() == 1) { // unmap to resize
+		log.write(4, "index: initialize: could not unmap, see above log message, exiting.");
+		return 1;
+	}
+
 }
 
 int index::uninitialize() {
