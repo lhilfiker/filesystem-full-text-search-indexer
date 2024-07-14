@@ -1,3 +1,4 @@
+#include "functions.h"
 #include <string>
 #include <iostream>
 #include <array>

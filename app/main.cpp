@@ -1,3 +1,5 @@
-void main() {
-	return 1;
+#include "functions.h"
+
+int main() {
+	return 0;
 }

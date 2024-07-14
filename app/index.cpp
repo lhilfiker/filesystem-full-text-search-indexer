@@ -1,4 +1,5 @@
 #include "lib/mio.hpp"
+#include "functions.h"
 #include <string>
 #include <filesystem>
 #include <algorithm>
