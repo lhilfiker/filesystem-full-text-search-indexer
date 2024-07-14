@@ -6,6 +6,7 @@
 #include <filesystem>
 
 // log.cpp
+void log.save_config(int config_min_log_level);
 void log.write(int log_level, std::string log_message);
 
 // index.cpp
