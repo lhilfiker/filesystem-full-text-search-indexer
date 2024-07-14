@@ -18,10 +18,12 @@ void log::save_config(int config_min_log_level) {
 
 void log::write(int log_level, std::string log_message) {
 	// log_level: 1 = debug, 2 = info, 3 = warn, 4 = critical
-	if (log_level >= 1 && log_level <= 4) {
-		std::cout << log_level_text[log_level - 1] << log_message << "\n";
-	}
-	else {
-		std::cout << "[INVALID LOG_LEVEL]: " << log_message << "\n";
+	if (min_log_level <= log_level) {
+		if (log_level >= 1 && log_level <= 4) {
+			std::cout << log_level_text[log_level - 1] << log_message << "\n";
+		}
+		else {
+			std::cout << "[INVALID LOG_LEVEL]: " << log_message << "\n";
+		}
 	}
 }
