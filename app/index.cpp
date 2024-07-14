@@ -101,7 +101,11 @@ int index::get_actual_size(const mio::mmap_sink& mmap) {
 		if (c == '\0') break;
 		++size;
 	}
-	if (ec) return -1;
+	if (ec) {
+		log::write(4, "index: get_actual_size: error when couting actual size");
+		return -1;
+	}
+	log::write(1, "index: get_actual_size: successfully counted size: " + std::to_string(size));
 	return size;
 }
 
@@ -110,16 +114,24 @@ int index::check_files() {
 		log::write(4, "index: check_files: config not loaded. can not continue.");
 		return 1;
 	}
+	log::write(1, "index: check_files: checking files.");
 	std::error_code ec;
 	if (!std::filesystem::is_directory(index_path)) {
+		log::write(1, "index: check_files: creating index directory.");
 		std::filesystem::create_directories(index_path);
 	}
 	if (!std::filesystem::exists(index_path / "paths.index") || !std::filesystem::exists(index_path / "words.index") || !std::filesystem::exists(index_path / "words_f.index") || !std::filesystem::exists(index_path / "reversed.index") || !std::filesystem::exists(index_path / "additional.index")) {
+		log::write(1, "index: check_files: index files damaged / not existing, recreating.");
 		std::ofstream { index_path / "paths.index" };
+		resize(index_path / "paths.index", 10); // a hacky fix for when index files sizes is empty and mio can memory map them.
 		std::ofstream { index_path / "words.index" };
+		resize(index_path / "words.index", 10);
 		std::ofstream { index_path / "words_f.index" };
+		resize(index_path / "words_f.index", 10);
 		std::ofstream { index_path / "reversed.index" };
+		resize(index_path / "reversed.index", 10);
 		std::ofstream { index_path / "additional.index" };
+		resize(index_path / "additional.index", 10);
 	}
 	if (ec) {
 		log::write(4, "index: check_files: error accessing/creating index files in " + (index_path).string() + ".");
