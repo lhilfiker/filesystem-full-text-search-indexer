@@ -10,10 +10,15 @@ class index {
 		static int buffer_size = 0;
 		static std::filesystem::path index_path;
 		static int paths_size = 0;
+		static int paths_size_buffer = 0;
 		static int words_size = 0;
+		static int words_size_buffer = 0;
 		static int words_f_size = 0;
+		static int words_f_size_buffer = 0;
 		static int reversed_size = 0;
+		static int reversed_size_buffer = 0;
 		static int additional_size = 0;
+		static int additional_size_buffer = 0;
 		static mio::mmap_sink mmap_paths;
 		static mio::mmap_sink mmap_words;
 		static mio::mmap_sink mmap_words_f;
@@ -23,6 +28,7 @@ class index {
 		int get_actual_size(const mio::mmap_sink& mmap);
 		int map();
 		int unmap();
+		int resize(std::filesystem::path path_to_resize, int size);
 	public:
 		void save_config(std::filesystem::path config_index_path, int config_buffer_size);
 		int initialize();
@@ -33,6 +39,16 @@ void index::save_config(std::filesystem::path config_index_path, int config_buff
 	index_path = config_index_path;
 	buffer_size = config_buffer_size;
 	return;
+}
+
+int index::resize(std::filesystem::path path_to_resize, int size) {
+	std::error_code ec;
+	std::filesystem::resize_file(path_to_resize, int size);
+	if (ec) {
+		log.write(4, "index: resize: could not resize file at path: " + std::to_string(path_to_resize) + " with size: " + size + ".");
+		return 1;
+	}
+	return 0;
 }
 
 int index::unmap() {
@@ -127,10 +143,15 @@ int index::initialize() {
 	}
 	// get actual sizes of the files to reset buffer.
 	paths_size = get_actual_size(mmap_paths); 
-	words_size = get_actual_size(mmap_words); 
-	words_f_size = get_actual_size(mmap_words_f); 
+	paths_size_buffer = paths_size + buffer_size;
+	words_size = get_actual_size(mmap_words);
+	words_size_buffer = words_size + buffer_size;
+	words_f_size = get_actual_size(mmap_words_f);
+	words_f_size_buffer = words_f_size + buffer_size;
 	reversed_size = get_actual_size(mmap_reversed); 
+	reversed_size_buffer = reversed_size + buffer_size;
 	additional_size = get_actual_size(mmap_additional);
+	additional_size_buffer = additional_size + buffer_size;
 	if ( paths_size == -1 || words_size == -1 || words_f_size == -1 || reversed_size == -1 || additional_size == -1 ) {
 		log.write(4, "index: initialize: could not get actual size of index files, exiting.");
 		return 1;
@@ -139,6 +160,33 @@ int index::initialize() {
 		log.write(4, "index: initialize: could not unmap, see above log message, exiting.");
 		return 1;
 	}
+	//resize actual size + buffer size
+	if (resize(index_path \ "paths.index", paths_size_buffer) == 1) {
+		log.write(4, "index: initialize: could not resize file, exiting.");
+		return 1;
+	}
+	if (resize(index_path \ "words.index", words_size_buffer) == 1) {
+		log.write(4, "index: initialize: could not resize file, exiting.");
+		return 1;
+	}
+	if (resize(index_path \ "words_f.index", words_f_size_buffer) == 1) {
+		log.write(4, "index: initialize: could not resize file, exiting.");
+		return 1;
+	}
+	if (resize(index_path \ "reversed.index", reversed_size_buffer) == 1) {
+		log.write(4, "index: initialize: could not resize file, exiting.");
+		return 1;
+	}
+	if (resize(index_path \ "additional.index", additional_size_buffer) == 1) {
+		log.write(4, "index: initialize: could not resize file, exiting.");
+		return 1;
+	}
+	// map after resizing
+	if (map() == 1) { // map files
+		log.write(4, "index: initialize: could not map, see above log message, exiting.");
+		return 1;
+	}
+	is_mapped = true;
 
 }
 
