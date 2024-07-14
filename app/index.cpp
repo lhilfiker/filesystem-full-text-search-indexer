@@ -38,6 +38,10 @@ class index {
 void index::save_config(std::filesystem::path config_index_path, int config_buffer_size) {
 	index_path = config_index_path;
 	buffer_size = config_buffer_size;
+	if (buffer_size < 10000) {
+		buffer_size = 10000;
+		log.write(3, "index: save_config: buffer size needs to be atleast 10000. setting it to 10000.");
+	}
 	return;
 }
 
