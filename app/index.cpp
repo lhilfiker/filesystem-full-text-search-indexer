@@ -79,7 +79,7 @@ int index::unmap() {
 	return 0;
 }
 
-int index::mapp() {
+int index::map() {
 	std::error_code ec;
 	if (!mmap_paths.mapped()) {
 		mmap_paths = mio::make_mmap_sink(std::to_string(index_path \ "paths.index"), 0, mio::map_entire_file, ec);
