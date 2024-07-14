@@ -6,6 +6,7 @@
 
 class index {
 	private:
+		static bool is_config_loaded = false;
 		static bool is_mapped = false;
 		static int buffer_size = 0;
 		static std::filesystem::path index_path;
@@ -42,6 +43,7 @@ void index::save_config(std::filesystem::path config_index_path, int config_buff
 		buffer_size = 10000;
 		log.write(3, "index: save_config: buffer size needs to be atleast 10000. setting it to 10000.");
 	}
+	is_config_loaded = true;
 	return;
 }
 
@@ -115,6 +117,10 @@ int index::get_actual_size(const mio::mmap_sink& mmap) {
 }
 
 int index::check_files() {
+	if (!is_config_loaded) {
+		log.write(4, "index: check_files: config not loaded. can not continue.");
+		return 1;
+	}
 	std::error_code ec;
 	if (!std::filesystem::is_directory(index_path)) {
 		std::filesystem::create_directories(index_path);
@@ -134,6 +140,10 @@ int index::check_files() {
 }
 
 int index::initialize() {
+	if (!is_config_loaded) {
+		log.write(4, "index: initialize: config not loaded. can not continue.");
+		return 1;
+	}
 	is_mapped = false;
 	std::error_code ec;
 	unmap(); //unmap anyway incase they are already mapped.
@@ -195,5 +205,9 @@ int index::initialize() {
 }
 
 int index::uninitialize() {
+	if (!is_config_loaded) {
+		log.write(4, "index: uninitialize: config not loaded. can not continue.");
+		return 1;
+	}
 	// unmapp, write caches, etc...
 }
