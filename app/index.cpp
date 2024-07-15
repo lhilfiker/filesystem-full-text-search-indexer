@@ -67,6 +67,7 @@ int index::unmap() {
 		log::write(4, "index: unmap: error when unmapping index files.");
 		return 1;
 	}
+	log::write(1, "index: unmap: unmapped all successfully.");
 	return 0;
 }
 
@@ -91,6 +92,7 @@ int index::map() {
 		log::write(4, "index: map: error when mapping index files.");
 		return 1;
 	}
+	log::write(1, "index: map: mapped all successfully.");
 	return 0;
 }
 
@@ -210,6 +212,11 @@ int index::uninitialize() {
 		log::write(4, "index: uninitialize: config not loaded. can not continue.");
 		return 1;
 	}
-	// unmapp, write caches, etc...
+	is_mapped = false;
+	// write caches, etc...
+	if (unmap() == 1) {
+		log::write(4, "index: uninitialize: could not unmap.");
+		return 1;
+	}
 	return 0;
 }

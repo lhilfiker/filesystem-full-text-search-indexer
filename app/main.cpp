@@ -13,6 +13,11 @@ int test() {
 		return 1;
 	}
 	log::write(2, "initialized successfully");
+	log::write(2, "uninitializing now.");
+	if (index::uninitialize() == 1) {
+		log::write(4, "uninitialize failed.");
+		return 1;
+	}
 	return 0;
 }
 
