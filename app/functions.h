@@ -11,7 +11,7 @@
 class helper {
 	private:
 	public:
-		static int file_size(std::filesystem::path file_path);
+		static int file_size(const std::filesystem::path file_path);
 };
 
 // log.cpp
@@ -21,7 +21,7 @@ class log {
                 static constexpr std::array<std::string_view, 4> log_level_text = {"[DEBUG]: ", "[INFO]: ", "[WARN]: ", "[CRITICAL]: "};
         public:
                 static void save_config(int config_min_log_level);
-                static void write(int log_level, std::string log_message);
+                static void write(int log_level, const std::string log_message);
 };
 
 // index.cpp
@@ -50,9 +50,9 @@ class index {
                 static int get_actual_size(const mio::mmap_sink& mmap);
                 static int map();
                 static int unmap();
-                static int resize(std::filesystem::path path_to_resize, int size);
+                static int resize(const std::filesystem::path path_to_resize, const int size);
         public:
-                static void save_config(std::filesystem::path config_index_path, int config_buffer_size);
+                static void save_config(const std::filesystem::path config_index_path, int config_buffer_size);
                 static int initialize();
                 static int uninitialize();
 };
