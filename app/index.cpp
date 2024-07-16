@@ -32,6 +32,10 @@ void index::save_config(std::filesystem::path config_index_path, int config_buff
 		buffer_size = 10000;
 		log::write(3, "index: save_config: buffer size needs to be atleast 10000. setting it to 10000.");
 	}
+	if (buffer_size > 10000000) {
+		buffer_size = 10000000;
+		log::write(3, "index: save_config: buffer size can not be larger than ~10MB, setting it to ~10MB);
+	}
 	is_config_loaded = true;
 	return;
 }
