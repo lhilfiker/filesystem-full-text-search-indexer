@@ -34,7 +34,7 @@ void index::save_config(std::filesystem::path config_index_path, int config_buff
 	}
 	if (buffer_size > 10000000) {
 		buffer_size = 10000000;
-		log::write(3, "index: save_config: buffer size can not be larger than ~10MB, setting it to ~10MB);
+		log::write(3, "index: save_config: buffer size can not be larger than ~10MB, setting it to ~10MB");
 	}
 	is_config_loaded = true;
 	return;
@@ -47,6 +47,7 @@ int index::resize(std::filesystem::path path_to_resize, int size) {
 		log::write(4, "index: resize: could not resize file at path: " + (path_to_resize).string() + " with size: " + std::to_string(size) + ".");
 		return 1;
 	}
+	log::write(1, "indexer: resize: resized file successfully.");
 	return 0;
 }
 
@@ -93,7 +94,7 @@ int index::map() {
 		mmap_additional = mio::make_mmap_sink((index_path / "additional.index").string(), 0, mio::map_entire_file, ec);
 	}
 	if (ec) {
-		log::write(4, "index: map: error when mapping index files.");
+		log::write(3, "index: map: error when mapping index files.");
 		return 1;
 	}
 	log::write(1, "index: map: mapped all successfully.");
@@ -102,13 +103,17 @@ int index::map() {
 
 int index::get_actual_size(const mio::mmap_sink& mmap) {
 	std::error_code ec;
+	if (!mmap.is_mapped()) {
+		log::write(3, "index: get_actual_size: not mapped. can not count.");
+		return -1;
+	}
 	int size = 0;
 	for (const char& c: mmap) {
 		if (c == '\0') break;
 		++size;
 	}
 	if (ec) {
-		log::write(4, "index: get_actual_size: error when couting actual size");
+		log::write(3, "index: get_actual_size: error when couting actual size");
 		return -1;
 	}
 	log::write(1, "index: get_actual_size: successfully counted size: " + std::to_string(size));
@@ -129,15 +134,10 @@ int index::check_files() {
 	if (!std::filesystem::exists(index_path / "paths.index") || !std::filesystem::exists(index_path / "words.index") || !std::filesystem::exists(index_path / "words_f.index") || !std::filesystem::exists(index_path / "reversed.index") || !std::filesystem::exists(index_path / "additional.index")) {
 		log::write(1, "index: check_files: index files damaged / not existing, recreating.");
 		std::ofstream { index_path / "paths.index" };
-		resize(index_path / "paths.index", 10); // a hacky fix for when index files sizes is empty and mio can memory map them.
 		std::ofstream { index_path / "words.index" };
-		resize(index_path / "words.index", 10);
 		std::ofstream { index_path / "words_f.index" };
-		resize(index_path / "words_f.index", 10);
 		std::ofstream { index_path / "reversed.index" };
-		resize(index_path / "reversed.index", 10);
 		std::ofstream { index_path / "additional.index" };
-		resize(index_path / "additional.index", 10);
 	}
 	if (ec) {
 		log::write(4, "index: check_files: error accessing/creating index files in " + (index_path).string() + ".");
@@ -158,25 +158,22 @@ int index::initialize() {
 		log::write(4, "index: initialize: could not check_files, see above log message, exiting.");
 		return 1;
 	}
-	if (map() == 1) { // map files
-		log::write(4, "index: initialize: could not map, see above log message, exiting.");
-		return 1;
-	}
+	map(); // ignore error here as it might fail if file size is 0.
 	// get actual sizes of the files to reset buffer.
-	paths_size = get_actual_size(mmap_paths); 
-	paths_size_buffer = paths_size + buffer_size;
-	words_size = get_actual_size(mmap_words);
-	words_size_buffer = words_size + buffer_size;
-	words_f_size = get_actual_size(mmap_words_f);
-	words_f_size_buffer = words_f_size + buffer_size;
-	reversed_size = get_actual_size(mmap_reversed); 
-	reversed_size_buffer = reversed_size + buffer_size;
-	additional_size = get_actual_size(mmap_additional);
-	additional_size_buffer = additional_size + buffer_size;
-	if ( paths_size == -1 || words_size == -1 || words_f_size == -1 || reversed_size == -1 || additional_size == -1 ) {
+	if (int paths_size = get_actual_size(mmap_paths); paths_size == -1 && helper::file_size(index_path / "paths.index") > 0) paths_size = 0;	
+	if (int words_size = get_actual_size(mmap_words); words_size == -1 && helper::file_size(index_path / "words.index") > 0) words_size = 0;
+	if (int words_f_size = get_actual_size(mmap_words_f); words_f_size == -1 && helper::file_size(index_path / "words_f.index") > 0) words_f_size = 0;	
+	if (int reversed_size = get_actual_size(mmap_reversed); reversed_size == -1 && helper::file_size(index_path / "reversed.index") > 0) reversed_size = 0;
+	if (int additional_size = get_actual_size(mmap_additional); additional_size == -1 && helper::file_size(index_path / "additional.index") > 0) additional_size = 0;
+	if ( paths_size == -1 || words_size == -1 || words_f_size == -1 || reversed_size == -1 || additional_size == -1) {
 		log::write(4, "index: initialize: could not get actual size of index files, exiting.");
 		return 1;
 	}
+	paths_size_buffer = paths_size + buffer_size;
+	words_size_buffer = words_size + buffer_size;
+	words_f_size_buffer = words_f_size + buffer_size;
+	reversed_size_buffer = reversed_size + buffer_size;
+	additional_size_buffer = additional_size + buffer_size;
 	if (unmap() == 1) { // unmap to resize
 		log::write(4, "index: initialize: could not unmap, see above log message, exiting.");
 		return 1;

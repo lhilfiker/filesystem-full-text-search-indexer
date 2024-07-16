@@ -7,6 +7,13 @@
 #include <array>
 #include "lib/mio.hpp"
 
+// helper.cpp
+class helper {
+	private:
+	public:
+		static int file_size(std::filesystem::path file_path);
+};
+
 // log.cpp
 class log {
         private:
