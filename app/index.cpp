@@ -25,7 +25,7 @@ mio::mmap_sink index::mmap_words_f;
 mio::mmap_sink index::mmap_reversed;
 mio::mmap_sink index::mmap_additional;
 
-void index::save_config(const std::filesystem::path config_index_path, int config_buffer_size) {
+void index::save_config(const std::filesystem::path& config_index_path, int config_buffer_size) {
 	index_path = config_index_path;
 	buffer_size = config_buffer_size;
 	if (buffer_size < 10000) {
@@ -40,7 +40,7 @@ void index::save_config(const std::filesystem::path config_index_path, int confi
 	return;
 }
 
-int index::resize(const std::filesystem::path path_to_resize, const int size) {
+int index::resize(const std::filesystem::path& path_to_resize, const int size) {
 	std::error_code ec;
 	std::filesystem::resize_file(path_to_resize, size);
 	if (ec) {
