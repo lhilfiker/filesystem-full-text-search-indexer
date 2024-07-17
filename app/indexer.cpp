@@ -32,7 +32,7 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	for (char c : file) {
 		helper::convert_char(c);
 		if (c == ' ') {
-			if  (current_word.length() > 3 && current_word.length() < 20) {
+			if  (current_word.length() > 3 && current_word.length() < 20) {				
 				StemEnglish(current_word);	
 				words_return.insert(current_word);
 			}
@@ -46,6 +46,9 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
                 words_return.insert(current_word);
         }
 	file.unmap();
+	if (ec) {
+		log::write(3, "indexerer: get_words: error reading / normalizing file.");
+	}
 	return words_return;
 }
 
@@ -58,7 +61,7 @@ int indexer::start_from(const std::filesystem::file_time_type& from_time) {
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {
-			log::write(1, "indexer: start_from: indexing path.");
+			log::write(1, "indexer: start_from: indexing path: " + dir_entry.path().string());
 			uint32_t path_id = local_index::add_path(dir_entry.path());
 			std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
 			local_index::add_words(words_to_add, path_id); 
