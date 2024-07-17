@@ -5,7 +5,30 @@
 #include <string>
 #include <filesystem>
 #include <array>
+#include <unordered_set>
+#include <vector>
 #include "lib/mio.hpp"
+
+// local_index.cpp
+class local_index {
+	private:
+		std::vector<std::string> paths;
+		std::vector<std::wstring> words;
+		std::vector<std::vector<uint32_t>> reversed;
+	public:
+		uint32_t add_path(const std::string& path_to_insert);
+		void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
+
+};
+
+// indexer.cpp
+class indexer {
+	private:
+		static bool scan_dot_paths;
+	public:
+		static void save_config(bool config_scan_dot_paths);
+		static int start_from(const std::filesystem::file_time_type& from_time);
+};
 
 // helper.cpp
 class helper {
@@ -53,7 +76,8 @@ class index {
                 static int resize(const std::filesystem::path& path_to_resize, const int size);
         public:
                 static void save_config(const std::filesystem::path& config_index_path, int config_buffer_size);
-                static int initialize();
+                static bool is_mapped();
+		static int initialize();
                 static int uninitialize();
 };
 

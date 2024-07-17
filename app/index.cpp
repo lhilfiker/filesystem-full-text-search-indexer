@@ -37,7 +37,12 @@ void index::save_config(const std::filesystem::path& config_index_path, int conf
 		log::write(3, "index: save_config: buffer size can not be larger than ~10MB, setting it to ~10MB");
 	}
 	is_config_loaded = true;
+	log::write(1, "index: save_config: saved config successfully.");
 	return;
+}
+
+bool index::is_mapped() {
+	return is_mapped;
 }
 
 int index::resize(const std::filesystem::path& path_to_resize, const int size) {
