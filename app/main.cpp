@@ -18,6 +18,8 @@ int test() {
 		log::write(4, "uninitialize failed.");
 		return 1;
 	}
+	indexer::save_config(false, "/home/lukas/");
+	indexer::start_from(std::filesystem::last_write_time("/home/lukas/test.txt"));
 	return 0;
 }
 

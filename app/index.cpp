@@ -41,7 +41,7 @@ void index::save_config(const std::filesystem::path& config_index_path, int conf
 	return;
 }
 
-bool index::is_mapped() {
+bool index::is_index_mapped() {
 	return is_mapped;
 }
 

@@ -8,22 +8,24 @@
 #include <unordered_set>
 #include <vector>
 #include "lib/mio.hpp"
+#include "lib/english_stem.h"
 
 // local_index.cpp
 class local_index {
 	private:
-		std::vector<std::string> paths;
-		std::vector<std::wstring> words;
-		std::vector<std::vector<uint32_t>> reversed;
+		static std::vector<std::string> paths;
+		static std::vector<std::wstring> words;
+		static std::vector<std::vector<uint32_t>> reversed;
 	public:
-		uint32_t add_path(const std::string& path_to_insert);
-		void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
+		static uint32_t add_path(const std::string& path_to_insert);
+		static void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
 
 };
 
 // indexer.cpp
 class indexer {
 	private:
+		static stemming::english_stem<> StemEnglish;
 		static bool config_loaded;
 		static bool scan_dot_paths;
 		static std::filesystem::path path_to_scan;
@@ -81,7 +83,7 @@ class index {
                 static int resize(const std::filesystem::path& path_to_resize, const int size);
         public:
                 static void save_config(const std::filesystem::path& config_index_path, int config_buffer_size);
-                static bool is_mapped();
+                static bool is_index_mapped();
 		static int initialize();
                 static int uninitialize();
 };
