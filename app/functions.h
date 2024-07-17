@@ -24,9 +24,13 @@ class local_index {
 // indexer.cpp
 class indexer {
 	private:
+		static bool config_loaded;
 		static bool scan_dot_paths;
+		static std::filesystem::path path_to_scan;
+		static bool extension_allowed(const std::filesystem::path& path);
+		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 	public:
-		static void save_config(bool config_scan_dot_paths);
+		static void save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan);
 		static int start_from(const std::filesystem::file_time_type& from_time);
 };
 
@@ -35,6 +39,7 @@ class helper {
 	private:
 	public:
 		static int file_size(const std::filesystem::path& file_path);
+		static void convert_char(char& c);
 };
 
 // log.cpp

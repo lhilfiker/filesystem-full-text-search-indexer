@@ -2,7 +2,6 @@
 #include <filesystem>
 #include <string>
 
-
 int helper::file_size(const std::filesystem::path& file_path) {
 	int size = -1;
 	std::error_code ec;
@@ -10,3 +9,6 @@ int helper::file_size(const std::filesystem::path& file_path) {
 	return size;
 }
 
+void helper::convert_char(char& c) {
+	// 'A' -> 'a', 'a' -> 'a', '1' -> ''	
+}
