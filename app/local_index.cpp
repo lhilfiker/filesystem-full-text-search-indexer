@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <unordered_set>
+#include <algorithm>
 
 std::vector<std::string> local_index::paths;
 std::vector<words_reversed> local_index::words_and_reversed;
@@ -30,4 +31,8 @@ void local_index::add_words(std::unordered_set<std::wstring>& words_to_insert, u
 		words_and_reversed.push_back({word, {path_id}});
 	}
 	return;
+}
+
+void local_index::sort() {
+	std::sort(words_and_reversed.begin(), words_and_reversed.end());
 }

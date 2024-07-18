@@ -15,6 +15,10 @@
 struct words_reversed {
 	std::wstring word;
 	std::vector<uint32_t> reversed;
+
+	bool operator<(const words_reversed& other) const {
+     		return word < other.word;
+    	}
 };
 
 class local_index {
@@ -24,7 +28,7 @@ class local_index {
 	public:
 		static uint32_t add_path(const std::string& path_to_insert);
 		static void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
-
+		static void sort();
 };
 
 // indexer.cpp

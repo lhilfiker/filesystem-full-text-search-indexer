@@ -31,8 +31,8 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	std::wstring current_word;
 	for (char c : file) {
 		helper::convert_char(c);
-		if (c == ' ') {
-			if  (current_word.length() > 3 && current_word.length() < 20) {				
+		if (c == '!') {
+			if  (current_word.length() > 4 && current_word.length() < 20) {				
 				StemEnglish(current_word);	
 				words_return.insert(current_word);
 			}
@@ -67,6 +67,8 @@ int indexer::start_from(const std::filesystem::file_time_type& from_time) {
 			local_index::add_words(words_to_add, path_id); 
 		}
 	}
+	log::write(2, "indexer: start_from: sorting local index.");
+	local_index::sort();
 
 	if (ec) {
 		log::write(4, "indexer: start_from: error.");

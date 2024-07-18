@@ -37,6 +37,6 @@ void helper::convert_char(char& c) {
 	else if (c == 'X') c = 'x';
 	else if (c == 'Y') c = 'y';
 	else if (c == 'Z') c = 'z';
-	else c = ' ';
+	else c = '!';
 	return;
 }
