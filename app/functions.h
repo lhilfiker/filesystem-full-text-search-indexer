@@ -11,11 +11,16 @@
 #include "lib/english_stem.h"
 
 // local_index.cpp
+
+struct words_reversed {
+	std::wstring word;
+	std::vector<uint32_t> reversed;
+};
+
 class local_index {
 	private:
 		static std::vector<std::string> paths;
-		static std::vector<std::wstring> words;
-		static std::vector<std::vector<uint32_t>> reversed;
+		static std::vector<words_reversed> words_and_reversed;
 	public:
 		static uint32_t add_path(const std::string& path_to_insert);
 		static void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
