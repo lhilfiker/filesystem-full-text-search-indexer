@@ -20,26 +20,27 @@ void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path conf
 }
 
 bool indexer::extension_allowed(const std::filesystem::path& path) {
-	if (path.extension() == ".txt") return true;
+	if (path.extension() == ".txt" || path.extension() == ".md") return true;
 	return false;
 }
 
 std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path& path) {
 	std::error_code ec;
 	std::unordered_set<std::wstring> words_return;
-	mio::mmap_sink file = mio::make_mmap_sink(path.string(), 0, mio::map_entire_file, ec);
-	std::wstring current_word;
+	mio::mmap_source file;
+	file.map(path.string(), ec);
+	std::wstring current_word = L"";
 	for (char c : file) {
 		helper::convert_char(c);
 		if (c == '!') {
-			if  (current_word.length() > 4 && current_word.length() < 20) {				
+			if  (current_word.length() > 4 && current_word.length() < 15) {				
 				StemEnglish(current_word);	
 				words_return.insert(current_word);
 			}
 			current_word.clear();
-			continue;
+		} else {
+			current_word.push_back(c);
 		}
-		current_word.push_back(c);
 	}
 	if  (current_word.length() > 3 && current_word.length() < 20) {
                 StemEnglish(current_word);
