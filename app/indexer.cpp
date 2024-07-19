@@ -59,6 +59,7 @@ int indexer::start_from(const std::filesystem::file_time_type& from_time) {
 	}
 	std::error_code ec;
 	log::write(2, "indexer: starting scan from last successful scan.");
+	local_index::init();
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {

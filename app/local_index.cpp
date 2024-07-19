@@ -7,6 +7,10 @@
 std::vector<std::string> local_index::paths;
 std::vector<words_reversed> local_index::words_and_reversed;
 
+void local_index::init() {
+	words_and_reversed.reserve(1000000); // This should later be the set memory usage. For now a temp value
+}
+
 uint32_t local_index::add_path(const std::string& path_to_insert) {
 	uint32_t id = 0;
 	for (const std::string& path : paths) {

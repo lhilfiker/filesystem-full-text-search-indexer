@@ -26,6 +26,7 @@ class local_index {
 		static std::vector<std::string> paths;
 		static std::vector<words_reversed> words_and_reversed;
 	public:
+		static void init();
 		static uint32_t add_path(const std::string& path_to_insert);
 		static void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
 		static void sort();
