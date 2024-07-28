@@ -39,6 +39,7 @@ class indexer {
 		static bool config_loaded;
 		static bool scan_dot_paths;
 		static std::filesystem::path path_to_scan;
+	private:
 		static bool extension_allowed(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 	public:
@@ -86,16 +87,18 @@ class index {
                 static mio::mmap_sink mmap_words_f;
                 static mio::mmap_sink mmap_reversed;
                 static mio::mmap_sink mmap_additional;
-                static int check_files();
+        private:
+		static int check_files();
                 static int get_actual_size(const mio::mmap_sink& mmap);
                 static int map();
                 static int unmap();
                 static int resize(const std::filesystem::path& path_to_resize, const int size);
         public:
-                static void save_config(const std::filesystem::path& config_index_path, int config_buffer_size);
+		static void save_config(const std::filesystem::path& config_index_path, int config_buffer_size);
                 static bool is_index_mapped();
 		static int initialize();
-                static int uninitialize();
+                static int uninitialize();	
+		static int add(const std::vector<std::string>& paths, std::vector<words_reversed>& words_reversed);
 };
 
 
