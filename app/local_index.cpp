@@ -4,10 +4,8 @@
 #include <unordered_set>
 #include <algorithm>
 
-std::vector<std::string> local_index::paths;
-std::vector<words_reversed> local_index::words_and_reversed;
 
-void local_index::init() {
+local_index::local_index() {
 	words_and_reversed.reserve(1000000); // This should later be the set memory usage. For now a temp value
 }
 

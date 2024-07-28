@@ -58,20 +58,18 @@ int indexer::start_from(const std::filesystem::file_time_type& from_time) {
 		return 1;
 	}
 	std::error_code ec;
+	local_index index;
 	log::write(2, "indexer: starting scan from last successful scan.");
-	local_index::init();
-
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {
 			log::write(1, "indexer: start_from: indexing path: " + dir_entry.path().string());
-			uint32_t path_id = local_index::add_path(dir_entry.path());
+			uint32_t path_id = index.add_path(dir_entry.path());
 			std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
-			local_index::add_words(words_to_add, path_id); 
+			index.add_words(words_to_add, path_id);
 		}
 	}
 	log::write(2, "indexer: start_from: sorting local index.");
-	local_index::sort();
-
+	index.sort();
 	if (ec) {
 		log::write(4, "indexer: start_from: error.");
 		return 1;

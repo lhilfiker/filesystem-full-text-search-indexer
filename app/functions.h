@@ -23,13 +23,13 @@ struct words_reversed {
 
 class local_index {
 	private:
-		static std::vector<std::string> paths;
-		static std::vector<words_reversed> words_and_reversed;
+		std::vector<std::string> paths;
+		std::vector<words_reversed> words_and_reversed;
 	public:
-		static void init();
-		static uint32_t add_path(const std::string& path_to_insert);
-		static void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
-		static void sort();
+		local_index();
+		uint32_t add_path(const std::string& path_to_insert);
+		void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
+		void sort();
 };
 
 // indexer.cpp
