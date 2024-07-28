@@ -226,3 +226,6 @@ int index::uninitialize() {
 	}
 	return 0;
 }
+
+int index::add(const std::vector<std::string>& paths, std::vector<words_reversed>& words_reversed) {
+}
