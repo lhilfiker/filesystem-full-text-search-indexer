@@ -27,3 +27,9 @@ void log::write(const int log_level, const std::string& log_message) {
 		}
 	}
 }
+
+void log::error(const std::string& error_message) {
+	// for now, it will just log it and throw an error.
+	write(4, "ERROR: " + error_message);
+	throw 1;
+}

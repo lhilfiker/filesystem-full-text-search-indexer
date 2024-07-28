@@ -63,6 +63,7 @@ class log {
         public:
                 static void save_config(const int config_min_log_level);
                 static void write(const int log_level, const std::string& log_message);
+		static void error(const std::string& error_message);
 };
 
 // index.cpp
