@@ -227,9 +227,9 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 	if (first_time) {
 		log::write(2, "index: add: first time write.");
 		// paths
-		int file_location = 0;
+		uint64_t file_location = 0;
 		paths_size_buffer = paths.size() + paths_size_l;	
-		paths_count_size_buffer = paths_count.size() + paths_count_size_l * 4;
+		paths_count_size_buffer = paths_count_size_l;
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
 		resize(index_path / "paths_count.index", paths_count_size_buffer);
@@ -249,14 +249,13 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		//paths_count
 		file_location = 0;
 		for (const uint32_t& path_count : paths_count) {
-			for (const char& c : std::to_string(path_count)) {
-				mmap_paths_count[file_location] = c;
-				++file_location;
-			}
-			mmap_paths_count[file_location] = '\n';
-			++file_location;
+			mmap_paths_count[file_location]     = (path_count >> 24) & 0xFF;
+			mmap_paths_count[file_location + 1] = (path_count >> 16) & 0xFF;
+			mmap_paths_count[file_location + 2] = (path_count >> 8)  & 0xFF;
+			mmap_paths_count[file_location + 3] = path_count & 0xFF;
+			file_location += 4;
 		}
-		paths_count_size = file_location - 1; // -1 to remove last newline character
+		paths_count_size = file_location;
 		paths_count.clear(); // free memory
 		
 		log::write(2, "index: add: paths_count written.");
