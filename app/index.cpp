@@ -7,6 +7,7 @@
 
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
+bool index::first_time = false;
 int index::buffer_size = 0;
 std::filesystem::path index::index_path;
 int index::paths_size = 0;
@@ -134,7 +135,8 @@ void index::check_files() {
 		log::write(1, "index: check_files: creating index directory.");
 		std::filesystem::create_directories(index_path);
 	}
-	if (!std::filesystem::exists(index_path / "paths.index") || !std::filesystem::exists(index_path / "words.index") || !std::filesystem::exists(index_path / "words_f.index") || !std::filesystem::exists(index_path / "reversed.index") || !std::filesystem::exists(index_path / "additional.index")) {
+	if (!std::filesystem::exists(index_path / "paths.index") || !std::filesystem::exists(index_path / "words.index") || !std::filesystem::exists(index_path / "words_f.index") || !std::filesystem::exists(index_path / "reversed.index") || !std::filesystem::exists(index_path / "additional.index") (words_size == 0 || words_f_size == 0 || paths_size == 0 || reversed_size == 0 || additional_size == 0) {
+		first_time = true;
 		log::write(1, "index: check_files: index files damaged / not existing, recreating.");
 		std::ofstream { index_path / "paths.index" };
 		std::ofstream { index_path / "words.index" };
@@ -208,7 +210,7 @@ int index::uninitialize() {
 
 int index::add(const std::vector<std::string>& paths, std::vector<words_reversed>& words_reversed) {
 	std::error_code ec;
-	if (words_size == 0 || words_f_size == 0 || paths_size == 0 || reversed_size == 0 || additional_size == 0) {
+	if (first_time) {
 	// empty, first time write
 	} else {
 	//compare and add
