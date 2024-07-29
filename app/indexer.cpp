@@ -14,7 +14,7 @@ std::filesystem::path indexer::path_to_scan;
 int indexer::threads_to_use = 1;
 size_t indexer::local_index_memory = 5000000;
 
-void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan, int config_threads_to_use, const size_t& config_local_index_memory) {
+void indexer::save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan, const int config_threads_to_use, const size_t& config_local_index_memory) {
 	std::error_code ec;
 	if (config_threads_to_use < 1) {
 		threads_to_use = 1;
