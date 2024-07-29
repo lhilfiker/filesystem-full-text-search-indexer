@@ -24,13 +24,18 @@ struct words_reversed {
 class local_index {
 	private:
 		std::vector<std::string> paths;
+		size_t paths_size;
 		std::vector<words_reversed> words_and_reversed;
+		size_t words_and_reversed_size;
 		std::vector<uint32_t> path_word_count;
+		size_t path_word_count_size;
 	public:
 		local_index();
+		void clear();
 		uint32_t add_path(const std::string& path_to_insert);
 		void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
 		void sort();
+		void add_to_disk();
 };
 
 // indexer.cpp
@@ -104,7 +109,7 @@ class index {
                 static bool is_index_mapped();
 		static int initialize();
                 static int uninitialize();	
-		static int add(const std::vector<std::string>& paths, std::vector<words_reversed>& words_reversed);
+		static int add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& path_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_reversed_size_l);
 };
 
 

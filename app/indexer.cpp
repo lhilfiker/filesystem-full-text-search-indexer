@@ -93,5 +93,7 @@ int indexer::start_from(const std::filesystem::file_time_type& from_time) {
 		log::write(4, "indexer: start_from: error.");
 		return 1;
 	}
+	log::write(2, "writting to disk");
+	index.add_to_disk();
 	return 0;
 }

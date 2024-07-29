@@ -222,10 +222,56 @@ int index::uninitialize() {
 	return 0;
 }
 
-int index::add(const std::vector<std::string>& paths, std::vector<words_reversed>& words_reversed) {
+int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_reversed_size_l) {
 	std::error_code ec;
 	if (first_time) {
-	// empty, first time write
+		log::write(2, "index: add: first time write.");
+		// paths
+		int file_location = 0;
+		paths_size_buffer = paths.size() + paths_size_l;	
+		paths_count_size_buffer = paths_count.size() + paths_count_size_l * 4;
+		unmap();
+		resize(index_path / "paths.index", paths_size_buffer);	
+		resize(index_path / "paths_count.index", paths_count_size_buffer);
+		map();
+		for (const std::string& path : paths) {
+			for (const char& c : path) {
+				mmap_paths[file_location] = c;
+				++file_location;
+			}
+			mmap_paths[file_location] = '\n';
+			++file_location;
+		}
+		paths_size = file_location - 1; // -1 to remove the last newline character
+		paths.clear(); // free memory
+
+		log::write(2, "index: add: paths written.");
+		//paths_count
+		file_location = 0;
+		for (const uint32_t& path_count : paths_count) {
+			for (const char& c : std::to_string(path_count)) {
+				mmap_paths_count[file_location] = c;
+				++file_location;
+			}
+			mmap_paths_count[file_location] = '\n';
+			++file_location;
+		}
+		paths_count_size = file_location - 1; // -1 to remove last newline character
+		paths_count.clear(); // free memory
+		
+		log::write(2, "index: add: paths_count written.");
+		// words & words_f
+		
+		unmap();
+                resize(index_path / "paths_count.index", paths_count_size);
+                resize(index_path / "paths.index", paths_size);
+		map();
+		first_time = false;
+
+		if (ec) {
+			log::write(3, "index: add: error");
+			return 1;
+		}
 	} else {
 	//compare and add
 	}
