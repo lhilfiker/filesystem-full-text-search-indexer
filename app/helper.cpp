@@ -39,6 +39,16 @@ void helper::convert_char(char& c) {
 	else if (c == 'X') c = 'x';
 	else if (c == 'Q') c = 'q';
 	else if (c == 'Z') c = 'z';
+	// Special characters
+	else if (c == 'ä' || c == 'Ä' || c == 'å' || c == 'Å' || c == 'à' || c == 'À' || c == 'á' || c == 'Á' || c == 'â' || c == 'Â' || c == 'ã' || c == 'Ã') c = 'a';
+	else if (c == 'ö' || c == 'Ö' || c == 'ò' || c == 'Ò' || c == 'ó' || c == 'Ó' || c == 'ô' || c == 'Ô' || c == 'õ' || c == 'Õ') c = 'o';
+	else if (c == 'é' || c == 'É' || c == 'è' || c == 'È' || c == 'ê' || c == 'Ê' || c == 'ë' || c == 'Ë') c = 'e';
+	else if (c == 'ü' || c == 'Ü' || c == 'ù' || c == 'Ù' || c == 'ú' || c == 'Ú' || c == 'û' || c == 'Û') c = 'u';
+	else if (c == 'ì' || c == 'Ì' || c == 'í' || c == 'Í' || c == 'î' || c == 'Î' || c == 'ï' || c == 'Ï') c = 'i';
+	else if (c == 'ñ' || c == 'Ñ') c = 'n';
+	else if (c == 'ý' || c == 'Ý' || c == 'ÿ' || c == 'Ÿ') c = 'y';
+	else if (c == 'ç' || c == 'Ç') c = 'c';
+	else if (c == 'ß') c = 'ss';
 	else c = '!';
 	return;
 }
