@@ -47,6 +47,25 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
                 words_return.insert(current_word);
         }
 	file.unmap();
+	// file name
+	current_word.clear();
+	for (char c : path.filename()) {
+		helper::convert_char(c);
+                if (c == '!') {
+                        if  (current_word.length() > 4 && current_word.length() < 15) {
+                                words_return.insert(current_word);
+                        }
+                        current_word.clear();
+                } else {
+                        current_word.push_back(c);
+                }
+
+	}
+	if  (current_word.length() > 3 && current_word.length() < 20) {
+                StemEnglish(current_word);
+                words_return.insert(current_word);
+        }
+
 	if (ec) {
 		log::write(3, "indexerer: get_words: error reading / normalizing file.");
 	}
