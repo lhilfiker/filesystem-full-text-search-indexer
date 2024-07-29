@@ -11,7 +11,7 @@ bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
 std::filesystem::path indexer::path_to_scan;
 
-void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan) {
+void indexer::save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan) {
 	scan_dot_paths = config_scan_dot_paths;
 	path_to_scan = config_path_to_scan;
 	log::write(1, "indexer: save_config: saved config successfully.");

@@ -50,7 +50,7 @@ class indexer {
 		static bool extension_allowed(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 	public:
-		static void save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan);
+		static void save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan);
 		static int start_from(const std::filesystem::file_time_type& from_time);
 };
 
@@ -106,7 +106,7 @@ class index {
                 static int unmap();
                 static void resize(const std::filesystem::path& path_to_resize, const int size);
         public:
-		static void save_config(const std::filesystem::path& config_index_path, int config_buffer_size);
+		static void save_config(const std::filesystem::path& config_index_path, const int config_buffer_size);
                 static bool is_index_mapped();
 		static int initialize();
                 static int uninitialize();	
