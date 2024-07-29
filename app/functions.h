@@ -51,7 +51,7 @@ class indexer {
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 	public:
 		static void save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan);
-		static int start_from(const std::filesystem::file_time_type& from_time);
+		static int start_from();
 };
 
 // helper.cpp

@@ -72,7 +72,7 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	return words_return;
 }
 
-int indexer::start_from(const std::filesystem::file_time_type& from_time) {
+int indexer::start_from() {
 	if (!config_loaded) {
 		return 1;
 	}
