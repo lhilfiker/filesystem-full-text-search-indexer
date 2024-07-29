@@ -25,6 +25,7 @@ class local_index {
 	private:
 		std::vector<std::string> paths;
 		std::vector<words_reversed> words_and_reversed;
+		std::vector<uint32_t> path_word_count;
 	public:
 		local_index();
 		uint32_t add_path(const std::string& path_to_insert);
