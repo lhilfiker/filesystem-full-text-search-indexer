@@ -45,15 +45,14 @@ bool index::is_index_mapped() {
 	return is_mapped;
 }
 
-int index::resize(const std::filesystem::path& path_to_resize, const int size) {
+void index::resize(const std::filesystem::path& path_to_resize, const int size) {
 	std::error_code ec;
 	std::filesystem::resize_file(path_to_resize, size);
 	if (ec) {
-		log::write(4, "index: resize: could not resize file at path: " + (path_to_resize).string() + " with size: " + std::to_string(size) + ".");
-		return 1;
+		log::error("index: resize: could not resize file at path: " + (path_to_resize).string() + " with size: " + std::to_string(size) + ".");
 	}
 	log::write(1, "indexer: resize: resized file successfully.");
-	return 0;
+	return;
 }
 
 int index::unmap() {
@@ -125,7 +124,7 @@ int index::get_actual_size(const mio::mmap_sink& mmap) {
 	return size;
 }
 
-int index::check_files() {
+void index::check_files() {
 	if (!is_config_loaded) {
 		log::write(4, "index: check_files: config not loaded. can not continue.");
 		return 1;
@@ -145,10 +144,9 @@ int index::check_files() {
 		std::ofstream { index_path / "additional.index" };
 	}
 	if (ec) {
-		log::write(4, "index: check_files: error accessing/creating index files in " + (index_path).string() + ".");
-		return 1;
+		log::error("index: check_files: error accessing/creating index files in " + (index_path).string() + ".");
 	}
-	return 0;
+	return;
 }
 
 int index::initialize() {
@@ -159,10 +157,7 @@ int index::initialize() {
 	is_mapped = false;
 	std::error_code ec;
 	unmap(); //unmap anyway incase they are already mapped.
-	if(check_files() == 1) { // check if index files exist and create them.
-		log::write(4, "index: initialize: could not check_files, see above log message, exiting.");
-		return 1;
-	}
+	check_files() // check if index files exist and create them.
 	map(); // ignore error here as it might fail if file size is 0.
 	// get actual sizes of the files to reset buffer.
 	if (int paths_size = get_actual_size(mmap_paths); paths_size == -1 && helper::file_size(index_path / "paths.index") > 0) paths_size = 0;	
@@ -184,26 +179,11 @@ int index::initialize() {
 		return 1;
 	}
 	//resize actual size + buffer size
-	if (resize(index_path / "paths.index", paths_size_buffer) == 1) {
-		log::write(4, "index: initialize: could not resize file, exiting.");
-		return 1;
-	}
-	if (resize(index_path / "words.index", words_size_buffer) == 1) {
-		log::write(4, "index: initialize: could not resize file, exiting.");
-		return 1;
-	}
-	if (resize(index_path / "words_f.index", words_f_size_buffer) == 1) {
-		log::write(4, "index: initialize: could not resize file, exiting.");
-		return 1;
-	}
-	if (resize(index_path / "reversed.index", reversed_size_buffer) == 1) {
-		log::write(4, "index: initialize: could not resize file, exiting.");
-		return 1;
-	}
-	if (resize(index_path / "additional.index", additional_size_buffer) == 1) {
-		log::write(4, "index: initialize: could not resize file, exiting.");
-		return 1;
-	}
+	resize(index_path / "paths.index", paths_size_buffer);
+	resize(index_path / "words.index", words_size_buffer);
+	resize(index_path / "words_f.index", words_f_size_buffer);
+	resize(index_path / "reversed.index", reversed_size_buffer);
+	resize(index_path / "additional.index", additional_size_buffer);
 	// map after resizing
 	if (map() == 1) { // map files
 		log::write(4, "index: initialize: could not map, see above log message, exiting.");
@@ -228,4 +208,11 @@ int index::uninitialize() {
 }
 
 int index::add(const std::vector<std::string>& paths, std::vector<words_reversed>& words_reversed) {
+	std::error_code ec;
+	if (words_size == 0 || words_f_size == 0 || paths_size == 0 || reversed_size == 0 || additional_size == 0) {
+	// empty, first time write
+	} else {
+	//compare and add
+	}
+
 }
