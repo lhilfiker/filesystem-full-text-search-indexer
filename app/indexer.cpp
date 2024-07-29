@@ -11,8 +11,10 @@ stemming::english_stem<> indexer::StemEnglish;
 bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
 std::filesystem::path indexer::path_to_scan;
+int indexer::threads_to_use = 1;
+size_t indexer::local_index_memory = 5000000;
 
-void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan, int config_threads_to_use) {
+void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan, int config_threads_to_use, const size_t& config_local_index_memory) {
 	std::error_code ec;
 	if (config_threads_to_use < 1) {
 		threads_to_use = 1;
@@ -89,6 +91,10 @@ int indexer::start_from() {
 	std::error_code ec;
 	local_index index;
 	log::write(2, "indexer: starting scan from last successful scan.");
+	std::vector<std::vector<std::filesystem::path>> queue(threads_to_use);
+	std::vector<std::filesystem::path> too_big_files;
+	uint16_t thread_counter = 0;
+
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {
 			log::write(1, "indexer: start_from: indexing path: " + dir_entry.path().string());

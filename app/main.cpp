@@ -18,7 +18,7 @@ int test() {
 		log::write(4, "uninitialize failed.");
 		return 1;
 	}
-	indexer::save_config(false, "/home/lukas/");
+	indexer::save_config(false, "/home/lukas/", 100);
 	indexer::start_from(std::filesystem::last_write_time("/home/lukas/test.txt"));
 	log::write(2, "done.");
 	return 0;
