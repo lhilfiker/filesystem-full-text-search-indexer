@@ -72,10 +72,13 @@ class index {
         private:
                 static bool is_config_loaded;
                 static bool is_mapped;
-                static int buffer_size;
+                static bool first_time;
+		static int buffer_size;
                 static std::filesystem::path index_path;
                 static int paths_size;
                 static int paths_size_buffer;
+		static int paths_count_size;
+		static int paths_count_size_buffer;
                 static int words_size;
                 static int words_size_buffer;
                 static int words_f_size;
@@ -85,6 +88,7 @@ class index {
                 static int additional_size;
                 static int additional_size_buffer;
                 static mio::mmap_sink mmap_paths;
+		static mio::mmap_sink mmap_paths_count;
                 static mio::mmap_sink mmap_words;
                 static mio::mmap_sink mmap_words_f;
                 static mio::mmap_sink mmap_reversed;

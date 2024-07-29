@@ -12,6 +12,8 @@ int index::buffer_size = 0;
 std::filesystem::path index::index_path;
 int index::paths_size = 0;
 int index::paths_size_buffer = 0;
+int index::paths_count_size = 0;
+int index::paths_count_size_buffer = 0;
 int index::words_size = 0;
 int index::words_size_buffer = 0;
 int index::words_f_size = 0;
@@ -21,6 +23,7 @@ int index::reversed_size_buffer = 0;
 int index::additional_size = 0;
 int index::additional_size_buffer = 0;
 mio::mmap_sink index::mmap_paths;
+mio::mmap_sink index::mmap_paths_count;
 mio::mmap_sink index::mmap_words;
 mio::mmap_sink index::mmap_words_f;
 mio::mmap_sink index::mmap_reversed;
@@ -61,6 +64,9 @@ int index::unmap() {
 	if (mmap_paths.is_mapped()) {
 		mmap_paths.unmap();
 	}
+	if (mmap_paths_count.is_mapped()) {
+		mmap_paths_count.unmap();
+	}
 	if (mmap_words.is_mapped()) {
 		mmap_words.unmap();
 	}
@@ -86,6 +92,10 @@ int index::map() {
 	if (!mmap_paths.is_mapped()) {
 		mmap_paths = mio::make_mmap_sink((index_path / "paths.index").string(), 0, mio::map_entire_file, ec);
 	}
+        if (!mmap_paths_count.is_mapped()) {
+                mmap_paths_count = mio::make_mmap_sink((index_path / "paths_count.index").string(), 0, mio::map_entire_file,
+ec);
+        }
 	if (!mmap_words.is_mapped()) {
 		mmap_words = mio::make_mmap_sink((index_path / "words.index").string(), 0, mio::map_entire_file, ec);
 	}
@@ -135,10 +145,11 @@ void index::check_files() {
 		log::write(1, "index: check_files: creating index directory.");
 		std::filesystem::create_directories(index_path);
 	}
-	if (!std::filesystem::exists(index_path / "paths.index") || !std::filesystem::exists(index_path / "words.index") || !std::filesystem::exists(index_path / "words_f.index") || !std::filesystem::exists(index_path / "reversed.index") || !std::filesystem::exists(index_path / "additional.index") (words_size == 0 || words_f_size == 0 || paths_size == 0 || reversed_size == 0 || additional_size == 0) {
+	if (!std::filesystem::exists(index_path / "paths.index") || helper::file_size(index_path / "paths.index") == 0 || !std::filesystem::exists(index_path / "paths_count.index")  || helper::file_size(index_path / "paths_count.index") == 0 || !std::filesystem::exists(index_path / "words.index")  || helper::file_size(index_path / "words.index") == 0|| !std::filesystem::exists(index_path / "words_f.index")  || helper::file_size(index_path / "words_f.index") == 0 || !std::filesystem::exists(index_path / "reversed.index")  || helper::file_size(index_path / "reversed.index") == 0 || !std::filesystem::exists(index_path / "additional.index") || helper::file_size(index_path / "additional.index") == 0) {
 		first_time = true;
 		log::write(1, "index: check_files: index files damaged / not existing, recreating.");
 		std::ofstream { index_path / "paths.index" };
+		std::ofstream { index_path / "paths_count.index" };
 		std::ofstream { index_path / "words.index" };
 		std::ofstream { index_path / "words_f.index" };
 		std::ofstream { index_path / "reversed.index" };
@@ -162,6 +173,7 @@ int index::initialize() {
 	map(); // ignore error here as it might fail if file size is 0.
 	// get actual sizes of the files to reset buffer.
 	if (int paths_size = get_actual_size(mmap_paths); paths_size == -1 && helper::file_size(index_path / "paths.index") > 0) paths_size = 0;	
+        if (int paths_count_size = get_actual_size(mmap_paths); paths_count_size == -1 && helper::file_size(index_path / "paths_count.index") > 0) paths_count_size = 0;
 	if (int words_size = get_actual_size(mmap_words); words_size == -1 && helper::file_size(index_path / "words.index") > 0) words_size = 0;
 	if (int words_f_size = get_actual_size(mmap_words_f); words_f_size == -1 && helper::file_size(index_path / "words_f.index") > 0) words_f_size = 0;	
 	if (int reversed_size = get_actual_size(mmap_reversed); reversed_size == -1 && helper::file_size(index_path / "reversed.index") > 0) reversed_size = 0;
@@ -171,6 +183,7 @@ int index::initialize() {
 		return 1;
 	}
 	paths_size_buffer = paths_size + buffer_size;
+	paths_count_size_buffer = paths_count_size + buffer_size;
 	words_size_buffer = words_size + buffer_size;
 	words_f_size_buffer = words_f_size + buffer_size;
 	reversed_size_buffer = reversed_size + buffer_size;
@@ -181,6 +194,7 @@ int index::initialize() {
 	}
 	//resize actual size + buffer size
 	resize(index_path / "paths.index", paths_size_buffer);
+	resize(index_path / "paths_count.index", paths_count_size_buffer);
 	resize(index_path / "words.index", words_size_buffer);
 	resize(index_path / "words_f.index", words_f_size_buffer);
 	resize(index_path / "reversed.index", reversed_size_buffer);
