@@ -49,7 +49,7 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	file.unmap();
 	// file name
 	current_word.clear();
-	for (char c : path.filename()) {
+	for (char c : path.filename().string()) {
 		helper::convert_char(c);
                 if (c == '!') {
                         if  (current_word.length() > 4 && current_word.length() < 15) {

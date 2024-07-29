@@ -48,7 +48,7 @@ void helper::convert_char(char& c) {
 	else if (c == 'ñ' || c == 'Ñ') c = 'n';
 	else if (c == 'ý' || c == 'Ý' || c == 'ÿ' || c == 'Ÿ') c = 'y';
 	else if (c == 'ç' || c == 'Ç') c = 'c';
-	else if (c == 'ß') c = 'ss';
+	else if (c == 'ß') c = 's';
 	else c = '!';
 	return;
 }

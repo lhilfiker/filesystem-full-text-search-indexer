@@ -229,5 +229,5 @@ int index::add(const std::vector<std::string>& paths, std::vector<words_reversed
 	} else {
 	//compare and add
 	}
-
+	return 0;
 }
