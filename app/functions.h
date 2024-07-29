@@ -31,6 +31,7 @@ class local_index {
 		size_t path_word_count_size;
 	public:
 		local_index();
+		int size();
 		void clear();
 		uint32_t add_path(const std::string& path_to_insert);
 		void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);

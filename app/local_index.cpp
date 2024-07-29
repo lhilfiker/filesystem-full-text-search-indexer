@@ -12,6 +12,10 @@ local_index::local_index() {
 	words_and_reversed.reserve(1000000); // This should later be the set memory usage. For now a temp value
 }
 
+int local_index::size() {
+	return paths_site + words_and_reversed_size + path_word_count_size;
+}
+
 void local_index::clear() {
 	paths.clear();
 	words_and_reversed.clear();
