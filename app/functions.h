@@ -90,11 +90,11 @@ class index {
                 static mio::mmap_sink mmap_reversed;
                 static mio::mmap_sink mmap_additional;
         private:
-		static int check_files();
+		static void check_files();
                 static int get_actual_size(const mio::mmap_sink& mmap);
                 static int map();
                 static int unmap();
-                static int resize(const std::filesystem::path& path_to_resize, const int size);
+                static void resize(const std::filesystem::path& path_to_resize, const int size);
         public:
 		static void save_config(const std::filesystem::path& config_index_path, int config_buffer_size);
                 static bool is_index_mapped();

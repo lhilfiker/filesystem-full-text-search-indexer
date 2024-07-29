@@ -126,8 +126,7 @@ int index::get_actual_size(const mio::mmap_sink& mmap) {
 
 void index::check_files() {
 	if (!is_config_loaded) {
-		log::write(4, "index: check_files: config not loaded. can not continue.");
-		return 1;
+		log::error("index: check_files: config not loaded. can not continue.");
 	}
 	log::write(1, "index: check_files: checking files.");
 	std::error_code ec;
@@ -157,7 +156,7 @@ int index::initialize() {
 	is_mapped = false;
 	std::error_code ec;
 	unmap(); //unmap anyway incase they are already mapped.
-	check_files() // check if index files exist and create them.
+	check_files(); // check if index files exist and create them.
 	map(); // ignore error here as it might fail if file size is 0.
 	// get actual sizes of the files to reset buffer.
 	if (int paths_size = get_actual_size(mmap_paths); paths_size == -1 && helper::file_size(index_path / "paths.index") > 0) paths_size = 0;	
