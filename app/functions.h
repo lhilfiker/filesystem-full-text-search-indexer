@@ -46,11 +46,12 @@ class indexer {
 		static bool config_loaded;
 		static bool scan_dot_paths;
 		static std::filesystem::path path_to_scan;
+		static int threads_to_use;
 	private:
 		static bool extension_allowed(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 	public:
-		static void save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan);
+		static void save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan, int config_threads_to_use);
 		static int start_from();
 };
 

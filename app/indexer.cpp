@@ -5,13 +5,23 @@
 #include <vector>
 #include <unordered_set>
 #include <filesystem>
+#include <threads>
 
 stemming::english_stem<> indexer::StemEnglish;
 bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
 std::filesystem::path indexer::path_to_scan;
 
-void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan) {
+void indexer::save_config(bool config_scan_dot_paths, std::filesystem::path config_path_to_scan, int config_threads_to_use) {
+	std::error_code ec;
+	if (config_threads_to_use < 1) {
+		threads_to_use = 1;
+	} else (config_threads_to_use > std::threads::hardware_concurrency()) {
+		threads_to_use = std::threads::hardware_concurrency();
+	}
+	if (ec) {
+		threads_to_use = 1;
+	}
 	scan_dot_paths = config_scan_dot_paths;
 	path_to_scan = config_path_to_scan;
 	log::write(1, "indexer: save_config: saved config successfully.");
