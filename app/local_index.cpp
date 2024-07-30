@@ -13,7 +13,7 @@ local_index::local_index() {
 }
 
 int local_index::size() {
-	return paths_site + words_and_reversed_size + path_word_count_size;
+	return paths_size + words_and_reversed_size + path_word_count_size;
 }
 
 void local_index::clear() {
