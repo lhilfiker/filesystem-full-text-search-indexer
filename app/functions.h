@@ -9,6 +9,7 @@
 #include <vector>
 #include "lib/mio.hpp"
 #include "lib/english_stem.h"
+#include <unordered_map>
 
 // local_index.cpp
 
@@ -59,6 +60,8 @@ class indexer {
 // helper.cpp
 class helper {
 	private:
+		static const std::array<char, 256> conversion_table;
+		static const std::unordered_map<char, char> special_chars;
 	public:
 		static int file_size(const std::filesystem::path& file_path);
 		static void convert_char(char& c);
