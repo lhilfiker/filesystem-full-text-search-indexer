@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <fstream>
+#include <array>
 
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
@@ -222,7 +223,7 @@ int index::uninitialize() {
 	return 0;
 }
 
-int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_reversed_size_l) {
+int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_size_l, const size_t& reversed_size_t) {
 	std::error_code ec;
 	if (first_time) {
 		log::write(2, "index: add: first time write.");
@@ -259,7 +260,8 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_count.clear(); // free memory
 		
 		log::write(2, "index: add: paths_count written.");
-		// words & words_f
+		// words & words_f & reversed
+		std::array<uint32_t, 26> words_f;
 		
 		unmap();
                 resize(index_path / "paths_count.index", paths_count_size);
