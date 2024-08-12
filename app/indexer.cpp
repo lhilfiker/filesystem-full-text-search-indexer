@@ -84,6 +84,17 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	return words_return;
 }
 
+local_index indexer::thread_task(std::vector<std::filesystem::path> paths_to_index) {
+	// TEMP
+			uint32_t path_id = index.add_path(dir_entry.path());
+			std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
+			index.add_words(words_to_add, path_id);
+}
+
+void indexer::task_start(const std::vector<std::filesystem::path>& paths) {
+
+}
+
 int indexer::start_from() {
 	if (!config_loaded) {
 		return 1;
@@ -93,16 +104,34 @@ int indexer::start_from() {
 	log::write(2, "indexer: starting scan from last successful scan.");
 	std::vector<std::vector<std::filesystem::path>> queue(threads_to_use);
 	std::vector<std::filesystem::path> too_big_files;
+	size_t current_thread_filesize = 0;
+	size_t thread_max_filesize = local_index_memory / threads_to_use;
 	uint16_t thread_counter = 0;
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
-		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {
-			log::write(1, "indexer: start_from: indexing path: " + dir_entry.path().string());
-			uint32_t path_id = index.add_path(dir_entry.path());
-			std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
-			index.add_words(words_to_add, path_id);
+		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {	
+			size_t filesize = std::filesystem::filesize(dir_entry.path());
+			if (filesize > thread_max_filesize) {
+				too_big_files.push_back(dir_entry.path());
+				continue;
+			}
+			if (thread_counter >= threads_to_use && current_thread_size + filesize >= thread_max_filesize) { // if all paths for all threads are done, index.
+				thread_counter.clear();
+				current_thread_filesize.clear();
+				task_start(queue);
+			}
+			if (current_thread_filesize + filesize > thread_max_filesize) {
+				++thread_counter;
+				current_thread_filesize = filesize;
+				queue[thread_counter].push_back(dir_entry.path);
+			} else {
+				current_thread_size += filesize;
+				queue[thread_counter].push_back(dir_entry.path());
+			}
 		}
 	}
+	task_start(queue);
+
 	log::write(2, "indexer: start_from: sorting local index.");
 	index.sort();
 	if (ec) {
