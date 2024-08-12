@@ -23,7 +23,7 @@ struct words_reversed {
 };
 
 class local_index {
-	private:
+	public:
 		std::vector<std::string> paths;
 		size_t paths_size;
 		std::vector<words_reversed> words_and_reversed;
@@ -39,6 +39,7 @@ class local_index {
 		void sort();
 		void add_to_disk();
 		void combine(local_index& to_combine_index);
+
 };
 
 // indexer.cpp
@@ -54,7 +55,7 @@ class indexer {
 		static bool extension_allowed(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 		static local_index thread_task(const std::vector<std::filesystem::path>& paths_to_index);
-		static void task_start(const std::vector<std::filesystem::path>& paths, local_index& index)
+		static void task_start(const std::vector<std::vector<std::filesystem::path>>& paths, local_index& index);
 	public:
 		static void save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan, const int config_threads_to_use, const size_t& config_local_index_memory);
 		static int start_from();

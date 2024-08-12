@@ -70,15 +70,16 @@ void local_index::add_to_disk() {
 	clear();
 	return;
 }
-
-void combine(local_index& to_combine_index) {
-	std::vector<uint32_t> paths_id(to_combine_index.paths.count());
+ 
+void local_index::combine(local_index& to_combine_index) {
+	std::vector<uint32_t> paths_id(to_combine_index.paths.size());
 	size_t paths_last = paths.size();
 	int i = 0;
 	for (const std::string& path_to_insert : to_combine_index.paths) {
-		if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert); loc != std::npos) {
-			paths_id.push_back(loc);
-			path_word_count[loc] = to_combine_index.path_word_count[i];
+		if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert); loc != std::end(paths)) {
+			size_t it = std::distance(paths.begin(), loc);
+			paths_id.push_back(static_cast<uint32_t>(it));
+			path_word_count[it] = to_combine_index.path_word_count[i];
 		}
 		else {
 			paths.push_back(path_to_insert);
@@ -91,7 +92,7 @@ void combine(local_index& to_combine_index) {
 	}
 	i = 0;
 	for (const words_reversed& words_reversed_to_insert : to_combine_index.words_and_reversed) {
-		auto w_insert = words_and_reversed.insert(words_reversed_to_insert.word);
+		auto w_insert = words_and_reversed.insert({words_reversed_to_insert.word,{}}); // Does not work. Doesn't have a insert function.
 		size_t size_insert = 0;
 		if (w_insert.second) {
 			size_insert += words_reversed_to_insert.word.length();
