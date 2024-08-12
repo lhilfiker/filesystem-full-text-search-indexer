@@ -91,13 +91,14 @@ local_index indexer::thread_task(const std::vector<std::filesystem::path>& paths
 			index.add_words(words_to_add, path_id);
 }
 
-void indexer::task_start(const std::vector<std::filesystem::path>& paths) {
+void indexer::task_start(const std::vector<std::filesystem::path>& paths, local_index& index) {
 	std::vector<std::future> async_awaits(threads_to_use);
 	for(int i = 0; i < threads_to_use; ++i) {
-		async_awaits[i] = auto a3 = std::async(std::launch::async, thread_task(paths[i]));
+		async_awaits[i] = std::async(std::launch::async, thread_task(paths[i]));
 	}
 	for(int i = 0; i < threads_to_use; ++i) {
-		// await
+		async_awaits[i].wait();
+		index.combine(async.awaits[i].get());
 	}
 }
 
