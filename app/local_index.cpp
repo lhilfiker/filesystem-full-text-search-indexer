@@ -70,3 +70,38 @@ void local_index::add_to_disk() {
 	clear();
 	return;
 }
+
+void combine(local_index& to_combine_index) {
+	std::vector<uint32_t> paths_id(to_combine_index.paths.count());
+	size_t paths_last = paths.size();
+	int i = 0;
+	for (const std::string& path_to_insert : to_combine_index.paths) {
+		if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert); loc != std::npos) {
+			paths_id.push_back(loc);
+			path_word_count[loc] = to_combine_index.path_word_count[i];
+		}
+		else {
+			paths.push_back(path_to_insert);
+			paths_size += path_to_insert.length();
+			paths_id.push_back(paths_last);
+			path_word_count[paths_last] = to_combine_index.path_word_count[i];
+			++paths_last;
+		}
+		++i;
+	}
+	i = 0;
+	for (const words_reversed& words_reversed_to_insert : to_combine_index.words_and_reversed) {
+		auto w_insert = words_and_reversed.insert(words_reversed_to_insert.word);
+		size_t size_insert = 0;
+		if (w_insert.second) {
+			size_insert += words_reversed_to_insert.word.length();
+		}
+		for (const uint32_t& insert_id : words_reversed_to_insert.reversed) {
+			auto r_insert  = words_and_reversed[i].reversed.insert(paths_id[insert_id]);
+			if (r_insert) {
+				words_and_reversed_size += size_insert + sizeof(paths_id[insert_id]);
+			}
+		}
+		++i;
+	}
+}

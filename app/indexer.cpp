@@ -5,7 +5,7 @@
 #include <vector>
 #include <unordered_set>
 #include <filesystem>
-#include <threads>
+#include <future>
 
 stemming::english_stem<> indexer::StemEnglish;
 bool indexer::config_loaded = false;
@@ -84,7 +84,7 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	return words_return;
 }
 
-local_index indexer::thread_task(std::vector<std::filesystem::path> paths_to_index) {
+local_index indexer::thread_task(const std::vector<std::filesystem::path>& paths_to_index) {
 	// TEMP
 			uint32_t path_id = index.add_path(dir_entry.path());
 			std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
@@ -92,7 +92,13 @@ local_index indexer::thread_task(std::vector<std::filesystem::path> paths_to_ind
 }
 
 void indexer::task_start(const std::vector<std::filesystem::path>& paths) {
-
+	std::vector<std::future> async_awaits(threads_to_use);
+	for(int i = 0; i < threads_to_use; ++i) {
+		async_awaits[i] = auto a3 = std::async(std::launch::async, thread_task(paths[i]));
+	}
+	for(int i = 0; i < threads_to_use; ++i) {
+		// await
+	}
 }
 
 int indexer::start_from() {
