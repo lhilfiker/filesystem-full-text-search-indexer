@@ -106,24 +106,24 @@ void local_index::combine(local_index& to_combine_index) {
 	sort();
 	to_combine_index.sort();
 	
-	int words_reversed_count = words_and_reversed.count();
-	int to_combine_count = to_combine_index.count();
+	int words_reversed_count = words_and_reversed.size();
+	int to_combine_count = to_combine_index.size();
 	int local_counter = 0;
 	int to_combine_counter = 0;
 	
-	for (local_counter < words_and_reversed_count) {
+	while(local_counter < words_reversed_count) {
 		// if found add converted path ids
-		if (words_and_reversed[local_counter].word == to_combine_index[to_combine_counter].word) {
-			for (const uint32_t& remote_id : to_combine_index[to_combine_counter].reversed) {
+		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
+			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
 				words_and_reversed[local_counter].reversed.push_back(paths_id[to_combine_counter]);
 				words_and_reversed_size += sizeof(paths_id[to_combine_counter]);
 			}	
 		}
 		// if it wasn't found and we went passed it, add a new word.
-		if (words_and_reversed[local_counter].word > to_combine_index[to_combine_counter].word) {
-			words_and_reversed[local_counter].push_back({to_combine_index[to_combine_counter].word,{}});
-			words_and_reversed_size += to_combine_index[to_combine_counter].word.length();
-			for (const uint32_t& remote_id : to_combine_index[to_combine_counter].reversed) {
+		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {
+			words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,{}});
+			words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
                                 words_and_reversed[local_counter].reversed.push_back(paths_id[to_combine_counter]);
                                 words_and_reversed_size += sizeof(paths_id[to_combine_counter]);
                         }
@@ -135,13 +135,14 @@ void local_index::combine(local_index& to_combine_index) {
 		++local_counter;
 	}
 	// add missing
-	for (to_combine_counter < to_combine_count) {
-		words_and_reversed[local_counter].push_back({to_combine_index[to_combine_counter].word,{}});
-                        words_and_reversed_size += to_combine_index[to_combine_counter].word.length();
-                        for (const uint32_t& remote_id : to_combine_index[to_combine_counter].reversed) {
+	while(to_combine_counter < to_combine_count) {
+		words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,{}});
+                        words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+                        for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
                                 words_and_reversed[local_counter].reversed.push_back(paths_id[to_combine_counter]);
                                 words_and_reversed_size += sizeof(paths_id[to_combine_counter]);
                         }
                         ++to_combine_counter;
 	}
+	return;
 }
