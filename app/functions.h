@@ -23,7 +23,7 @@ struct words_reversed {
 };
 
 class local_index {
-	public:
+	private:
 		std::vector<std::string> paths;
 		size_t paths_size;
 		std::vector<words_reversed> words_and_reversed;
@@ -40,6 +40,7 @@ class local_index {
 		void add_to_disk();
 		void combine(local_index& to_combine_index);
 
+	friend void combine(local_index& to_combine_index);
 };
 
 // indexer.cpp
