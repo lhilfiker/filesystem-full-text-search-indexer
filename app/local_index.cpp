@@ -72,6 +72,16 @@ void local_index::add_to_disk() {
 }
  
 void local_index::combine(local_index& to_combine_index) {
+	// if empty just add directly
+	if (paths_size == 0 && words_and_reversed_size == 0 && path_word_count_size == 0) {
+		paths = to_combine_index.paths;
+		paths_size = to_combine_index.paths_size;
+		words_and_reversed = to_combine_index.words_and_reversed;
+		words_and_reversed_size = to_combine_index.words_and_reversed_size;
+		path_word_count = to_combine_index.path_word_count;
+		path_word_count_size = to_combine_index.path_word_count_size;
+	}
+
 	std::vector<uint32_t> paths_id(to_combine_index.paths.size());
 	size_t paths_last = paths.size();
 	int i = 0;
@@ -91,18 +101,47 @@ void local_index::combine(local_index& to_combine_index) {
 		++i;
 	}
 	i = 0;
-	for (const words_reversed& words_reversed_to_insert : to_combine_index.words_and_reversed) {
-		auto w_insert = words_and_reversed.insert({words_reversed_to_insert.word,{}}); // Does not work. Doesn't have a insert function.
-		size_t size_insert = 0;
-		if (w_insert.second) {
-			size_insert += words_reversed_to_insert.word.length();
+
+	// sort to compare them by the alphabet.
+	sort();
+	to_combine_index.sort();
+	
+	int words_reversed_count = words_and_reversed.count();
+	int to_combine_count = to_combine_index.count();
+	int local_counter = 0;
+	int to_combine_counter = 0;
+	
+	for (local_counter < words_and_reversed_count) {
+		// if found add converted path ids
+		if (words_and_reversed[local_counter].word == to_combine_index[to_combine_counter].word) {
+			for (const uint32_t& remote_id : to_combine_index[to_combine_counter].reversed) {
+				words_and_reversed[local_counter].reversed.push_back(paths_id[to_combine_counter]);
+				words_and_reversed_size += sizeof(paths_id[to_combine_counter]);
+			}	
 		}
-		for (const uint32_t& insert_id : words_reversed_to_insert.reversed) {
-			auto r_insert  = words_and_reversed[i].reversed.insert(paths_id[insert_id]);
-			if (r_insert) {
-				words_and_reversed_size += size_insert + sizeof(paths_id[insert_id]);
+		// if it wasn't found and we went passed it, add a new word.
+		if (words_and_reversed[local_counter].word > to_combine_index[to_combine_counter].word) {
+			words_and_reversed[local_counter].push_back({to_combine_index[to_combine_counter].word,{}});
+			words_and_reversed_size += to_combine_index[to_combine_counter].word.length();
+			for (const uint32_t& remote_id : to_combine_index[to_combine_counter].reversed) {
+                                words_and_reversed[local_counter].reversed.push_back(paths_id[to_combine_counter]);
+                                words_and_reversed_size += sizeof(paths_id[to_combine_counter]);
+                        }
+			++to_combine_counter;
+			if (to_combine_counter > to_combine_count) {
+				return; // finished if no more to_combine_elements.
 			}
 		}
-		++i;
+		++local_counter;
+	}
+	// add missing
+	for (to_combine_counter < to_combine_count) {
+		words_and_reversed[local_counter].push_back({to_combine_index[to_combine_counter].word,{}});
+                        words_and_reversed_size += to_combine_index[to_combine_counter].word.length();
+                        for (const uint32_t& remote_id : to_combine_index[to_combine_counter].reversed) {
+                                words_and_reversed[local_counter].reversed.push_back(paths_id[to_combine_counter]);
+                                words_and_reversed_size += sizeof(paths_id[to_combine_counter]);
+                        }
+                        ++to_combine_counter;
 	}
 }
