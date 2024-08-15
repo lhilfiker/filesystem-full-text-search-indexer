@@ -27,7 +27,9 @@ void indexer::save_config(const bool config_scan_dot_paths, const std::filesyste
 	if (ec) {
 		threads_to_use = 1;
 	}
-	local_index_memory = config_local_index_memory; // TODO: VALIDATE
+	if (config_local_index_memory > 5000000) { // ignore larger memory as most modern system will handle that
+		local_index_memory = config_local_index_memory; 
+	}
 	scan_dot_paths = config_scan_dot_paths;
 	path_to_scan = config_path_to_scan;
 	log::write(1, "indexer: save_config: saved config successfully.");
@@ -171,7 +173,9 @@ int indexer::start_from() {
 		log::write(4, "indexer: start_from: error.");
 		return 1;
 	}
+	log::write(2, "done.");
+	log::write(2, "total size in MB: " + std::to_string(index.size() / 1000000));
 	log::write(2, "writting to disk");
-	index.add_to_disk();
+        index.add_to_disk();
 	return 0;
 }
