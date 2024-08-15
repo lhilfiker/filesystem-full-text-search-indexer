@@ -21,6 +21,8 @@ void indexer::save_config(const bool config_scan_dot_paths, const std::filesyste
 		threads_to_use = 1;
 	} else if (config_threads_to_use > std::thread::hardware_concurrency()) {
 		threads_to_use = std::thread::hardware_concurrency();
+	} else {
+		threads_to_use = config_threads_to_use;
 	}
 	if (ec) {
 		threads_to_use = 1;
