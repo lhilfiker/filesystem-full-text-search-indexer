@@ -91,7 +91,7 @@ void local_index::combine(local_index& to_combine_index) {
 		if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert); loc != std::end(paths)) {
 			size_t it = std::distance(paths.begin(), loc);
 			paths_id.push_back(static_cast<uint32_t>(it));
-			path_word_count[i] = to_combine_index.path_word_count[i];
+			path_word_count[it] = to_combine_index.path_word_count[i];
 		}
 		else {
 			paths.push_back(path_to_insert);
