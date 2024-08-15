@@ -155,6 +155,10 @@ int indexer::start_from() {
 				for (std::vector<std::filesystem::path>& queue_item : queue) {
 					queue_item.clear();
 				}
+				if (local_index_memory < index.size()) {
+					log::write(1, "local index memory max exceeded. writing to disk.");
+					index.add_to_disk();
+				}
 			} else if (current_thread_filesize + filesize > thread_max_filesize) {
 				++thread_counter;
 				current_thread_filesize = filesize;
