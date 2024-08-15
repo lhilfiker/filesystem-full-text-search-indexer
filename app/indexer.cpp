@@ -86,16 +86,24 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 }
 
 local_index indexer::thread_task(const std::vector<std::filesystem::path>& paths_to_index) {
+	std::error_code ec;
+	log::write(1, "indexer: thread_task: new task started.");
 	local_index task_index;
 	for (const std::filesystem::path& path : paths_to_index) {
+		log::write(1, "indexer: indexing path: " + path.string());
 		uint32_t path_id = task_index.add_path(path);
 		std::unordered_set<std::wstring> words_to_add = get_words(path);
 		task_index.add_words(words_to_add, path_id);
+		if (ec) {
+
+		}
 	}
 	return task_index;
 }
 
 void indexer::task_start(const std::vector<std::vector<std::filesystem::path>>& paths, local_index& index) {
+	std::error_code ec;
+	log::write(1, "indexer: task_start: starting tasks jobs.");
 	std::vector<std::future<local_index>> async_awaits;
 	async_awaits.reserve(threads_to_use);
 
@@ -103,9 +111,14 @@ void indexer::task_start(const std::vector<std::vector<std::filesystem::path>>& 
 		async_awaits.emplace_back(std::async(std::launch::async, 
 			[&paths, i]() { return thread_task(paths[i]); }
 		));
+		if (ec) {
+
+		}
 	}
 
 	for(int i = 0; i < threads_to_use; ++i) {
+		log::write(1, "indexer: task_start: combining thread...");
+		async_awaits[i].wait();
 		local_index task_result = async_awaits[i].get();
 		index.combine(task_result);
 	}
@@ -131,12 +144,14 @@ int indexer::start_from() {
 				too_big_files.push_back(dir_entry.path());
 				continue;
 			}
-			if (thread_counter >= threads_to_use && current_thread_filesize + filesize >= thread_max_filesize) { // if all paths for all threads are done, index.
+			if (thread_counter == threads_to_use - 1 && current_thread_filesize + filesize > thread_max_filesize) { // if all paths for all threads are done, index.
 				thread_counter = 0;
 				current_thread_filesize = 0;
 				task_start(queue, index);
-			}
-			if (current_thread_filesize + filesize > thread_max_filesize) {
+				for (std::vector<std::filesystem::path>& queue_item : queue) {
+					queue_item.clear();
+				}
+			} else if (current_thread_filesize + filesize > thread_max_filesize) {
 				++thread_counter;
 				current_thread_filesize = filesize;
 				queue[thread_counter].push_back(dir_entry.path());
