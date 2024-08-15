@@ -91,13 +91,14 @@ void local_index::combine(local_index& to_combine_index) {
 		if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert); loc != std::end(paths)) {
 			size_t it = std::distance(paths.begin(), loc);
 			paths_id.push_back(static_cast<uint32_t>(it));
-			path_word_count[it] = to_combine_index.path_word_count[i];
+			path_word_count[i] = to_combine_index.path_word_count[i];
 		}
 		else {
 			paths.push_back(path_to_insert);
 			paths_size += path_to_insert.length();
 			paths_id.push_back(paths_last);
 			path_word_count[paths_last] = to_combine_index.path_word_count[i];
+			path_word_count_size += sizeof(to_combine_index.path_word_count[i]);
 			++paths_last;
 		}
 		++i;
@@ -111,7 +112,7 @@ void local_index::combine(local_index& to_combine_index) {
 	int to_combine_count = to_combine_index.size();
 	int local_counter = 0;
 	int to_combine_counter = 0;
-	while(local_counter < words_reversed_count + 1) {
+	while(local_counter < words_reversed_count) {
 		// if found add converted path ids
 
 		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
@@ -124,9 +125,12 @@ void local_index::combine(local_index& to_combine_index) {
 		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {
 			std::vector<uint32_t> to_add_ids;
 			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-                                to_add_ids.push_back(paths_id[remote_id]);
-                                words_and_reversed_size += sizeof(paths_id[remote_id]);
-                        }
+                                try {
+					to_add_ids.push_back(paths_id[remote_id]);
+                                	words_and_reversed_size += sizeof(paths_id[remote_id]);
+                        
+				} catch ( ... ) { }
+			}
 			words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
 			words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
 			++to_combine_counter;
@@ -141,9 +145,11 @@ void local_index::combine(local_index& to_combine_index) {
 	while(to_combine_counter < to_combine_count) {
 	std::vector<uint32_t> to_add_ids;
                 for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-                        to_add_ids.push_back(paths_id[remote_id]);
-                        words_and_reversed_size += sizeof(paths_id[remote_id]);
-                }
+                        try {
+				to_add_ids.push_back(paths_id[remote_id]);
+                        	words_and_reversed_size += sizeof(paths_id[remote_id]);
+                	} catch ( ... ) { }
+		}
                 words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
                 words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
         	++to_combine_counter;

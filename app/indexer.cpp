@@ -118,7 +118,6 @@ void indexer::task_start(const std::vector<std::vector<std::filesystem::path>>& 
 
 	for(int i = 0; i < threads_to_use; ++i) {
 		log::write(1, "indexer: task_start: combining thread...");
-		async_awaits[i].wait();
 		local_index task_result = async_awaits[i].get();
 		index.combine(task_result);
 	}
