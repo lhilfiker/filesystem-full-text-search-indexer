@@ -80,6 +80,8 @@ void local_index::combine(local_index& to_combine_index) {
 		words_and_reversed_size = to_combine_index.words_and_reversed_size;
 		path_word_count = to_combine_index.path_word_count;
 		path_word_count_size = to_combine_index.path_word_count_size;
+		log::write(1, "copied as empty");
+		return;
 	}
 
 	std::vector<uint32_t> paths_id;
@@ -96,20 +98,20 @@ void local_index::combine(local_index& to_combine_index) {
 			paths.push_back(path_to_insert);
 			paths_size += path_to_insert.length();
 			paths_id.push_back(paths_last);
-			path_word_count[paths_last] = to_combine_index.path_word_count[i];
+			path_word_count.push_back(to_combine_index.path_word_count[i]);
 			path_word_count_size += sizeof(to_combine_index.path_word_count[i]);
 			++paths_last;
 		}
 		++i;
 	}
-
+	
 	// sort to compare them by the alphabet.
 	sort();
 	to_combine_index.sort();
 	
 	int words_reversed_count = words_and_reversed.size();
-	int to_combine_count = to_combine_index.size();
-	if (to_combine_count == 0) return;
+	int to_combine_count = to_combine_index.words_and_reversed.size();
+	if (to_combine_index.words_and_reversed.empty()) return;
 	int local_counter = 0;
 	int to_combine_counter = 0;
 	while(local_counter < words_reversed_count) {
@@ -140,7 +142,7 @@ void local_index::combine(local_index& to_combine_index) {
 	}
 
 	// add missing
-	while(to_combine_counter < to_combine_count) {
+	while(to_combine_counter >= to_combine_count) {
 		std::vector<uint32_t> to_add_ids;
                 for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
 				to_add_ids.push_back(paths_id[remote_id]);
