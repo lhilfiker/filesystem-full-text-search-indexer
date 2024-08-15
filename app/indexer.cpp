@@ -85,7 +85,7 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	return words_return;
 }
 
-local_index indexer::thread_task(const std::vector<std::filesystem::path>& paths_to_index) {
+local_index indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
 	std::error_code ec;
 	log::write(1, "indexer: thread_task: new task started.");
 	local_index task_index;

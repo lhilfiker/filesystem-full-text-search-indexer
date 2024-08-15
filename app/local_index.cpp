@@ -9,7 +9,6 @@ local_index::local_index() {
 	paths_size = 0;
 	words_and_reversed_size = 0;
 	path_word_count_size = 0;
-	words_and_reversed.reserve(1000000); // This should later be the set memory usage. For now a temp value
 }
 
 int local_index::size() {
@@ -117,19 +116,17 @@ void local_index::combine(local_index& to_combine_index) {
 		// if found add converted path ids
 		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
 			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-				words_and_reversed[local_counter].reversed.push_back(paths_id[remote_id]);
-				words_and_reversed_size += sizeof(paths_id[remote_id]);
+					words_and_reversed[local_counter].reversed.push_back(paths_id[remote_id]);
+					words_and_reversed_size += sizeof(paths_id[remote_id]);
 			}	
 		}
 		// if it wasn't found and we went passed it, add a new word.
-		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {
+		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {	
 			std::vector<uint32_t> to_add_ids;
 			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-                                try {
 					to_add_ids.push_back(paths_id[remote_id]);
                                 	words_and_reversed_size += sizeof(paths_id[remote_id]);
                         
-				} catch ( ... ) { }
 			}
 			words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
 			words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
@@ -141,14 +138,13 @@ void local_index::combine(local_index& to_combine_index) {
 		}
 		++local_counter;
 	}
+
 	// add missing
 	while(to_combine_counter < to_combine_count) {
-	std::vector<uint32_t> to_add_ids;
+		std::vector<uint32_t> to_add_ids;
                 for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-                        try {
 				to_add_ids.push_back(paths_id[remote_id]);
                         	words_and_reversed_size += sizeof(paths_id[remote_id]);
-                	} catch ( ... ) { }
 		}
                 words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
                 words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
