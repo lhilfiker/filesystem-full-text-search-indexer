@@ -27,6 +27,7 @@ void indexer::save_config(const bool config_scan_dot_paths, const std::filesyste
 	if (ec) {
 		threads_to_use = 1;
 	}
+	local_index_memory = config_local_index_memory; // TODO: VALIDATE
 	scan_dot_paths = config_scan_dot_paths;
 	path_to_scan = config_path_to_scan;
 	log::write(1, "indexer: save_config: saved config successfully.");
