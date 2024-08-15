@@ -110,11 +110,11 @@ void local_index::combine(local_index& to_combine_index) {
 	
 	int words_reversed_count = words_and_reversed.size();
 	int to_combine_count = to_combine_index.size();
+	if (to_combine_count == 0) return;
 	int local_counter = 0;
 	int to_combine_counter = 0;
 	while(local_counter < words_reversed_count) {
 		// if found add converted path ids
-
 		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
 			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
 				words_and_reversed[local_counter].reversed.push_back(paths_id[remote_id]);
@@ -134,7 +134,7 @@ void local_index::combine(local_index& to_combine_index) {
 			words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
 			words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
 			++to_combine_counter;
-			if (to_combine_counter > to_combine_count) {
+			if (to_combine_counter >= to_combine_count) {
 				to_combine_index.clear();
 				return; // finished if no more to_combine_elements.
 			}
