@@ -133,10 +133,11 @@ int indexer::start_from() {
 	bool batch_add_done = true;
 	uint32_t current_batch_add_done = 0;
 	uint32_t current_batch_add_start = 0;
-
 	uint32_t batch_queue_add_start = 0;
 	std::vector<size_t> batch_queue_added_size(threads_to_use);
 	uint32_t batch_queue_current = 0;
+	size_t paths_count = 0;
+	size_t paths_size = 0;
 
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
@@ -159,15 +160,18 @@ int indexer::start_from() {
 					if (current_batch_add_done == threads_to_use) {
 						batch_add_done = true;
 						current_batch_add_done = 0;
+						for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
+							paths_size += batch_queue_added_size[i];
+							paths_count += queue[i].size();
+							queue[i].clear();
+							batch_queue_added_size[i] = 0;
+						}
 						current_batch_add_start += threads_to_use;
 					}
 				}
 			}
 			if (batch_add_done && !queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, current_batch_add_start)) {
 				batch_add_done = false;
-				for (int to_reset = 0; threads_to_use > to_reset; ++to_reset) {
-					batch_queue_added_size[current_batch_add_done + to_reset] = 0;
-				}
 				async_awaits.clear();
 				async_awaits.reserve(threads_to_use);
 
@@ -209,7 +213,8 @@ int indexer::start_from() {
 
 		}
 	}
-	task_start(queue, index);
+
+	// TODO ADD MISSING
 
 	log::write(2, "indexer: start_from: sorting local index.");
 	index.sort();
@@ -219,6 +224,8 @@ int indexer::start_from() {
 	}
 	log::write(2, "done.");
 	log::write(2, "total size in MB: " + std::to_string(index.size() / 1000000));
+	log::write(2, "total indexed files: " + std::to_string(paths_count));
+	log::write(2, "total indexed file size in MB: " + std::to_string(paths_size / 1000000));
 	log::write(2, "writting to disk");
         index.add_to_disk();
 	return 0;
