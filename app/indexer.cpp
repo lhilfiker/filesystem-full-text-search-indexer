@@ -141,7 +141,7 @@ int indexer::start_from() {
 	size_t paths_size = 0;
 
 
-	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
+	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied, ec)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {	
 			size_t filesize = std::filesystem::file_size(dir_entry.path(), ec);
 			if (ec) continue;
