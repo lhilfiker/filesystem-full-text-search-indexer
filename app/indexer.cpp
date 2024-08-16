@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <future>
 #include <thread>
+#include <chrono>
 
 stemming::english_stem<> indexer::StemEnglish;
 bool indexer::config_loaded = false;
@@ -173,7 +174,6 @@ int indexer::start_from() {
 			if (batch_add_done && !queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, current_batch_add_start)) {
 				batch_add_done = false;
 				async_awaits.clear();
-				async_awaits.reserve(threads_to_use);
 
         			for(int i = 0; i < threads_to_use; ++i) {
                 			int queue_to_index = current_batch_add_start + i;
@@ -213,8 +213,59 @@ int indexer::start_from() {
 
 		}
 	}
+	bool all_done = false;
+	bool last_path = false;
+	while (!all_done) {
+		if(!batch_add_done) {
+                        if (async_awaits.size() == 0 && last_path) {
+				all_done = true;
+				break;
+			}
+			for (std::future<local_index>& future : async_awaits) {
+                                if (future.valid()) {
+                                        log::write(1, "indexer: task done. combining.");
+                                        local_index task_result = future.get();
+                                        index.combine(task_result);
+                                        ++current_batch_add_done;
+                                }
+                                if (current_batch_add_done == threads_to_use) {
+                                        batch_add_done = true;
+                                        current_batch_add_done = 0;
+                                        for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
+                                                paths_size += batch_queue_added_size[i];
+                                                paths_count += queue[i].size();
+                                                queue[i].clear();
+                                                batch_queue_added_size[i] = 0;
+                                        }
+                                        current_batch_add_start += threads_to_use;
+                                } else if (current_batch_add_done == async_awaits.size()) {
+                                        all_done = true;
+                                        break;
+                                }
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(50)); // to not utilize 100% cpu in the main process.
+                } else {
+			batch_add_done = false;
+                        async_awaits.clear();
 
-	// TODO ADD MISSING
+                        for(int i = 0; i < threads_to_use; ++i) {
+                                int queue_to_index = current_batch_add_start + i;
+                                if (queue.size() <= queue_to_index) {
+					last_path = true;
+					continue; // to prevent accessing elementsout of range.
+				}
+				async_awaits.emplace_back(std::async(std::launch::async,
+                                        [&queue, queue_to_index]() { return thread_task(queue[queue_to_index]); }
+                                ));
+                                if (ec) {
+
+                                }
+                        }
+
+                }
+		
+	}
+
 
 	log::write(2, "indexer: start_from: sorting local index.");
 	index.sort();
@@ -226,6 +277,7 @@ int indexer::start_from() {
 	log::write(2, "total size in MB: " + std::to_string(index.size() / 1000000));
 	log::write(2, "total indexed files: " + std::to_string(paths_count));
 	log::write(2, "total indexed file size in MB: " + std::to_string(paths_size / 1000000));
+	log::write(2, "files too big to be indexed: " + std::to_string(too_big_files.size()));
 	log::write(2, "writting to disk");
         index.add_to_disk();
 	return 0;
