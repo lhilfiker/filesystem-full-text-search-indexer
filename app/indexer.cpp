@@ -149,7 +149,25 @@ int indexer::start_from() {
                                 too_big_files.push_back(dir_entry.path());
                                 continue;
                         }
+			if (threads_to_use == 1) {
+				if (current_thread_filesize + filesize > thread_max_filesize) {
+					index.add_to_disk();
+					paths_size += current_thread_filesize;
+					current_thread_filesize = 0;
+				}
+				current_thread_filesize += filesize;
+				++paths_count;
 
+				log::write(1, "indexer: indexing path: " + dir_entry.path().string());
+                		uint32_t path_id = index.add_path(dir_entry.path());
+                		std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
+                		index.add_words(words_to_add, path_id);
+        	        	if (ec) {
+	
+	                	}
+
+				continue;
+			}
 			if(!batch_add_done) {
 				for (std::future<local_index>& future : async_awaits) {
 					if (future.valid()) {
@@ -213,59 +231,63 @@ int indexer::start_from() {
 
 		}
 	}
-	bool all_done = false;
-	bool last_path = false;
-	while (!all_done) {
-		if(!batch_add_done) {
-                        if (async_awaits.size() == 0 && last_path) {
-				all_done = true;
-				break;
-			}
-			for (std::future<local_index>& future : async_awaits) {
-                                if (future.valid()) {
-                                        log::write(1, "indexer: task done. combining.");
-                                        local_index task_result = future.get();
-                                        index.combine(task_result);
-                                        ++current_batch_add_done;
-                                }
-                                if (current_batch_add_done == threads_to_use) {
-                                        batch_add_done = true;
-                                        current_batch_add_done = 0;
-                                        for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
-                                                paths_size += batch_queue_added_size[i];
-                                                paths_count += queue[i].size();
-                                                queue[i].clear();
-                                                batch_queue_added_size[i] = 0;
-                                        }
-                                        current_batch_add_start += threads_to_use;
-                                } else if (current_batch_add_done == async_awaits.size()) {
-                                        all_done = true;
-                                        break;
-                                }
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(50)); // to not utilize 100% cpu in the main process.
-                } else {
-			batch_add_done = false;
-                        async_awaits.clear();
-
-                        for(int i = 0; i < threads_to_use; ++i) {
-                                int queue_to_index = current_batch_add_start + i;
-                                if (queue.size() <= queue_to_index) {
-					last_path = true;
-					continue; // to prevent accessing elementsout of range.
+	if (threads_to_use != 1) {
+		bool all_done = false;
+		bool last_path = false;
+		while (!all_done) {
+			if(!batch_add_done) {
+                        	if (async_awaits.size() == 0 && last_path) {
+					all_done = true;
+					break;
 				}
-				async_awaits.emplace_back(std::async(std::launch::async,
-                                        [&queue, queue_to_index]() { return thread_task(queue[queue_to_index]); }
-                                ));
-                                if (ec) {
+				for (std::future<local_index>& future : async_awaits) {
+                                	if (future.valid()) {
+                                        	log::write(1, "indexer: task done. combining.");
+                                        	local_index task_result = future.get();
+                                        	index.combine(task_result);
+                                        	++current_batch_add_done;
+                                	}
+                                	if (current_batch_add_done == threads_to_use) {
+                                       	 	batch_add_done = true;
+                                        	current_batch_add_done = 0;
+                                        	for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
+                                                	paths_size += batch_queue_added_size[i];
+                                                	paths_count += queue[i].size();
+                                                	queue[i].clear();
+                                                	batch_queue_added_size[i] = 0;
+                                        	}
+                                        	current_batch_add_start += threads_to_use;
+                                	} else if (current_batch_add_done == async_awaits.size()) {
+                                        	all_done = true;
+                                        	break;
+                                	}
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(50)); // to not utilize 100% cpu in the main process.
+                	} else {
+				batch_add_done = false;
+                        	async_awaits.clear();
 
-                                }
-                        }
+                        	for(int i = 0; i < threads_to_use; ++i) {
+                                	int queue_to_index = current_batch_add_start + i;
+                                	if (queue.size() <= queue_to_index) {
+						last_path = true;
+						continue; // to prevent accessing elementsout of range.
+					}
+					async_awaits.emplace_back(std::async(std::launch::async,
+                                        	[&queue, queue_to_index]() { return thread_task(queue[queue_to_index]); }
+                         		));
+                                	if (ec) {
 
-                }
+                                	}
+                        	}
+
+                	}
 		
+		}
 	}
-
+	if (threads_to_use == 1) {
+		paths_size += current_thread_filesize;
+	}
 
 	log::write(2, "indexer: start_from: sorting local index.");
 	index.sort();
