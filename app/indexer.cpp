@@ -156,7 +156,8 @@ int indexer::start_from() {
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {	
-			size_t filesize = std::filesystem::file_size(dir_entry.path());
+			size_t filesize = std::filesystem::file_size(dir_entry.path(), ec);
+			if (ec) continue;
 			if (filesize > thread_max_filesize) {
 				too_big_files.push_back(dir_entry.path());
 				continue;
@@ -176,10 +177,10 @@ int indexer::start_from() {
 				++thread_counter;
 				current_thread_filesize = filesize;
 				queue[thread_counter].push_back(dir_entry.path());
-			} else {
-				current_thread_filesize += filesize;
-				queue[thread_counter].push_back(dir_entry.path());
+				continue;
 			}
+			current_thread_filesize += filesize;
+			queue[thread_counter].push_back(dir_entry.path());
 		}
 	}
 	task_start(queue, index);
