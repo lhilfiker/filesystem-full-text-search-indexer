@@ -56,7 +56,7 @@ class indexer {
 		static bool extension_allowed(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
 		static local_index thread_task(const std::vector<std::filesystem::path> paths_to_index);
-		static void task_start(const std::vector<std::vector<std::filesystem::path>>& paths, local_index& index);
+		static bool queue_has_place(const std::vector<size_t>& batch_queue_added_size, const size_t& filesize, const size_t& max_filesize, const uint32_t& current_batch_add_start);
 	public:
 		static void save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan, const int config_threads_to_use, const size_t& config_local_index_memory);
 		static int start_from();
