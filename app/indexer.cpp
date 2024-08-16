@@ -112,32 +112,19 @@ void indexer::task_start(const std::vector<std::vector<std::filesystem::path>>& 
 	std::vector<std::future<local_index>> async_awaits;
 	async_awaits.reserve(threads_to_use);
 
-	if (threads_to_use != 1) {
-		for(int i = 0; i < threads_to_use; ++i) {
-			async_awaits.emplace_back(std::async(std::launch::async, 
-				[&paths, i]() { return thread_task(paths[i]); }
-			));
-			if (ec) {
+	for(int i = 0; i < threads_to_use; ++i) {
+		async_awaits.emplace_back(std::async(std::launch::async, 
+			[&paths, i]() { return thread_task(paths[i]); }
+		));
+		if (ec) {
 
-			}
 		}
+	}
 
-		for(int i = 0; i < threads_to_use; ++i) {
-			log::write(1, "indexer: task_start: combining thread...");
-			local_index task_result = async_awaits[i].get();
-			index.combine(task_result);
-		}
-	} else {
-		std::error_code ect;
-		for (const std::filesystem::path& path : paths[0]) {
-			log::write(1, "indexer: indexing path: " + path.string());
-	                uint32_t path_id = index.add_path(path);
-        	        std::unordered_set<std::wstring> words_to_add = get_words(path);
-                	index.add_words(words_to_add, path_id);
-			if (ect) {
-				log::write(3, "indexer: error while indexing path: " + path.string());
-			}
-		}
+	for(int i = 0; i < threads_to_use; ++i) {
+		log::write(1, "indexer: task_start: combining thread...");
+		local_index task_result = async_awaits[i].get();
+		index.combine(task_result);
 	}
 }
 
