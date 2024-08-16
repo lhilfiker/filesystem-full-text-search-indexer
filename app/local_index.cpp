@@ -10,7 +10,6 @@ local_index::local_index() {
 	words_size = 0;
 	reversed_size = 0;
 	path_word_count_size = 0;
-	words_and_reversed.reserve(1000000); // This should later be the set memory usage. For now a temp value
 }
 
 int local_index::size() {
@@ -71,5 +70,91 @@ void local_index::sort() {
 void local_index::add_to_disk() {
 	index::add(paths, paths_size, path_word_count, path_word_count_size, words_and_reversed, words_size, reversed_size);
 	clear();
+	return;
+}
+ 
+void local_index::combine(local_index& to_combine_index) {
+	log::write(1, "local_index: combine: start");
+	// if empty just add directly
+	if (paths_size == 0 && words_and_reversed_size == 0 && path_word_count_size == 0) {
+		paths = to_combine_index.paths;
+		paths_size = to_combine_index.paths_size;
+		words_and_reversed = to_combine_index.words_and_reversed;
+		words_and_reversed_size = to_combine_index.words_and_reversed_size;
+		path_word_count = to_combine_index.path_word_count;
+		path_word_count_size = to_combine_index.path_word_count_size;
+		log::write(1, "copied as empty");
+		return;
+	}
+
+	std::vector<uint32_t> paths_id;
+	size_t paths_last = paths.size();
+	int i = 0;
+
+	for (const std::string& path_to_insert : to_combine_index.paths) {
+		if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert); loc != std::end(paths)) {
+			size_t it = std::distance(paths.begin(), loc);
+			paths_id.push_back(static_cast<uint32_t>(it));
+			path_word_count[it] = to_combine_index.path_word_count[i];
+		}
+		else {
+			paths.push_back(path_to_insert);
+			paths_size += path_to_insert.length();
+			paths_id.push_back(paths_last);
+			path_word_count.push_back(to_combine_index.path_word_count[i]);
+			path_word_count_size += sizeof(to_combine_index.path_word_count[i]);
+			++paths_last;
+		}
+		++i;
+	}
+	
+	// sort to compare them by the alphabet.
+	sort();
+	to_combine_index.sort();
+	
+	int words_reversed_count = words_and_reversed.size();
+	int to_combine_count = to_combine_index.words_and_reversed.size();
+	if (to_combine_index.words_and_reversed.empty()) return;
+	int local_counter = 0;
+	int to_combine_counter = 0;
+	while(local_counter < words_reversed_count) {
+		// if found add converted path ids
+		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
+			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
+					words_and_reversed[local_counter].reversed.push_back(paths_id[remote_id]);
+					words_and_reversed_size += sizeof(paths_id[remote_id]);
+			}	
+		}
+		// if it wasn't found and we went passed it, add a new word.
+		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {	
+			std::vector<uint32_t> to_add_ids;
+			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
+					to_add_ids.push_back(paths_id[remote_id]);
+                                	words_and_reversed_size += sizeof(paths_id[remote_id]);
+                        
+			}
+			words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
+			words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+			++to_combine_counter;
+			if (to_combine_counter >= to_combine_count) {
+				to_combine_index.clear();
+				return; // finished if no more to_combine_elements.
+			}
+		}
+		++local_counter;
+	}
+
+	// add missing
+	while(to_combine_counter >= to_combine_count) {
+		std::vector<uint32_t> to_add_ids;
+                for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
+				to_add_ids.push_back(paths_id[remote_id]);
+                        	words_and_reversed_size += sizeof(paths_id[remote_id]);
+		}
+                words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
+                words_and_reversed_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+        	++to_combine_counter;
+	}
+	to_combine_index.clear();
 	return;
 }
