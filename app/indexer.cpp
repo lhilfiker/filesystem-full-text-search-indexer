@@ -176,7 +176,7 @@ int indexer::start_from() {
 						index.combine(task_result);
 						if (index.size() >= local_index_memory) {
 							log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
-							index.add_to_disk()
+							index.add_to_disk();
 						}
 						++current_batch_add_done;
 					}
@@ -251,7 +251,7 @@ int indexer::start_from() {
                                         	index.combine(task_result);
 	                                        if (index.size() >= local_index_memory) {
                                                         log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
-                                                        index.add_to_disk()
+                                                        index.add_to_disk();
                                                 }
                                         	++current_batch_add_done;
                                 	}
