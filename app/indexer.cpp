@@ -106,26 +106,14 @@ local_index indexer::thread_task(const std::vector<std::filesystem::path> paths_
 	return task_index;
 }
 
-void indexer::task_start(const std::vector<std::vector<std::filesystem::path>>& paths, local_index& index) {
-	std::error_code ec;
-	log::write(1, "indexer: task_start: starting tasks jobs.");
-	std::vector<std::future<local_index>> async_awaits;
-	async_awaits.reserve(threads_to_use);
-
-	for(int i = 0; i < threads_to_use; ++i) {
-		async_awaits.emplace_back(std::async(std::launch::async, 
-			[&paths, i]() { return thread_task(paths[i]); }
-		));
-		if (ec) {
-
+bool indexer::queue_has_place(const std::vector<size_t>& batch_queue_added_size, const size_t& filesize, const size_t& max_filesize, const uint32_t& current_batch_add_start) {
+	if (batch_queue_added_size.size() <= current_batch_add_start) return true;
+	for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
+		if (batch_queue_added_size[i] + filesize <= max_filesize) {
+			return true;
 		}
-	}
-
-	for(int i = 0; i < threads_to_use; ++i) {
-		log::write(1, "indexer: task_start: combining thread...");
-		local_index task_result = async_awaits[i].get();
-		index.combine(task_result);
-	}
+	}	
+	return false;
 }
 
 int indexer::start_from() {
@@ -140,34 +128,85 @@ int indexer::start_from() {
 	size_t current_thread_filesize = 0;
 	size_t thread_max_filesize = local_index_memory / threads_to_use;
 	uint16_t thread_counter = 0;
+	std::vector<std::future<local_index>> async_awaits;
+
+	bool batch_add_done = true;
+	uint32_t current_batch_add_done = 0;
+	uint32_t current_batch_add_start = 0;
+
+	uint32_t batch_queue_add_start = 0;
+	std::vector<size_t> batch_queue_added_size(threads_to_use);
+	uint32_t batch_queue_current = 0;
+
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {	
 			size_t filesize = std::filesystem::file_size(dir_entry.path(), ec);
 			if (ec) continue;
-			if (filesize > thread_max_filesize) {
-				too_big_files.push_back(dir_entry.path());
-				continue;
-			}
-			if (thread_counter == threads_to_use - 1 && current_thread_filesize + filesize > thread_max_filesize) { // if all paths for all threads are done, index.
-				thread_counter = 0;
-				current_thread_filesize = 0;
-				task_start(queue, index);
-				for (std::vector<std::filesystem::path>& queue_item : queue) {
-					queue_item.clear();
+	                if (filesize > thread_max_filesize) {
+                                too_big_files.push_back(dir_entry.path());
+                                continue;
+                        }
+
+			if(!batch_add_done) {
+				for (std::future<local_index>& future : async_awaits) {
+					if (future.valid()) {
+						log::write(1, "indexer: task done. combining.");
+						local_index task_result = future.get();
+						index.combine(task_result);
+						++current_batch_add_done;
+					}
+					if (current_batch_add_done == threads_to_use) {
+						batch_add_done = true;
+						current_batch_add_done = 0;
+						current_batch_add_start += threads_to_use;
+					}
 				}
-				if (local_index_memory < index.size()) {
-					log::write(1, "local index memory max exceeded. writing to disk.");
-					index.add_to_disk();
-				}
-			} else if (current_thread_filesize + filesize > thread_max_filesize) {
-				++thread_counter;
-				current_thread_filesize = filesize;
-				queue[thread_counter].push_back(dir_entry.path());
-				continue;
 			}
-			current_thread_filesize += filesize;
-			queue[thread_counter].push_back(dir_entry.path());
+			if (batch_add_done && !queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, current_batch_add_start)) {
+				batch_add_done = false;
+				for (int to_reset = 0; threads_to_use > to_reset; ++to_reset) {
+					batch_queue_added_size[current_batch_add_done + to_reset] = 0;
+				}
+				async_awaits.clear();
+				async_awaits.reserve(threads_to_use);
+
+        			for(int i = 0; i < threads_to_use; ++i) {
+                			int queue_to_index = current_batch_add_start + i;
+					async_awaits.emplace_back(std::async(std::launch::async,
+                        			[&queue, queue_to_index]() { return thread_task(queue[queue_to_index]); }
+                			));
+                			if (ec) {
+
+                			}
+	        		}
+
+			}
+
+			if (!queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, batch_queue_add_start)) {
+                                for (int i = 0; threads_to_use > i; ++i) {
+                                	batch_queue_added_size.push_back(0);
+                                        queue.push_back({});
+                                        ++batch_queue_add_start;
+                                }
+                                batch_queue_current = 0;
+			}
+			bool added = false;
+			while(!added) {
+				if(batch_queue_added_size[batch_queue_add_start + batch_queue_current] + filesize <= thread_max_filesize) {
+					
+					queue[batch_queue_add_start + batch_queue_current].push_back(dir_entry.path());
+					batch_queue_added_size[batch_queue_add_start + batch_queue_current] += filesize;
+					added = true;
+				}
+				if (batch_queue_current + 1 == threads_to_use) {
+					batch_queue_current = 0;
+				}
+				else {
+					++batch_queue_current;
+				}
+			}
+
 		}
 	}
 	task_start(queue, index);
