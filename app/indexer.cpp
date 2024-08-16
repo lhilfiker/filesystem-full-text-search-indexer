@@ -164,10 +164,10 @@ int indexer::start_from() {
 				++thread_counter;
 				current_thread_filesize = filesize;
 				queue[thread_counter].push_back(dir_entry.path());
-			} else {
-				current_thread_filesize += filesize;
-				queue[thread_counter].push_back(dir_entry.path());
+				continue;
 			}
+			current_thread_filesize += filesize;
+			queue[thread_counter].push_back(dir_entry.path());
 		}
 	}
 	task_start(queue, index);
