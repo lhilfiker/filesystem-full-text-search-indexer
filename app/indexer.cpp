@@ -174,6 +174,10 @@ int indexer::start_from() {
 						log::write(1, "indexer: task done. combining.");
 						local_index task_result = future.get();
 						index.combine(task_result);
+						if (index.size() >= local_index_memory) {
+							log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
+							index.add_to_disk()
+						}
 						++current_batch_add_done;
 					}
 					if (current_batch_add_done == threads_to_use) {
@@ -245,6 +249,10 @@ int indexer::start_from() {
                                         	log::write(1, "indexer: task done. combining.");
                                         	local_index task_result = future.get();
                                         	index.combine(task_result);
+	                                        if (index.size() >= local_index_memory) {
+                                                        log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
+                                                        index.add_to_disk()
+                                                }
                                         	++current_batch_add_done;
                                 	}
                                 	if (current_batch_add_done == threads_to_use) {
