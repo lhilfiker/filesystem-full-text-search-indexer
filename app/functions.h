@@ -10,6 +10,7 @@
 #include "lib/mio.hpp"
 #include "lib/english_stem.h"
 #include <unordered_map>
+#include <future>
 
 // local_index.cpp
 
@@ -41,6 +42,11 @@ class local_index {
 		void combine(local_index& to_combine_index);
 
 	friend void combine(local_index& to_combine_index);
+};
+
+struct threads_jobs {
+        std::future<local_index> future;
+        uint32_t queue_id;
 };
 
 // indexer.cpp

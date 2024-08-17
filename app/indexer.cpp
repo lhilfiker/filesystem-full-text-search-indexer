@@ -129,16 +129,17 @@ int indexer::start_from() {
 	size_t current_thread_filesize = 0;
 	size_t thread_max_filesize = local_index_memory / threads_to_use;
 	uint16_t thread_counter = 0;
-	std::vector<std::future<local_index>> async_awaits;
 
-	bool batch_add_done = true;
-	uint32_t current_batch_add_done = 0;
-	uint32_t current_batch_add_start = 0;
+	uint32_t current_batch_add_running = 0;
+	uint32_t current_batch_add_next = 0;
 	uint32_t batch_queue_add_start = 0;
 	std::vector<size_t> batch_queue_added_size(threads_to_use);
 	uint32_t batch_queue_current = 0;
 	size_t paths_count = 0;
 	size_t paths_size = 0;
+	bool needs_a_queue = true;
+	std::vector<threads_jobs> async_awaits;
+	async_awaits.reserve(threads_to_use);
 
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied, ec)) {
@@ -168,45 +169,42 @@ int indexer::start_from() {
 
 				continue;
 			}
-			if(!batch_add_done) {
-				for (std::future<local_index>& future : async_awaits) {
-					if (future.valid()) {
+			if(current_batch_add_running != 0 && !needs_a_queue) {
+				int i = 0;
+				for (threads_jobs& job : async_awaits) {
+					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
 						log::write(1, "indexer: task done. combining.");
-						local_index task_result = future.get();
+						local_index task_result = job.future.get();
 						index.combine(task_result);
 						if (index.size() >= local_index_memory) {
 							log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
 							index.add_to_disk();
 						}
-						++current_batch_add_done;
+						paths_size += batch_queue_added_size[job.queue_id];
+						paths_count += queue[job.queue_id].size();
+						batch_queue_added_size[job.queue_id] = 0;
+						queue[job.queue_id].clear();
+						async_awaits.erase(async_awaits.begin() + i);
+						--i;
+						--current_batch_add_running;
+						break;
 					}
-					if (current_batch_add_done == threads_to_use) {
-						batch_add_done = true;
-						current_batch_add_done = 0;
-						for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
-							paths_size += batch_queue_added_size[i];
-							paths_count += queue[i].size();
-							queue[i].clear();
-							batch_queue_added_size[i] = 0;
-						}
-						current_batch_add_start += threads_to_use;
-					}
+					++i;
 				}
 			}
-			if (batch_add_done && !queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, current_batch_add_start)) {
-				batch_add_done = false;
-				async_awaits.clear();
-
-        			for(int i = 0; i < threads_to_use; ++i) {
-                			int queue_to_index = current_batch_add_start + i;
-					async_awaits.emplace_back(std::async(std::launch::async,
-                        			[&queue, queue_to_index]() { return thread_task(queue[queue_to_index]); }
-                			));
-                			if (ec) {
-
-                			}
-	        		}
-
+			if (current_batch_add_running != threads_to_use && !needs_a_queue) {
+				for (int i = current_batch_add_running; i < threads_to_use; ++i) {
+					if (queue.size() <= current_batch_add_next + threads_to_use) {
+						needs_a_queue = true;
+						break;
+					}; //if no availible queues, no adding.
+					log::write(1, "indexer: not used up threads slot. creating a new one.");
+					async_awaits.emplace_back(threads_jobs{std::async(std::launch::async,
+                                                [&queue, current_batch_add_next]() { return thread_task(queue[current_batch_add_next]); }
+                                        ), current_batch_add_next});
+					++current_batch_add_next;
+					++current_batch_add_running;
+				}
 			}
 
 			if (!queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, batch_queue_add_start)) {
@@ -215,6 +213,7 @@ int indexer::start_from() {
                                         queue.push_back({});
                                         ++batch_queue_add_start;
                                 }
+				needs_a_queue = false;
                                 batch_queue_current = 0;
 			}
 			bool added = false;
@@ -237,60 +236,45 @@ int indexer::start_from() {
 	}
 	if (threads_to_use != 1) {
 		bool all_done = false;
-		bool last_path = false;
 		while (!all_done) {
-			if(!batch_add_done) {
-                        	if (async_awaits.size() == 0 && last_path) {
-					all_done = true;
-					break;
-				}
-				for (std::future<local_index>& future : async_awaits) {
-                                	if (future.valid()) {
-                                        	log::write(1, "indexer: task done. combining.");
-                                        	local_index task_result = future.get();
-                                        	index.combine(task_result);
-	                                        if (index.size() >= local_index_memory) {
+			if(current_batch_add_running != 0 && !needs_a_queue) {
+                                int i = 0;
+                                for (threads_jobs& job : async_awaits) {
+					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
+                                                log::write(1, "indexer: task done. combining.");
+                                                local_index task_result = job.future.get();
+                                                index.combine(task_result);
+                                                if (index.size() >= local_index_memory) {
                                                         log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
                                                         index.add_to_disk();
                                                 }
-                                        	++current_batch_add_done;
-                                	}
-                                	if (current_batch_add_done == threads_to_use) {
-                                       	 	batch_add_done = true;
-                                        	current_batch_add_done = 0;
-                                        	for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
-                                                	paths_size += batch_queue_added_size[i];
-                                                	paths_count += queue[i].size();
-                                                	queue[i].clear();
-                                                	batch_queue_added_size[i] = 0;
-                                        	}
-                                        	current_batch_add_start += threads_to_use;
-                                	} else if (current_batch_add_done == async_awaits.size()) {
-                                        	all_done = true;
-                                        	break;
-                                	}
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(50)); // to not utilize 100% cpu in the main process.
-                	} else {
-				batch_add_done = false;
-                        	async_awaits.clear();
-
-                        	for(int i = 0; i < threads_to_use; ++i) {
-                                	int queue_to_index = current_batch_add_start + i;
-                                	if (queue.size() <= queue_to_index) {
-						last_path = true;
-						continue; // to prevent accessing elementsout of range.
+                                                paths_size += batch_queue_added_size[job.queue_id];
+                                                paths_count += queue[job.queue_id].size();
+                                                batch_queue_added_size[job.queue_id] = 0;
+                                                queue[job.queue_id].clear();
+                                                async_awaits.erase(async_awaits.begin() + i);
+                                                --i;
+                                                --current_batch_add_running;
+						break;
 					}
-					async_awaits.emplace_back(std::async(std::launch::async,
-                                        	[&queue, queue_to_index]() { return thread_task(queue[queue_to_index]); }
-                         		));
-                                	if (ec) {
-
-                                	}
-                        	}
-
-                	}
-		
+                                        ++i;
+                                }
+				std::this_thread::sleep_for(std::chrono::milliseconds(50)); // to not utilize 100% cpu in the main process.
+			}
+                        if (current_batch_add_running != threads_to_use) {
+                                for (int i = current_batch_add_running; i < threads_to_use; ++i) {
+					if (queue.size() <= current_batch_add_next) {
+						if (current_batch_add_running == 0) all_done = true;
+						break;
+					} 
+       					log::write(1, "indexer: not used up threads slot. creating a new one.");
+					async_awaits.emplace_back(threads_jobs{std::async(std::launch::async,
+                                                [&queue, current_batch_add_next]() { return thread_task(queue[current_batch_add_next]); }
+                                        ), current_batch_add_next});
+                                        ++current_batch_add_next;
+                                        ++current_batch_add_running;
+                                }
+                        }
 		}
 	}
 	if (threads_to_use == 1) {
