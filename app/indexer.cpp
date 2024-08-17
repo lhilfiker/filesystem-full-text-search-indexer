@@ -137,6 +137,7 @@ int indexer::start_from() {
 	uint32_t batch_queue_current = 0;
 	size_t paths_count = 0;
 	size_t paths_size = 0;
+	bool needs_a_queue = true;
 	std::vector<threads_jobs> async_awaits;
 	async_awaits.reserve(threads_to_use);
 
@@ -168,11 +169,10 @@ int indexer::start_from() {
 
 				continue;
 			}
-			if(current_batch_add_running != 0) {
+			if(current_batch_add_running != 0 && !needs_a_queue) {
 				int i = 0;
-				bool done = false;
 				for (threads_jobs& job : async_awaits) {
-					if (!done && job.future.valid()) {
+					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
 						log::write(1, "indexer: task done. combining.");
 						local_index task_result = job.future.get();
 						index.combine(task_result);
@@ -187,14 +187,17 @@ int indexer::start_from() {
 						async_awaits.erase(async_awaits.begin() + i);
 						--i;
 						--current_batch_add_running;
-						done = true;
+						break;
 					}
 					++i;
 				}
 			}
-			if (current_batch_add_running != threads_to_use) {
+			if (current_batch_add_running != threads_to_use && !needs_a_queue) {
 				for (int i = current_batch_add_running; i < threads_to_use; ++i) {
-					if (queue.size() <= current_batch_add_next + threads_to_use) break; //if no availible queues, no adding.
+					if (queue.size() <= current_batch_add_next + threads_to_use) {
+						needs_a_queue = true;
+						break;
+					}; //if no availible queues, no adding.
 					log::write(1, "indexer: not used up threads slot. creating a new one.");
 					async_awaits.emplace_back(threads_jobs{std::async(std::launch::async,
                                                 [&queue, current_batch_add_next]() { return thread_task(queue[current_batch_add_next]); }
@@ -210,6 +213,7 @@ int indexer::start_from() {
                                         queue.push_back({});
                                         ++batch_queue_add_start;
                                 }
+				needs_a_queue = false;
                                 batch_queue_current = 0;
 			}
 			bool added = false;
@@ -233,11 +237,10 @@ int indexer::start_from() {
 	if (threads_to_use != 1) {
 		bool all_done = false;
 		while (!all_done) {
-			if(current_batch_add_running != 0) {
+			if(current_batch_add_running != 0 && !needs_a_queue) {
                                 int i = 0;
-				bool done = false;
                                 for (threads_jobs& job : async_awaits) {
-					if (!done && job.future.valid()) {
+					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
                                                 log::write(1, "indexer: task done. combining.");
                                                 local_index task_result = job.future.get();
                                                 index.combine(task_result);
@@ -252,7 +255,7 @@ int indexer::start_from() {
                                                 async_awaits.erase(async_awaits.begin() + i);
                                                 --i;
                                                 --current_batch_add_running;
-						done = true;
+						break;
 					}
                                         ++i;
                                 }
