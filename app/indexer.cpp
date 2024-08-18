@@ -128,6 +128,7 @@ int indexer::start_from() {
 	std::vector<std::filesystem::path> too_big_files;
 	size_t current_thread_filesize = 0;
 	size_t thread_max_filesize = local_index_memory / threads_to_use;
+	
 	uint16_t thread_counter = 0;
 
 	uint32_t current_batch_add_running = 0;
@@ -140,7 +141,6 @@ int indexer::start_from() {
 	bool needs_a_queue = true;
 	std::vector<threads_jobs> async_awaits;
 	async_awaits.reserve(threads_to_use);
-
 
 	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied, ec)) {
 		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {	
@@ -192,8 +192,8 @@ int indexer::start_from() {
 					++i;
 				}
 			}
-			if (current_batch_add_running != threads_to_use && !needs_a_queue) {
-				for (int i = current_batch_add_running; i < threads_to_use; ++i) {
+			if (current_batch_add_running != threads_to_use - 1 && !needs_a_queue) {
+				for (int i = current_batch_add_running; i < threads_to_use - 1; ++i) {
 					if (queue.size() <= current_batch_add_next + threads_to_use) {
 						needs_a_queue = true;
 						break;
@@ -224,7 +224,7 @@ int indexer::start_from() {
 					batch_queue_added_size[batch_queue_add_start + batch_queue_current] += filesize;
 					added = true;
 				}
-				if (batch_queue_current + 1 == threads_to_use) {
+				if (batch_queue_current + 1 == threads_to_use - 1) {
 					batch_queue_current = 0;
 				}
 				else {
