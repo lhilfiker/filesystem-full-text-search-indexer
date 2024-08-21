@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <fstream>
 #include <array>
+#include <bitset>
 
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
@@ -223,7 +224,7 @@ int index::uninitialize() {
 	return 0;
 }
 
-int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_size_l, const size_t& reversed_size_t) {
+int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed_l, const size_t& words_size_l, const size_t& reversed_size_l) {
 	std::error_code ec;
 	if (first_time) {
 		log::write(2, "index: add: first time write.");
@@ -231,9 +232,13 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		uint64_t file_location = 0;
 		paths_size_buffer = paths.size() + paths_size_l;	
 		paths_count_size_buffer = paths_count_size_l;
+		words_size_buffer = ((words_size_l + words_reversed_l.size()) / 8) * 5; // we save it as 5 bits instead of 8 (1 byte)
+		words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for each letter in the alphabet.
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
 		resize(index_path / "paths_count.index", paths_count_size_buffer);
+		resize(index_path / "words.index", words_size_buffer);
+		resize(index_path / "words_f.index", words_f_size_buffer);
 		map();
 		for (const std::string& path : paths) {
 			for (const char& c : path) {
@@ -261,11 +266,64 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		
 		log::write(2, "index: add: paths_count written.");
 		// words & words_f & reversed
-		std::array<uint32_t, 26> words_f;
+		std::array<uint64_t, 26> words_f;
+		char current_char = '0';
+		uint32_t current_word = 0;
+		file_location = 0;
+		for (const words_reversed& word : words_reversed_l ) {
+			if (word.word[0] != current_char) {
+				current_char = word.word[0];
+				words_f[current_char - 'a'] = file_location;
+			}
+			std::vector<bool> all_bits;
+			all_bits.reserve(word.word.length() * 5);
+			for (const char c: word.word) {
+				unsigned char value = c - 'a';
+				std::bitset<5> bits(value);
+				for (int i = 4; i >= 0; --i) {
+					all_bits.push_back(bits[i]);
+				}
+			}
+			//insert new word char
+			std::bitset<5> bits(29);
+			for (int i = 4; i >= 0; --i) {
+				all_bits.push_back(bits[i]);
+			}
+
+
+			for (size_t i = 0; i < all_bits.size(); ++i) {
+				mmap_words[file_location + i] = all_bits[i] ? 1 : 0;
+			}
+			file_location += all_bits.size();
+
+			++current_word;
+		}
+		words_size = file_location;
+		log::write(2, "indexer: add: words written");
 		
+		file_location = 0;
+                for (const uint64_t& word_start_f : words_f) {
+                        mmap_words_f[file_location]     = (word_start_f >> 56) & 0xFF;
+                        mmap_words_f[file_location + 1] = (word_start_f >> 48) & 0xFF;
+                        mmap_words_f[file_location + 2] = (word_start_f >> 40)  & 0xFF; 
+                        mmap_words_f[file_location + 3] = (word_start_f >> 32)  & 0xFF;
+                        mmap_words_f[file_location + 4] = (word_start_f >> 24)  & 0xFF;
+                        mmap_words_f[file_location + 5] = (word_start_f >> 16)  & 0xFF;
+                        mmap_words_f[file_location + 6] = (word_start_f >> 8)  & 0xFF;
+			mmap_words_f[file_location + 7] = word_start_f & 0xFF;
+                        file_location += 8;
+                }
+		words_f_size = file_location;
+		log::write(2, "indexer: add: words_f written");
+		// reversed & additional
+		file_location = 0;
+
+
 		unmap();
                 resize(index_path / "paths_count.index", paths_count_size);
                 resize(index_path / "paths.index", paths_size);
+		resize(index_path / "words.index", words_size);
+		resize(index_path / "words_f.index", words_f_size);
 		map();
 		first_time = false;
 

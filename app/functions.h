@@ -127,7 +127,7 @@ class index {
                 static bool is_index_mapped();
 		static int initialize();
                 static int uninitialize();	
-		static int add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& path_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_size_l, const size_t& reversed_size_l);
+		static int add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& path_count_size_l, std::vector<words_reversed>& words_reversed_l, const size_t& words_size_l, const size_t& reversed_size_l);
 };
 
 
