@@ -224,7 +224,7 @@ int indexer::start_from() {
 					batch_queue_added_size[batch_queue_add_start + batch_queue_current] += filesize;
 					added = true;
 				}
-				if (batch_queue_current + 1 == threads_to_use - 1) {
+				if (batch_queue_current + 1 == threads_to_use) {
 					batch_queue_current = 0;
 				}
 				else {
