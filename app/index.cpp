@@ -7,6 +7,13 @@
 #include <array>
 #include <bitset>
 
+union bit_byte {
+	std::bitset<8> bits;
+	unsigned char all;
+
+	bit_byte() : all(0) {}
+};
+
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
 bool index::first_time = false;
@@ -232,7 +239,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		uint64_t file_location = 0;
 		paths_size_buffer = paths.size() + paths_size_l;	
 		paths_count_size_buffer = paths_count_size_l;
-		words_size_buffer = ((words_size_l + words_reversed_l.size()) / 8) * 5; // we save it as 5 bits instead of 8 (1 byte)
+		words_size_buffer = (((words_size_l + words_reversed_l.size()) * 5) / 8) + 5; // we save one char  as 5 bits instead of 8 (1 byte) + place for end of file char and buffer.
 		words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for each letter in the alphabet.
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
@@ -270,6 +277,8 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		char current_char = '0';
 		uint32_t current_word = 0;
 		file_location = 0;
+		bit_byte current_byte;
+		int bit_count = 7;
 		for (const words_reversed& word : words_reversed_l ) {
 			if (word.word[0] != current_char) {
 				current_char = word.word[0];
@@ -278,26 +287,61 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			std::vector<bool> all_bits;
 			all_bits.reserve(word.word.length() * 5);
 			for (const char c: word.word) {
+
 				unsigned char value = c - 'a';
 				std::bitset<5> bits(value);
-				for (int i = 4; i >= 0; --i) {
-					all_bits.push_back(bits[i]);
+				int word_bit_count = 5;
+				while (0 < word_bit_count) {
+					current_byte.bits[bit_count] = bits[word_bit_count];
+					if (bit_count == 0) {
+						mmap_words[file_location] = current_byte.all;
+						++file_location;
+						bit_count = 7;
+						current_byte.all = 0;
+					} else {
+						--bit_count;
+					}
+					--word_bit_count;
 				}
 			}
 			//insert new word char
 			std::bitset<5> bits(29);
-			for (int i = 4; i >= 0; --i) {
-				all_bits.push_back(bits[i]);
+			int word_bit_count = 5;
+			while (0 < word_bit_count) {
+				current_byte.bits[bit_count] = bits[word_bit_count];
+				if (bit_count == 0) {
+					mmap_words[file_location] = current_byte.all;
+					++file_location;
+					bit_count = 7;
+					current_byte.all = 0;
+				} else {
+					--bit_count;
+				}
+				--word_bit_count;
 			}
-
-
-			for (size_t i = 0; i < all_bits.size(); ++i) {
-				mmap_words[file_location + i] = all_bits[i] ? 1 : 0;
-			}
-			file_location += all_bits.size();
-
+			
 			++current_word;
 		}
+		// write rest of bits if there are any and then write the end of file char (30)
+		std::bitset<5> bits(30);
+		int word_bit_count = 5;
+		while (0 < word_bit_count) {
+			current_byte.bits[bit_count] = bits[word_bit_count];
+			if (bit_count == 0) {
+				mmap_words[file_location] = current_byte.all;
+				++file_location;
+				bit_count = 7;
+				current_byte.all = 0;
+			} else {
+				--bit_count;
+			}
+			--word_bit_count;
+		}
+		if (bit_count != 7) {
+			mmap_words[file_location] = current_byte.all;
+			++file_location;
+		}
+	
 		words_size = file_location;
 		log::write(2, "indexer: add: words written");
 		
@@ -326,13 +370,13 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		resize(index_path / "words_f.index", words_f_size);
 		map();
 		first_time = false;
-
+		
 		if (ec) {
 			log::write(3, "index: add: error");
 			return 1;
 		}
 	} else {
-	//compare and add
+		log::write(2, "indexer: add: adding to existing index.");
 	}
 	return 0;
 }
