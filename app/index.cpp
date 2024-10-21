@@ -343,7 +343,6 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 	
 		words_size = file_location;
-		words_reversed_l.clear();
 		log::write(2, "indexer: add: words written");
 		
 		file_location = 0;
