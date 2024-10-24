@@ -243,7 +243,6 @@ int indexer::start_from() {
 
 		}
 	}
-	needs_a_queue = false;
 	if (threads_to_use != 1) {
 		bool all_done = false;
 		while (!all_done) {
