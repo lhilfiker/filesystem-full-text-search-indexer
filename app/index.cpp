@@ -17,7 +17,7 @@ union bit_byte {
 union reversed_block {
 	uint16_t ids [5];
 	char bytes [10];
-}
+};
 
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
@@ -378,19 +378,19 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		for (const words_reversed& reversed : words_reversed_l) {
 			// it just needs a reversed block and no additional.
 			reversed_block current_reversed_block{};
-			if (reversed.size() =< 4) {
-				for (int i = 0; i < reversed.count(); ++i) {
-					current_reversed_block[i] = reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
+			if (reversed.reversed.size() <= 4) {
+				for (int i = 0; i < reversed.reversed.size(); ++i) {
+					current_reversed_block.ids[i] = reversed.reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
 				}
 			}
 
 			// write reversed block
 			for (int i = 0; i < 10; ++i) {
-				mmap_reversed[file_location] = current_reversed_block[i];
+				mmap_reversed[file_location] = current_reversed_block.bytes[i];
 				++file_location;
 			}
 		}
-		reversed_count_size = file_location;
+		reversed_size = file_location;
 
 		unmap();
                 resize(index_path / "paths_count.index", paths_count_size);
