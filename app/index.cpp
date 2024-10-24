@@ -404,7 +404,6 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
                 resize(index_path / "paths.index", paths_size);
 		resize(index_path / "words.index", words_size);
 		resize(index_path / "words_f.index", words_f_size);
-		resize(index_path / "reversed.index", reversed_size);
 		map();
 		first_time = false;
 		
