@@ -155,7 +155,8 @@ int indexer::start_from() {
 			size_t filesize = std::filesystem::file_size(dir_entry.path(), ec);
 			if (ec) continue;
 	                if (filesize > thread_max_filesize) {
-                                too_big_files.push_back(dir_entry.path());
+				log::write(1, "indexer: file too big. marking it for later proccessing");
+				too_big_files.push_back(dir_entry.path());
                                 continue;
                         }
 			if (threads_to_use == 1) {
@@ -167,7 +168,7 @@ int indexer::start_from() {
 				current_thread_filesize += filesize;
 				++paths_count;
 
-				log::write(1, "indexer: indexing path: " + dir_entry.path().string());
+				log::write(1, "indexer(single threaded): indexing path: " + dir_entry.path().string());
                 		uint32_t path_id = index.add_path(dir_entry.path());
                 		std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
                 		index.add_words(words_to_add, path_id);
@@ -245,7 +246,7 @@ int indexer::start_from() {
 	if (threads_to_use != 1) {
 		bool all_done = false;
 		while (!all_done) {
-			if(current_batch_add_running != 0 && !needs_a_queue) {
+			if(current_batch_add_running != 0) {
                                 int i = 0;
                                 for (threads_jobs& job : async_awaits) {
 					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
