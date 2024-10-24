@@ -279,7 +279,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		uint32_t current_word = 0;
 		file_location = 0;
 		// needed for words_f as it saves a letter as 5 bits instead of 8.
-		file_five_bit_location = 0;
+		uint64_t file_five_bit_location = 0;
 		bit_byte current_byte;
 		int bit_count = 7;
 		for (const words_reversed& word : words_reversed_l ) {
