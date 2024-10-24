@@ -43,10 +43,10 @@ bool indexer::extension_allowed(const std::filesystem::path& path) {
 	return false;
 }
 
-std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path& path) {
+std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::path& path) {
 	std::error_code ec;
-	std::unordered_set<std::wstring> words_return;
 	mio::mmap_source file;
+	std::unordered_set<std::wstring> words_return;
 	file.map(path.string(), ec);
 	std::wstring current_word = L"";
 	for (char c : file) {
@@ -89,6 +89,14 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 		log::write(3, "indexerer: get_words: error reading / normalizing file.");
 	}
 	return words_return;
+}
+
+std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path& path) {
+	std::string extension = helper::file_extension(path);
+
+	if (extension == ".txt") return get_words_text(path);
+
+	return std::unordered_set<std::wstring>{};
 }
 
 local_index indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {

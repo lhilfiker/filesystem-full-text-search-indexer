@@ -10,6 +10,11 @@ int helper::file_size(const std::filesystem::path& file_path) {
 	return size;
 }
 
+// returns the extension of the file. Currently it will determine that by the extension in the filename. It may be changed for a better dedection in the future.
+std::string helper::file_extension(const std::filesystem::path& path) {
+	return path.extension();
+}
+
 void helper::convert_char(char& c) {
 	if (c >= 0 && c < 256) {
             c = conversion_table[static_cast<unsigned char>(c)];
