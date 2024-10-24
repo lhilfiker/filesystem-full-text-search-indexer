@@ -247,13 +247,13 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		words_size_buffer = (((words_size_l + words_reversed_l.size()) * 5) / 8) + 5; // we save one char  as 5 bits instead of 8 (1 byte) + place for end of file char and buffer.
 		// words_f_size maybe needs to be extended to allow larger numbers if 8 bytes turn out to be too small. maybe automaticly resize if running out of space?
 		words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for each letter in the alphabet.
-		additional_size_buffer = words_reversed_l.size() * 10; // each word id has a 10 byte block.
+		reversed_size_buffer = words_reversed_l.size() * 10; // each word id has a 10 byte block.
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
 		resize(index_path / "paths_count.index", paths_count_size_buffer);
 		resize(index_path / "words.index", words_size_buffer);
 		resize(index_path / "words_f.index", words_f_size_buffer);
-		resize(index_path / "additional.index", additional_size_buffer);
+		resize(index_path / "reversed.index", reversed_size_buffer);
 		map();
 		for (const std::string& path : paths) {
 			for (const char& c : path) {
@@ -390,13 +390,14 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				++file_location;
 			}
 		}
-
+		reversed_count_size = file_location;
 
 		unmap();
                 resize(index_path / "paths_count.index", paths_count_size);
                 resize(index_path / "paths.index", paths_size);
 		resize(index_path / "words.index", words_size);
 		resize(index_path / "words_f.index", words_f_size);
+		resize(index_path / "reversed.index", reversed_size);
 		map();
 		first_time = false;
 		
