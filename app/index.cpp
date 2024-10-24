@@ -240,6 +240,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_size_buffer = paths.size() + paths_size_l;	
 		paths_count_size_buffer = paths_count_size_l;
 		words_size_buffer = (((words_size_l + words_reversed_l.size()) * 5) / 8) + 5; // we save one char  as 5 bits instead of 8 (1 byte) + place for end of file char and buffer.
+		// words_f_size maybe needs to be extended to allow larger numbers if 8 bytes turn out to be too small. maybe automaticly resize if running out of space?
 		words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for each letter in the alphabet.
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
@@ -277,12 +278,15 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		char current_char = '0';
 		uint32_t current_word = 0;
 		file_location = 0;
+		// needed for words_f as it saves a letter as 5 bits instead of 8.
+		file_five_bit_location = 0;
 		bit_byte current_byte;
 		int bit_count = 7;
 		for (const words_reversed& word : words_reversed_l ) {
+			// if a word with a new letter comes, add its location to words_f
 			if (word.word[0] != current_char) {
 				current_char = word.word[0];
-				words_f[current_char - 'a'] = file_location;
+				words_f[current_char - 'a'] = file_five_bit_location;
 			}
 			std::vector<bool> all_bits;
 			all_bits.reserve(word.word.length() * 5);
@@ -303,6 +307,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 					}
 					--word_bit_count;
 				}
+				++file_five_bit_location;
 			}
 			//insert new word char
 			std::bitset<5> bits(29);
@@ -319,10 +324,10 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				}
 				--word_bit_count;
 			}
-			
+			++file_five_bit_location;
 			++current_word;
 		}
-		// write rest of bits if there are any and then write the end of file char (30)
+		// write rest the remaining byte if needed and then write the end of file char (30)
 		std::bitset<5> bits(30);
 		int word_bit_count = 5;
 		while (0 < word_bit_count) {
@@ -341,10 +346,11 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			mmap_words[file_location] = current_byte.all;
 			++file_location;
 		}
-	
+		file_five_bit_location = 0;
 		words_size = file_location;
 		log::write(2, "indexer: add: words written");
 		
+		// write words_f
 		file_location = 0;
                 for (const uint64_t& word_start_f : words_f) {
                         mmap_words_f[file_location]     = (word_start_f >> 56) & 0xFF;
