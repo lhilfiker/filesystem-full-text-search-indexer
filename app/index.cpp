@@ -19,6 +19,11 @@ union reversed_block {
 	char bytes [10];
 };
 
+union additional_block {
+	uint16_t ids[25];
+	char bytes[50];
+};
+
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
 bool index::first_time = false;
