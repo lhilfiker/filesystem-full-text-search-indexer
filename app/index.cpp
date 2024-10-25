@@ -258,7 +258,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			if (additional_reversed_counter.reversed.size() < 5) continue; // if under 4 words, no additional is requiered. 
 			additional_size_buffer += (additional_reversed_counter.reversed.size() + 19) / 24;
 		}
-		additional_size_buffer *= 5;
+		additional_size_buffer *= 50;
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
 		resize(index_path / "paths_count.index", paths_count_size_buffer);
@@ -386,6 +386,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		log::write(2, "indexer: add: words_f written");
 		// reversed & additional
 		file_location = 0;
+		size_t additional_file_location = 0;
 		size_t additional_id = 1;
 		for (const words_reversed& reversed : words_reversed_l) {
 			// it just needs a reversed block and no additional.
@@ -393,6 +394,40 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			if (reversed.reversed.size() <= 4) {
 				for (int i = 0; i < reversed.reversed.size(); ++i) {
 					current_reversed_block.ids[i] = reversed.reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
+				}
+			} else {
+				int additional_i = 0;
+				int reversed_i = 0;
+				additional_block additional{};
+				for(const uint32_t& path_id : reversed.reversed) {
+					if(reversed_i < 4) {
+						current_reversed_block.ids[reversed_i] = path_id + 1;
+						++reversed_i;
+						continue;
+					}
+					if(reversed_i == 4) {
+						current_reversed_block.ids[4] = additional_id;
+						++reversed_i;
+					}
+					if(additional_i == 24) {// the next additional id field.
+						additional.ids[24] = additional_id + 1;
+						additional_i = 0;
+						for (const char& byte : additional.bytes) {
+							mmap_additional[additional_file_location] = byte;
+							++additional_file_location;
+						}
+						++additional_id;
+						additional = {};
+					}
+					additional.ids[additional_i] = path_id + 1;
+					++additional_i;
+				}
+				if (additional_i != 0) {
+					for (const char& byte : additional.bytes) {
+						mmap_additional[additional_file_location] = byte;
+						++additional_file_location;
+					}
+					++additional_id;
 				}
 			}
 
@@ -403,12 +438,14 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			}
 		}
 		reversed_size = file_location;
-
+		log::write(2, "indexer: add: reversed and additonal written");
+		
 		unmap();
                 resize(index_path / "paths_count.index", paths_count_size);
                 resize(index_path / "paths.index", paths_size);
 		resize(index_path / "words.index", words_size);
 		resize(index_path / "words_f.index", words_f_size);
+		// no resizing of reversed and additional as we can calculate its needed space at the beginning.
 		map();
 		first_time = false;
 		
