@@ -24,6 +24,11 @@ union additional_block {
 	char bytes[50];
 };
 
+union path_offset {
+	uint16_t offset;
+	char bytes[2];
+};
+
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
 bool index::first_time = false;
@@ -247,7 +252,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		log::write(2, "index: add: first time write.");
 		// paths
 		uint64_t file_location = 0;
-		paths_size_buffer = paths.size() + paths_size_l;	
+		paths_size_buffer = (paths.size() * 2) + paths_size_l;	
 		paths_count_size_buffer = paths_count_size_l;
 		words_size_buffer = (((words_size_l + words_reversed_l.size()) * 5) / 8) + 5; // we save one char  as 5 bits instead of 8 (1 byte) + place for end of file char and buffer.
 		// words_f_size maybe needs to be extended to allow larger numbers if 8 bytes turn out to be too small. maybe automaticly resize if running out of space?
@@ -268,14 +273,18 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		resize(index_path / "additional.index", additional_size_buffer);
 		map();
 		for (const std::string& path : paths) {
+			path_offset offset = {};
+			offset.offset = path.length();
+			mmap_paths[file_location] = offset.bytes[0];
+			++file_location;
+			mmap_paths[file_location] = offset.bytes[1];
+			++file_location;
 			for (const char& c : path) {
 				mmap_paths[file_location] = c;
 				++file_location;
 			}
-			mmap_paths[file_location] = '\n';
-			++file_location;
 		}
-		paths_size = file_location - 1; // -1 to remove the last newline character
+		paths_size = file_location; // -1 to remove the last newline character
 		paths.clear(); // free memory
 
 		log::write(2, "index: add: paths written.");
