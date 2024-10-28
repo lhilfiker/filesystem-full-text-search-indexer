@@ -4,6 +4,30 @@
 #include <filesystem>
 #include <algorithm>
 #include <fstream>
+#include <array>
+#include <bitset>
+
+union bit_byte {
+	std::bitset<8> bits;
+	unsigned char all;
+
+	bit_byte() : all(0) {}
+};
+
+union reversed_block {
+	uint16_t ids [5];
+	char bytes [10];
+};
+
+union additional_block {
+	uint16_t ids[25];
+	char bytes[50];
+};
+
+union path_offset {
+	uint16_t offset;
+	char bytes[2];
+};
 
 bool index::is_config_loaded = false;
 bool index::is_mapped = false;
@@ -222,27 +246,45 @@ int index::uninitialize() {
 	return 0;
 }
 
-int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed, const size_t& words_reversed_size_l) {
+int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed_l, const size_t& words_size_l, const size_t& reversed_size_l) {
 	std::error_code ec;
 	if (first_time) {
 		log::write(2, "index: add: first time write.");
 		// paths
 		uint64_t file_location = 0;
-		paths_size_buffer = paths.size() + paths_size_l;	
+		paths_size_buffer = (paths.size() * 2) + paths_size_l;	
 		paths_count_size_buffer = paths_count_size_l;
+		words_size_buffer = (((words_size_l + words_reversed_l.size()) * 5) / 8) + 5; // we save one char  as 5 bits instead of 8 (1 byte) + place for end of file char and buffer.
+		// words_f_size maybe needs to be extended to allow larger numbers if 8 bytes turn out to be too small. maybe automaticly resize if running out of space?
+		words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for each letter in the alphabet.
+		reversed_size_buffer = words_reversed_l.size() * 10; // each word id has a 10 byte block.
+		additional_size_buffer = 0;
+		for (const words_reversed& additional_reversed_counter : words_reversed_l) {
+			if (additional_reversed_counter.reversed.size() < 5) continue; // if under 4 words, no additional is requiered. 
+			additional_size_buffer += (additional_reversed_counter.reversed.size() + 19) / 24;
+		}
+		additional_size_buffer *= 50;
 		unmap();
 		resize(index_path / "paths.index", paths_size_buffer);	
 		resize(index_path / "paths_count.index", paths_count_size_buffer);
+		resize(index_path / "words.index", words_size_buffer);
+		resize(index_path / "words_f.index", words_f_size_buffer);
+		resize(index_path / "reversed.index", reversed_size_buffer);
+		resize(index_path / "additional.index", additional_size_buffer);
 		map();
 		for (const std::string& path : paths) {
+			path_offset offset = {};
+			offset.offset = path.length();
+			mmap_paths[file_location] = offset.bytes[0];
+			++file_location;
+			mmap_paths[file_location] = offset.bytes[1];
+			++file_location;
 			for (const char& c : path) {
 				mmap_paths[file_location] = c;
 				++file_location;
 			}
-			mmap_paths[file_location] = '\n';
-			++file_location;
 		}
-		paths_size = file_location - 1; // -1 to remove the last newline character
+		paths_size = file_location; // -1 to remove the last newline character
 		paths.clear(); // free memory
 
 		log::write(2, "index: add: paths written.");
@@ -259,20 +301,169 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_count.clear(); // free memory
 		
 		log::write(2, "index: add: paths_count written.");
-		// words & words_f
+		// words & words_f & reversed
+		std::array<uint64_t, 26> words_f;
+		char current_char = '0';
+		uint32_t current_word = 0;
+		file_location = 0;
+		// needed for words_f as it saves a letter as 5 bits instead of 8.
+		uint64_t file_five_bit_location = 0;
+		bit_byte current_byte;
+		int bit_count = 7;
+		for (const words_reversed& word : words_reversed_l ) {
+			// if a word with a new letter comes, add its location to words_f
+			if (word.word[0] != current_char) {
+				current_char = word.word[0];
+				words_f[current_char - 'a'] = file_five_bit_location;
+			}
+			std::vector<bool> all_bits;
+			all_bits.reserve(word.word.length() * 5);
+			for (const char c: word.word) {
+
+				unsigned char value = c - 'a';
+				std::bitset<5> bits(value);
+				int word_bit_count = 5;
+				while (0 < word_bit_count) {
+					current_byte.bits[bit_count] = bits[word_bit_count];
+					if (bit_count == 0) {
+						mmap_words[file_location] = current_byte.all;
+						++file_location;
+						bit_count = 7;
+						current_byte.all = 0;
+					} else {
+						--bit_count;
+					}
+					--word_bit_count;
+				}
+				++file_five_bit_location;
+			}
+			//insert new word char
+			std::bitset<5> bits(29);
+			int word_bit_count = 5;
+			while (0 < word_bit_count) {
+				current_byte.bits[bit_count] = bits[word_bit_count];
+				if (bit_count == 0) {
+					mmap_words[file_location] = current_byte.all;
+					++file_location;
+					bit_count = 7;
+					current_byte.all = 0;
+				} else {
+					--bit_count;
+				}
+				--word_bit_count;
+			}
+			++file_five_bit_location;
+			++current_word;
+		}
+		// write rest the remaining byte if needed and then write the end of file char (30)
+		std::bitset<5> bits(30);
+		int word_bit_count = 5;
+		while (0 < word_bit_count) {
+			current_byte.bits[bit_count] = bits[word_bit_count];
+			if (bit_count == 0) {
+				mmap_words[file_location] = current_byte.all;
+				++file_location;
+				bit_count = 7;
+				current_byte.all = 0;
+			} else {
+				--bit_count;
+			}
+			--word_bit_count;
+		}
+		if (bit_count != 7) {
+			mmap_words[file_location] = current_byte.all;
+			++file_location;
+		}
+		file_five_bit_location = 0;
+		words_size = file_location;
+		log::write(2, "indexer: add: words written");
+		
+		// write words_f
+		file_location = 0;
+                for (const uint64_t& word_start_f : words_f) {
+                        mmap_words_f[file_location]     = (word_start_f >> 56) & 0xFF;
+                        mmap_words_f[file_location + 1] = (word_start_f >> 48) & 0xFF;
+                        mmap_words_f[file_location + 2] = (word_start_f >> 40)  & 0xFF; 
+                        mmap_words_f[file_location + 3] = (word_start_f >> 32)  & 0xFF;
+                        mmap_words_f[file_location + 4] = (word_start_f >> 24)  & 0xFF;
+                        mmap_words_f[file_location + 5] = (word_start_f >> 16)  & 0xFF;
+                        mmap_words_f[file_location + 6] = (word_start_f >> 8)  & 0xFF;
+			mmap_words_f[file_location + 7] = word_start_f & 0xFF;
+                        file_location += 8;
+                }
+		words_f_size = file_location;
+		log::write(2, "indexer: add: words_f written");
+		// reversed & additional
+		file_location = 0;
+		size_t additional_file_location = 0;
+		size_t additional_id = 1;
+		for (const words_reversed& reversed : words_reversed_l) {
+			// it just needs a reversed block and no additional.
+			reversed_block current_reversed_block{};
+			if (reversed.reversed.size() <= 4) {
+				for (int i = 0; i < reversed.reversed.size(); ++i) {
+					current_reversed_block.ids[i] = reversed.reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
+				}
+			} else {
+				int additional_i = 0;
+				int reversed_i = 0;
+				additional_block additional{};
+				for(const uint32_t& path_id : reversed.reversed) {
+					if(reversed_i < 4) {
+						current_reversed_block.ids[reversed_i] = path_id + 1;
+						++reversed_i;
+						continue;
+					}
+					if(reversed_i == 4) {
+						current_reversed_block.ids[4] = additional_id;
+						++reversed_i;
+					}
+					if(additional_i == 24) {// the next additional id field.
+						additional.ids[24] = additional_id + 1;
+						additional_i = 0;
+						for (const char& byte : additional.bytes) {
+							mmap_additional[additional_file_location] = byte;
+							++additional_file_location;
+						}
+						++additional_id;
+						additional = {};
+					}
+					additional.ids[additional_i] = path_id + 1;
+					++additional_i;
+				}
+				if (additional_i != 0) {
+					for (const char& byte : additional.bytes) {
+						mmap_additional[additional_file_location] = byte;
+						++additional_file_location;
+					}
+					++additional_id;
+				}
+			}
+
+			// write reversed block
+			for (int i = 0; i < 10; ++i) {
+				mmap_reversed[file_location] = current_reversed_block.bytes[i];
+				++file_location;
+			}
+		}
+		reversed_size = file_location;
+		log::write(2, "indexer: add: reversed and additonal written");
 		
 		unmap();
                 resize(index_path / "paths_count.index", paths_count_size);
                 resize(index_path / "paths.index", paths_size);
+		resize(index_path / "words.index", words_size);
+		resize(index_path / "words_f.index", words_f_size);
+		// no resizing of reversed and additional as we can calculate its needed space at the beginning.
 		map();
 		first_time = false;
-
+		
 		if (ec) {
 			log::write(3, "index: add: error");
 			return 1;
 		}
 	} else {
-	//compare and add
+		log::write(2, "indexer: add: adding to existing index.");
 	}
 	return 0;
 }

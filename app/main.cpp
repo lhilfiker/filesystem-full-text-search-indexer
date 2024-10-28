@@ -20,7 +20,11 @@ int test() {
 	}
 	indexer::save_config(false, "/home/lukas/", 4, 1500000000);
 	indexer::start_from();
-	log::write(2, "done.");
+	log::write(2, "done, uninitializing...");
+	if (index::uninitialize() == 1) {
+		log::write(4, "uninitialize failed.");
+		return 1;
+	}
 	return 0;
 }
 
