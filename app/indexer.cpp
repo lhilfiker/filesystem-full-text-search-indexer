@@ -16,7 +16,8 @@ std::filesystem::path indexer::path_to_scan;
 int indexer::threads_to_use = 1;
 size_t indexer::local_index_memory = 5000000;
 
-void indexer::save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan, const int config_threads_to_use, const size_t& config_local_index_memory) {
+void indexer::save_config(const bool config_scan_dot_paths, const std::filesystem::path &config_path_to_scan,
+                          const int config_threads_to_use, const size_t &config_local_index_memory) {
 	std::error_code ec;
 	if (config_threads_to_use < 1) {
 		threads_to_use = 1;
@@ -28,32 +29,32 @@ void indexer::save_config(const bool config_scan_dot_paths, const std::filesyste
 	if (ec) {
 		threads_to_use = 1;
 	}
-	if (config_local_index_memory > 5000000) { // ignore larger memory as most modern system will handle that
-		local_index_memory = config_local_index_memory; 
+	if (config_local_index_memory > 5000000) {
+		// ignore larger memory as most modern system will handle that
+		local_index_memory = config_local_index_memory;
 	}
 	scan_dot_paths = config_scan_dot_paths;
 	path_to_scan = config_path_to_scan;
 	log::write(1, "indexer: save_config: saved config successfully.");
 	config_loaded = true;
-	return;
 }
 
-bool indexer::extension_allowed(const std::filesystem::path& path) {
+bool indexer::extension_allowed(const std::filesystem::path &path) {
 	if (path.extension() == ".txt" || path.extension() == ".md") return true;
 	return false;
 }
 
-std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::path& path) {
+std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::path &path) {
 	std::error_code ec;
 	mio::mmap_source file;
 	std::unordered_set<std::wstring> words_return;
 	file.map(path.string(), ec);
 	std::wstring current_word = L"";
-	for (char c : file) {
+	for (char c: file) {
 		helper::convert_char(c);
 		if (c == '!') {
-			if  (current_word.length() > 4 && current_word.length() < 15) {				
-				StemEnglish(current_word);	
+			if (current_word.length() > 4 && current_word.length() < 15) {
+				StemEnglish(current_word);
 				words_return.insert(current_word);
 			}
 			current_word.clear();
@@ -61,37 +62,36 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 			current_word.push_back(c);
 		}
 	}
-	if  (current_word.length() > 3 && current_word.length() < 20) {
-                StemEnglish(current_word);
-                words_return.insert(current_word);
-        }
+	if (current_word.length() > 3 && current_word.length() < 20) {
+		StemEnglish(current_word);
+		words_return.insert(current_word);
+	}
 	file.unmap();
 	// file name
 	current_word.clear();
-	for (char c : path.filename().string()) {
+	for (char c: path.filename().string()) {
 		helper::convert_char(c);
-                if (c == '!') {
-                        if  (current_word.length() > 4 && current_word.length() < 15) {
-                                words_return.insert(current_word);
-                        }
-                        current_word.clear();
-                } else {
-                        current_word.push_back(c);
-                }
-
+		if (c == '!') {
+			if (current_word.length() > 4 && current_word.length() < 15) {
+				words_return.insert(current_word);
+			}
+			current_word.clear();
+		} else {
+			current_word.push_back(c);
+		}
 	}
-	if  (current_word.length() > 3 && current_word.length() < 20) {
-                StemEnglish(current_word);
-                words_return.insert(current_word);
-        }
+	if (current_word.length() > 3 && current_word.length() < 20) {
+		StemEnglish(current_word);
+		words_return.insert(current_word);
+	}
 
 	if (ec) {
-		log::write(3, "indexerer: get_words: error reading / normalizing file.");
+		log::write(3, "indexer: get_words: error reading / normalizing file.");
 	}
 	return words_return;
 }
 
-std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path& path) {
+std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path &path) {
 	std::string extension = helper::file_extension(path);
 
 	if (extension == ".txt") return get_words_text(path);
@@ -103,25 +103,25 @@ local_index indexer::thread_task(const std::vector<std::filesystem::path> paths_
 	std::error_code ec;
 	log::write(1, "indexer: thread_task: new task started.");
 	local_index task_index;
-	for (const std::filesystem::path& path : paths_to_index) {
+	for (const std::filesystem::path &path: paths_to_index) {
 		log::write(1, "indexer: indexing path: " + path.string());
 		uint32_t path_id = task_index.add_path(path);
 		std::unordered_set<std::wstring> words_to_add = get_words(path);
 		task_index.add_words(words_to_add, path_id);
 		if (ec) {
-
 		}
 	}
 	return task_index;
 }
 
-bool indexer::queue_has_place(const std::vector<size_t>& batch_queue_added_size, const size_t& filesize, const size_t& max_filesize, const uint32_t& current_batch_add_start) {
+bool indexer::queue_has_place(const std::vector<size_t> &batch_queue_added_size, const size_t &filesize,
+                              const size_t &max_filesize, const uint32_t &current_batch_add_start) {
 	if (batch_queue_added_size.size() <= current_batch_add_start) return true;
 	for (int i = current_batch_add_start; i < current_batch_add_start + threads_to_use; ++i) {
 		if (batch_queue_added_size[i] + filesize <= max_filesize) {
 			return true;
 		}
-	}	
+	}
 	return false;
 }
 
@@ -132,11 +132,11 @@ int indexer::start_from() {
 	std::error_code ec;
 	local_index index;
 	log::write(2, "indexer: starting scan from last successful scan.");
-	std::vector<std::vector<std::filesystem::path>> queue(threads_to_use);
+	std::vector<std::vector<std::filesystem::path> > queue(threads_to_use);
 	std::vector<std::filesystem::path> too_big_files;
 	size_t current_thread_filesize = 0;
 	size_t thread_max_filesize = local_index_memory / threads_to_use;
-	
+
 	uint16_t thread_counter = 0;
 
 	uint32_t current_batch_add_running = 0;
@@ -150,15 +150,17 @@ int indexer::start_from() {
 	std::vector<threads_jobs> async_awaits;
 	async_awaits.reserve(threads_to_use);
 
-	for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(path_to_scan, std::filesystem::directory_options::skip_permission_denied, ec)) {
-		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().string().find("/.") == std::string::npos) {	
+	for (const auto &dir_entry: std::filesystem::recursive_directory_iterator(
+		     path_to_scan, std::filesystem::directory_options::skip_permission_denied, ec)) {
+		if (extension_allowed(dir_entry.path()) && !std::filesystem::is_directory(dir_entry, ec) && dir_entry.path().
+		    string().find("/.") == std::string::npos) {
 			size_t filesize = std::filesystem::file_size(dir_entry.path(), ec);
 			if (ec) continue;
-	                if (filesize > thread_max_filesize) {
-				log::write(1, "indexer: file too big. marking it for later proccessing");
+			if (filesize > thread_max_filesize) {
+				log::write(1, "indexer: file too big. marking it for later processing");
 				too_big_files.push_back(dir_entry.path());
-                                continue;
-                        }
+				continue;
+			}
 			if (threads_to_use == 1) {
 				if (current_thread_filesize + filesize > thread_max_filesize) {
 					index.add_to_disk();
@@ -169,18 +171,17 @@ int indexer::start_from() {
 				++paths_count;
 
 				log::write(1, "indexer(single threaded): indexing path: " + dir_entry.path().string());
-                		uint32_t path_id = index.add_path(dir_entry.path());
-                		std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
-                		index.add_words(words_to_add, path_id);
-        	        	if (ec) {
-	
-	                	}
+				uint32_t path_id = index.add_path(dir_entry.path());
+				std::unordered_set<std::wstring> words_to_add = get_words(dir_entry.path());
+				index.add_words(words_to_add, path_id);
+				if (ec) {
+				}
 
 				continue;
 			}
-			if(current_batch_add_running != 0 && !needs_a_queue) {
+			if (current_batch_add_running != 0 && !needs_a_queue) {
 				int i = 0;
-				for (threads_jobs& job : async_awaits) {
+				for (threads_jobs &job: async_awaits) {
 					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
 						log::write(1, "indexer: task done. combining.");
 						local_index task_result = job.future.get();
@@ -206,84 +207,93 @@ int indexer::start_from() {
 					if (queue.size() <= current_batch_add_next + threads_to_use) {
 						needs_a_queue = true;
 						break;
-					}; //if no availible queues, no adding.
+					}; //if no available queues, no adding.
 					log::write(1, "indexer: not used up threads slot. creating a new one.");
-					async_awaits.emplace_back(threads_jobs{std::async(std::launch::async,
-                                                [&queue, current_batch_add_next]() { return thread_task(queue[current_batch_add_next]); }
-                                        ), current_batch_add_next});
+					async_awaits.emplace_back(threads_jobs{
+						std::async(std::launch::async,
+						           [&queue, current_batch_add_next]() {
+							           return thread_task(queue[current_batch_add_next]);
+						           }
+						),
+						current_batch_add_next
+					});
 					++current_batch_add_next;
 					++current_batch_add_running;
 				}
 			}
 
 			if (!queue_has_place(batch_queue_added_size, filesize, thread_max_filesize, batch_queue_add_start)) {
-                                for (int i = 0; threads_to_use > i; ++i) {
-                                	batch_queue_added_size.push_back(0);
-                                        queue.push_back({});
-                                        ++batch_queue_add_start;
-                                }
+				for (int i = 0; threads_to_use > i; ++i) {
+					batch_queue_added_size.push_back(0);
+					queue.push_back({});
+					++batch_queue_add_start;
+				}
 				needs_a_queue = false;
-                                batch_queue_current = 0;
+				batch_queue_current = 0;
 			}
 			bool added = false;
-			while(!added) {
-				if(batch_queue_added_size[batch_queue_add_start + batch_queue_current] + filesize <= thread_max_filesize) {
-					
+			while (!added) {
+				if (batch_queue_added_size[batch_queue_add_start + batch_queue_current] + filesize <=
+				    thread_max_filesize) {
 					queue[batch_queue_add_start + batch_queue_current].push_back(dir_entry.path());
 					batch_queue_added_size[batch_queue_add_start + batch_queue_current] += filesize;
 					added = true;
 				}
 				if (batch_queue_current + 1 == threads_to_use) {
 					batch_queue_current = 0;
-				}
-				else {
+				} else {
 					++batch_queue_current;
 				}
 			}
-
 		}
 	}
 	if (threads_to_use != 1) {
 		bool all_done = false;
 		while (!all_done) {
-			if(current_batch_add_running != 0) {
-                                int i = 0;
-                                for (threads_jobs& job : async_awaits) {
+			if (current_batch_add_running != 0) {
+				int i = 0;
+				for (threads_jobs &job: async_awaits) {
 					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
-                                                log::write(1, "indexer: task done. combining.");
-                                                local_index task_result = job.future.get();
-                                                index.combine(task_result);
-                                                if (index.size() >= local_index_memory) {
-                                                        log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
-                                                        index.add_to_disk();
-                                                }
-                                                paths_size += batch_queue_added_size[job.queue_id];
-                                                paths_count += queue[job.queue_id].size();
-                                                batch_queue_added_size[job.queue_id] = 0;
-                                                queue[job.queue_id].clear();
-                                                async_awaits.erase(async_awaits.begin() + i);
-                                                --i;
-                                                --current_batch_add_running;
+						log::write(1, "indexer: task done. combining.");
+						local_index task_result = job.future.get();
+						index.combine(task_result);
+						if (index.size() >= local_index_memory) {
+							log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
+							index.add_to_disk();
+						}
+						paths_size += batch_queue_added_size[job.queue_id];
+						paths_count += queue[job.queue_id].size();
+						batch_queue_added_size[job.queue_id] = 0;
+						queue[job.queue_id].clear();
+						async_awaits.erase(async_awaits.begin() + i);
+						--i;
+						--current_batch_add_running;
 						break;
 					}
-                                        ++i;
-                                }
-				std::this_thread::sleep_for(std::chrono::milliseconds(50)); // to not utilize 100% cpu in the main process.
+					++i;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				// to not utilize 100% cpu in the main process.
 			}
-                        if (current_batch_add_running != threads_to_use) {
-                                for (int i = current_batch_add_running; i < threads_to_use; ++i) {
+			if (current_batch_add_running != threads_to_use) {
+				for (int i = current_batch_add_running; i < threads_to_use; ++i) {
 					if (queue.size() <= current_batch_add_next) {
 						if (current_batch_add_running == 0) all_done = true;
 						break;
-					} 
-       					log::write(1, "indexer: not used up threads slot. creating a new one.");
-					async_awaits.emplace_back(threads_jobs{std::async(std::launch::async,
-                                                [&queue, current_batch_add_next]() { return thread_task(queue[current_batch_add_next]); }
-                                        ), current_batch_add_next});
-                                        ++current_batch_add_next;
-                                        ++current_batch_add_running;
-                                }
-                        }
+					}
+					log::write(1, "indexer: not used up threads slot. creating a new one.");
+					async_awaits.emplace_back(threads_jobs{
+						std::async(std::launch::async,
+						           [&queue, current_batch_add_next]() {
+							           return thread_task(queue[current_batch_add_next]);
+						           }
+						),
+						current_batch_add_next
+					});
+					++current_batch_add_next;
+					++current_batch_add_running;
+				}
+			}
 		}
 	}
 	if (threads_to_use == 1) {
@@ -301,7 +311,7 @@ int indexer::start_from() {
 	log::write(2, "total indexed files: " + std::to_string(paths_count));
 	log::write(2, "total indexed file size in MB: " + std::to_string(paths_size / 1000000));
 	log::write(2, "files too big to be indexed: " + std::to_string(too_big_files.size()));
-	log::write(2, "writting to disk");
-        index.add_to_disk();
+	log::write(2, "writing to disk");
+	index.add_to_disk();
 	return 0;
 }
