@@ -464,6 +464,82 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 	} else {
 		log::write(2, "indexer: add: adding to existing index.");
+		std::unordered_map<std::string, uint16_t> paths_lookup; // unint16_t as currently its the max limit for the index. an option to increase will be added later.
+		for (int i = 0; i < paths.size(); ++i) {
+			paths_lookup[paths[i]] = i;
+		}
+		uint16_t path_ids_converted[paths.size()] = {};
+		size_t paths_count = paths.size();
+		paths.clear();
+		size_t file_location = 0;
+		path_offset offset;
+		offset.offset = 0;
+		std::string current_path = "";
+		uint16_t part_of_path_grabbed = 0;
+		bool offset_grabbed = false;
+		bool offset_location = false;
+		uint16_t current_id = 1;
+		for (const char& c : mmap_paths) {
+			if (!offset_grabbed) {
+				if(offset_location) {
+					offset.bytes[1] = c;
+					offset_grabbed = true;
+					offset_location = false;
+				} else {
+					offset.bytes[0] = c;
+					offset_location = true;
+				}
+			} else {
+				current_path += c;
+				++part_of_path_grabbed;
+				if(part_of_path_grabbed == offset.offset) {
+					if(auto result = paths_lookup.find(current_path); result != paths_lookup.end()) {
+						path_ids_converted[result->second] = current_id;
+					}
+					++current_id;
+					current_path = "";
+					part_of_path_grabbed = 0;
+					offset_grabbed = false;
+				}
+			}
+		}
+		std::vector<std::string> to_add_paths;
+		size_t to_add_size = 0;
+		// needs to be changed to else as value based lookup is not possible
+		for(uint16_t j = 0; j < paths_count; ++j) {
+			if(path_ids_converted[j] == 0) {
+				auto path_lookup_result = paths_lookup.find(j);
+				std::string path = path_lookup_result->first;
+				to_add_paths.push_back(path);
+				to_add_size += path.length();
+				path_ids_converted[j] = current_id;
+				++current_id;
+			}
+		}
+		//add missing paths
+		if(to_add_size != 0) {
+			to_add_size += to_add_paths.size() * 2;
+			unmap();
+			paths_size_buffer = paths_size + to_add_size;
+			resize(index_path / "paths.index", paths_size_buffer);
+			map();
+			file_location = paths_size;
+			for(const std::string& path : to_add_paths) {
+				path_offset offset;
+				offset.offset = path.size();
+				mmap_paths[file_location] = offset.bytes[0];
+				++file_location;
+				mmap_paths[file_location] = offset.bytes[1];
+				++file_location;
+				for(const char& c: path) {
+					mmap_paths[file_location] = c;
+					++file_location;
+				}
+			}
+			paths_size = paths_size_buffer;
+		}
+
+		
 	}
 	return 0;
 }
