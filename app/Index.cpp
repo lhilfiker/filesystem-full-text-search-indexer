@@ -46,6 +46,20 @@ struct Transaction {
 	std::string content;
 };
 
+union InsertionHeader {
+	struct {
+		uint8_t index_type;
+		uint64_t location;
+		uint64_t content_length;
+	};
+	char bytes[9];
+};
+
+struct Insertion {
+	InsertionHeader header;
+	std::string content;
+};
+
 bool Index::is_config_loaded = false;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
