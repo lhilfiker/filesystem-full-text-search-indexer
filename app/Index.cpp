@@ -32,11 +32,11 @@ union PathOffset {
 union TransactionHeader {
 	struct {
 		uint8_t status;
-		uint8_t index_type;
-		size_t location;
-		size_t backup_id;
-		uint8_t operation_type;
-		size_t content_length;
+		uint8_t index_type; // paths = 0, words = 1, words_f = 2, reversed = 3, additional = 4
+		uint64_t location; // byte count in file(or bit for words)
+		uint64_t backup_id; // 0 = none
+		uint8_t operation_type; // 0 = Move, 1 = write
+		uint64_t content_length; // length of content
 	};
 	char bytes[15];
 };
@@ -510,7 +510,6 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			} else { 
 				log::write(3, "Index: Combine: invalid path content length indicator. Skipping. The Index could be corrupted.");
 				on_disk_count = paths_size; 
-				continue; 
 			}
 
 			if (on_disk_count + next_path_end < paths_size) { // check if we can read all of it.
@@ -522,12 +521,25 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			} else { 
 				log::write(3, "Index: Combine: invalid path content length. Skipping. The Index could be corrupted.");
 				on_disk_count = paths_size; 
-				continue; 
 			}
 			++on_disk_id;
 		}
 
 		// go through all remaining paths_search elements, add a transaction and add a new id to paths_mapping.
+		for (const auto& [key, value] : paths_search) {
+			paths_mapping[value] = on_disk_id;
+			Transaction to_add_path_transaction;
+			to_add_path_transaction.content = key;
+			to_add_path_transaction.header.status = 0;
+			to_add_path_transaction.header.index_type = 0;
+			to_add_path_transaction.header.location = paths_size - 1;
+			to_add_path_transaction.header.backup_id = 0;
+			to_add_path_transaction.header.operation_type = 1;
+			to_add_path_transaction.header.content_length = key.length();
+			++on_disk_id;
+			transactions.push_back(to_add_path_transaction);
+		}
+		paths_search.clear();
 	}
 	return 0;
 }
