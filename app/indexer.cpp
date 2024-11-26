@@ -99,10 +99,10 @@ std::unordered_set<std::wstring> indexer::get_words(const std::filesystem::path&
 	return std::unordered_set<std::wstring>{};
 }
 
-local_index indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
+LocalIndex indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
 	std::error_code ec;
 	log::write(1, "indexer: thread_task: new task started.");
-	local_index task_index;
+	LocalIndex task_index;
 	for (const std::filesystem::path& path : paths_to_index) {
 		log::write(1, "indexer: indexing path: " + path.string());
 		uint32_t path_id = task_index.add_path(path);
@@ -130,7 +130,7 @@ int indexer::start_from() {
 		return 1;
 	}
 	std::error_code ec;
-	local_index index;
+	LocalIndex index;
 	log::write(2, "indexer: starting scan from last successful scan.");
 	std::vector<std::vector<std::filesystem::path>> queue(threads_to_use);
 	std::vector<std::filesystem::path> too_big_files;
@@ -183,7 +183,7 @@ int indexer::start_from() {
 				for (threads_jobs& job : async_awaits) {
 					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
 						log::write(1, "indexer: task done. combining.");
-						local_index task_result = job.future.get();
+						LocalIndex task_result = job.future.get();
 						index.combine(task_result);
 						if (index.size() >= local_index_memory) {
 							log::write(2, "indexer: exceeded local index memory limit. writing to disk.");
@@ -251,7 +251,7 @@ int indexer::start_from() {
                                 for (threads_jobs& job : async_awaits) {
 					if (job.future.wait_for(std::chrono::nanoseconds(0)) == std::future_status::ready) {
                                                 log::write(1, "indexer: task done. combining.");
-                                                local_index task_result = job.future.get();
+                                                LocalIndex task_result = job.future.get();
                                                 index.combine(task_result);
                                                 if (index.size() >= local_index_memory) {
                                                         log::write(2, "indexer: exceeded local index memory limit. writing to disk.");

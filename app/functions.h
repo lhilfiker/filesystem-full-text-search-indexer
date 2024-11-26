@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <future>
 
-// local_index.cpp
+// LocalIndex.cpp
 
 struct words_reversed {
 	std::wstring word;
@@ -23,7 +23,7 @@ struct words_reversed {
     	}
 };
 
-class local_index {
+class LocalIndex {
 	private:
 		std::vector<std::string> paths;
 		size_t paths_size;
@@ -33,20 +33,20 @@ class local_index {
 		std::vector<uint32_t> path_word_count;
 		size_t path_word_count_size;
 	public:
-		local_index();
+		LocalIndex();
 		int size();
 		void clear();
 		uint32_t add_path(const std::string& path_to_insert);
 		void add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id);
 		void sort();
 		void add_to_disk();
-		void combine(local_index& to_combine_index);
+		void combine(LocalIndex& to_combine_index);
 
-	friend void combine(local_index& to_combine_index);
+	friend void combine(LocalIndex& to_combine_index);
 };
 
 struct threads_jobs {
-        std::future<local_index> future;
+        std::future<LocalIndex> future;
         uint32_t queue_id;
 };
 
@@ -63,7 +63,7 @@ class indexer {
 		static bool extension_allowed(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words_text(const std::filesystem::path& path);
 		static std::unordered_set<std::wstring> get_words(const std::filesystem::path& path);
-		static local_index thread_task(const std::vector<std::filesystem::path> paths_to_index);
+		static LocalIndex thread_task(const std::vector<std::filesystem::path> paths_to_index);
 		static bool queue_has_place(const std::vector<size_t>& batch_queue_added_size, const size_t& filesize, const size_t& max_filesize, const uint32_t& current_batch_add_start);
 	public:
 		static void save_config(const bool config_scan_dot_paths, const std::filesystem::path& config_path_to_scan, const int config_threads_to_use, const size_t& config_local_index_memory);

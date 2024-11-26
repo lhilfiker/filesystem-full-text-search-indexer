@@ -5,18 +5,18 @@
 #include <algorithm>
 
 
-local_index::local_index() {
+LocalIndex::LocalIndex() {
 	paths_size = 0;
 	words_size = 0;
 	reversed_size = 0;
 	path_word_count_size = 0;
 }
 
-int local_index::size() {
+int LocalIndex::size() {
 	return paths_size + words_size + paths_size + path_word_count_size;
 }
 
-void local_index::clear() {
+void LocalIndex::clear() {
 	paths.clear();
 	words_and_reversed.clear();
 	path_word_count.clear();
@@ -27,7 +27,7 @@ void local_index::clear() {
 	return;
 }
 
-uint32_t local_index::add_path(const std::string& path_to_insert) {
+uint32_t LocalIndex::add_path(const std::string& path_to_insert) {
 	uint32_t id = 0;
 	for (const std::string& path : paths) {
 		if (path == path_to_insert) {
@@ -42,7 +42,7 @@ uint32_t local_index::add_path(const std::string& path_to_insert) {
 	return id;
 }
 
-void local_index::add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id) {
+void LocalIndex::add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id) {
 	uint32_t word_count = 0;
 	for (words_reversed& word_r : words_and_reversed) {
 		if (words_to_insert.erase(word_r.word) == 1) {
@@ -62,19 +62,19 @@ void local_index::add_words(std::unordered_set<std::wstring>& words_to_insert, u
 	return;
 }
 
-void local_index::sort() {
+void LocalIndex::sort() {
 	std::sort(words_and_reversed.begin(), words_and_reversed.end());
 	return;
 }
 
-void local_index::add_to_disk() {
-	index::add(paths, paths_size, path_word_count, path_word_count_size, words_and_reversed, words_size, reversed_size);
+void LocalIndex::add_to_disk() {
+	Index::add(paths, paths_size, path_word_count, path_word_count_size, words_and_reversed, words_size, reversed_size);
 	clear();
 	return;
 }
  
-void local_index::combine(local_index& to_combine_index) {
-	log::write(1, "local_index: combine: start");
+void LocalIndex::combine(LocalIndex& to_combine_index) {
+	log::write(1, "LocalIndex: combine: start");
 	// if empty just add directly
 	if (paths_size == 0 && words_size == 0 && reversed_size == 0 && path_word_count_size == 0) {
 		paths = to_combine_index.paths;

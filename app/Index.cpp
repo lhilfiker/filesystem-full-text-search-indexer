@@ -37,12 +37,12 @@ union TransactionHeader {
 		size_t backup_id;
 		uint8_t operation_type;
 		size_t content_length;
-	}
+	};
 	char bytes[15];
 };
 
 struct Transaction {
-	transaction_header header;
+	TransactionHeader header;
 	std::string content;
 };
 
