@@ -7,26 +7,43 @@
 #include <array>
 #include <bitset>
 
-union bit_byte {
+union BitByte {
 	std::bitset<8> bits;
 	unsigned char all;
 
-	bit_byte() : all(0) {}
+	BitByte() : all(0) {}
 };
 
-union reversed_block {
+union ReversedBlock {
 	uint16_t ids [5];
 	char bytes [10];
 };
 
-union additional_block {
+union AdditionalBlock {
 	uint16_t ids[25];
 	char bytes[50];
 };
 
-union path_offset {
+union PathOffset {
 	uint16_t offset;
 	char bytes[2];
+};
+
+union TransactionHeader {
+	struct {
+		uint8_t status;
+		uint8_t index_type;
+		size_t location;
+		size_t backup_id;
+		uint8_t operation_type;
+		size_t content_length;
+	}
+	char bytes[15];
+};
+
+struct Transaction {
+	transaction_header header;
+	std::string content;
 };
 
 bool index::is_config_loaded = false;
@@ -273,7 +290,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		resize(index_path / "additional.index", additional_size_buffer);
 		map();
 		for (const std::string& path : paths) {
-			path_offset offset = {};
+			PathOffset offset = {};
 			offset.offset = path.length();
 			mmap_paths[file_location] = offset.bytes[0];
 			++file_location;
@@ -308,7 +325,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		file_location = 0;
 		// needed for words_f as it saves a letter as 5 bits instead of 8.
 		uint64_t file_five_bit_location = 0;
-		bit_byte current_byte;
+		BitByte current_byte;
 		int bit_count = 7;
 		for (const words_reversed& word : words_reversed_l ) {
 			// if a word with a new letter comes, add its location to words_f
@@ -399,23 +416,23 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		size_t additional_id = 1;
 		for (const words_reversed& reversed : words_reversed_l) {
 			// it just needs a reversed block and no additional.
-			reversed_block current_reversed_block{};
+			ReversedBlock current_ReversedBlock{};
 			if (reversed.reversed.size() <= 4) {
 				for (int i = 0; i < reversed.reversed.size(); ++i) {
-					current_reversed_block.ids[i] = reversed.reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
+					current_ReversedBlock.ids[i] = reversed.reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
 				}
 			} else {
 				int additional_i = 0;
 				int reversed_i = 0;
-				additional_block additional{};
+				AdditionalBlock additional{};
 				for(const uint32_t& path_id : reversed.reversed) {
 					if(reversed_i < 4) {
-						current_reversed_block.ids[reversed_i] = path_id + 1;
+						current_ReversedBlock.ids[reversed_i] = path_id + 1;
 						++reversed_i;
 						continue;
 					}
 					if(reversed_i == 4) {
-						current_reversed_block.ids[4] = additional_id;
+						current_ReversedBlock.ids[4] = additional_id;
 						++reversed_i;
 					}
 					if(additional_i == 24) {// the next additional id field.
@@ -442,7 +459,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 
 			// write reversed block
 			for (int i = 0; i < 10; ++i) {
-				mmap_reversed[file_location] = current_reversed_block.bytes[i];
+				mmap_reversed[file_location] = current_ReversedBlock.bytes[i];
 				++file_location;
 			}
 		}
@@ -464,80 +481,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 	} else {
 		log::write(2, "indexer: add: adding to existing index.");
-		std::unordered_map<std::string, uint16_t> paths_lookup; // unint16_t as currently its the max limit for the index. an option to increase will be added later.
-		for (int i = 0; i < paths.size(); ++i) {
-			paths_lookup[paths[i]] = i;
-		}
-		uint16_t path_ids_converted[paths.size()] = {};
-		size_t paths_count = paths.size();
-		paths.clear();
-		size_t file_location = 0;
-		path_offset offset;
-		offset.offset = 0;
-		std::string current_path = "";
-		uint16_t part_of_path_grabbed = 0;
-		bool offset_grabbed = false;
-		bool offset_location = false;
-		uint16_t current_id = 1;
-		for (const char& c : mmap_paths) {
-			if (!offset_grabbed) {
-				if(offset_location) {
-					offset.bytes[1] = c;
-					offset_grabbed = true;
-					offset_location = false;
-				} else {
-					offset.bytes[0] = c;
-					offset_location = true;
-				}
-			} else {
-				current_path += c;
-				++part_of_path_grabbed;
-				if(part_of_path_grabbed == offset.offset) {
-					if(auto result = paths_lookup.find(current_path); result != paths_lookup.end()) {
-						path_ids_converted[result->second] = current_id;
-					}
-					++current_id;
-					current_path = "";
-					part_of_path_grabbed = 0;
-					offset_grabbed = false;
-				}
-			}
-		}
-		std::vector<std::string> to_add_paths;
-		size_t to_add_size = 0;
-		// needs to be changed to else as value based lookup is not possible
-		for(uint16_t j = 0; j < paths_count; ++j) {
-			if(path_ids_converted[j] == 0) {
-				auto path_lookup_result = paths_lookup.find(j);
-				std::string path = path_lookup_result->first;
-				to_add_paths.push_back(path);
-				to_add_size += path.length();
-				path_ids_converted[j] = current_id;
-				++current_id;
-			}
-		}
-		//add missing paths
-		if(to_add_size != 0) {
-			to_add_size += to_add_paths.size() * 2;
-			unmap();
-			paths_size_buffer = paths_size + to_add_size;
-			resize(index_path / "paths.index", paths_size_buffer);
-			map();
-			file_location = paths_size;
-			for(const std::string& path : to_add_paths) {
-				path_offset offset;
-				offset.offset = path.size();
-				mmap_paths[file_location] = offset.bytes[0];
-				++file_location;
-				mmap_paths[file_location] = offset.bytes[1];
-				++file_location;
-				for(const char& c: path) {
-					mmap_paths[file_location] = c;
-					++file_location;
-				}
-			}
-			paths_size = paths_size_buffer;
-		}
+		
 
 		
 	}
