@@ -481,9 +481,48 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 	} else {
 		log::write(2, "indexer: add: adding to existing index.");
-		
+		std::vector<Transaction> transactions;		
+		size_t paths_size = paths.size();
+		uint16_t paths_mapping[paths_size] = {};
 
-		
+		//convert local paths to a map with path -> id
+		std::unordered_map<std::string, uint16_t> paths_search;
+		size_t path_insertion_count = 0;
+		for (const std::string& s : paths) {
+			paths_search[s] = path_insertion_count;
+			++path_insertion_count;
+		}
+		paths.clear();
+
+		//go through index on disk and map disk Id to local Id.
+		size_t on_disk_count = 0;
+		size_t on_disk_id = 0;
+		std::string current_path = "";
+		uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
+		while (on_disk_count < paths_size) {
+			if (next_path_end == 0 && on_disk_count + 1 < paths_size) { // as we read 1 byte ahead to prevent accessing invalid data. The index format would allow it but it could be corrupted and not detected.
+				PathOffset path_off_set;
+				path_off_set.bytes[0] = mmap_paths[on_disk_count];
+				++on_disk_count;
+				path_off_set.bytes[1] = mmap_paths[on_disk_count];
+				next_path_end = path_off_set.offset;
+				++on_disk_count;
+				if (current_path != "") {
+					if (paths_search.find(current_path) != paths_search.end()) {
+						paths_mapping[paths_search[current_path]] = on_disk_id;
+					}
+					paths_search.erase(current_path);
+					current_path = "";
+				}
+			}
+			else {
+				current_path += mmap_paths[on_disk_count];
+				--next_path_end;
+			}
+			++on_disk_count;
+		}
+
+		// go through all remaining paths_search elements, add a transaction and add a new id to paths_mapping.
 	}
 	return 0;
 }
