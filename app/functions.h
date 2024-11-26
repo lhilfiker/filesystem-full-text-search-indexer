@@ -93,7 +93,7 @@ class log {
 };
 
 // index.cpp
-class index {
+class Index {
         private:
                 static bool is_config_loaded;
                 static bool is_mapped;

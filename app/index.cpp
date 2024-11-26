@@ -46,61 +46,61 @@ struct Transaction {
 	std::string content;
 };
 
-bool index::is_config_loaded = false;
-bool index::is_mapped = false;
-bool index::first_time = false;
-int index::buffer_size = 0;
-std::filesystem::path index::index_path;
-int index::paths_size = 0;
-int index::paths_size_buffer = 0;
-int index::paths_count_size = 0;
-int index::paths_count_size_buffer = 0;
-int index::words_size = 0;
-int index::words_size_buffer = 0;
-int index::words_f_size = 0;
-int index::words_f_size_buffer = 0;
-int index::reversed_size = 0;
-int index::reversed_size_buffer = 0;
-int index::additional_size = 0;
-int index::additional_size_buffer = 0;
-mio::mmap_sink index::mmap_paths;
-mio::mmap_sink index::mmap_paths_count;
-mio::mmap_sink index::mmap_words;
-mio::mmap_sink index::mmap_words_f;
-mio::mmap_sink index::mmap_reversed;
-mio::mmap_sink index::mmap_additional;
+bool Index::is_config_loaded = false;
+bool Index::is_mapped = false;
+bool Index::first_time = false;
+int Index::buffer_size = 0;
+std::filesystem::path Index::index_path;
+int Index::paths_size = 0;
+int Index::paths_size_buffer = 0;
+int Index::paths_count_size = 0;
+int Index::paths_count_size_buffer = 0;
+int Index::words_size = 0;
+int Index::words_size_buffer = 0;
+int Index::words_f_size = 0;
+int Index::words_f_size_buffer = 0;
+int Index::reversed_size = 0;
+int Index::reversed_size_buffer = 0;
+int Index::additional_size = 0;
+int Index::additional_size_buffer = 0;
+mio::mmap_sink Index::mmap_paths;
+mio::mmap_sink Index::mmap_paths_count;
+mio::mmap_sink Index::mmap_words;
+mio::mmap_sink Index::mmap_words_f;
+mio::mmap_sink Index::mmap_reversed;
+mio::mmap_sink Index::mmap_additional;
 
-void index::save_config(const std::filesystem::path& config_index_path, const int config_buffer_size) {
+void Index::save_config(const std::filesystem::path& config_index_path, const int config_buffer_size) {
 	index_path = config_index_path;
 	buffer_size = config_buffer_size;
 	if (buffer_size < 10000) {
 		buffer_size = 10000;
-		log::write(3, "index: save_config: buffer size needs to be atleast 10000. setting it to 10000.");
+		log::write(3, "Index: save_config: buffer size needs to be atleast 10000. setting it to 10000.");
 	}
 	if (buffer_size > 10000000) {
 		buffer_size = 10000000;
-		log::write(3, "index: save_config: buffer size can not be larger than ~10MB, setting it to ~10MB");
+		log::write(3, "Index: save_config: buffer size can not be larger than ~10MB, setting it to ~10MB");
 	}
 	is_config_loaded = true;
-	log::write(1, "index: save_config: saved config successfully.");
+	log::write(1, "Index: save_config: saved config successfully.");
 	return;
 }
 
-bool index::is_index_mapped() {
+bool Index::is_index_mapped() {
 	return is_mapped;
 }
 
-void index::resize(const std::filesystem::path& path_to_resize, const int size) {
+void Index::resize(const std::filesystem::path& path_to_resize, const int size) {
 	std::error_code ec;
 	std::filesystem::resize_file(path_to_resize, size);
 	if (ec) {
-		log::error("index: resize: could not resize file at path: " + (path_to_resize).string() + " with size: " + std::to_string(size) + ".");
+		log::error("Index: resize: could not resize file at path: " + (path_to_resize).string() + " with size: " + std::to_string(size) + ".");
 	}
 	log::write(1, "indexer: resize: resized file successfully.");
 	return;
 }
 
-int index::unmap() {
+int Index::unmap() {
 	std::error_code ec;
 	if (mmap_paths.is_mapped()) {
 		mmap_paths.unmap();
@@ -121,14 +121,14 @@ int index::unmap() {
 		mmap_additional.unmap();
 	}
 	if (ec) {
-		log::write(4, "index: unmap: error when unmapping index files.");
+		log::write(4, "Index: unmap: error when unmapping index files.");
 		return 1;
 	}
-	log::write(1, "index: unmap: unmapped all successfully.");
+	log::write(1, "Index: unmap: unmapped all successfully.");
 	return 0;
 }
 
-int index::map() {
+int Index::map() {
 	std::error_code ec;
 	if (!mmap_paths.is_mapped()) {
 		mmap_paths = mio::make_mmap_sink((index_path / "paths.index").string(), 0, mio::map_entire_file, ec);
@@ -150,17 +150,17 @@ ec);
 		mmap_additional = mio::make_mmap_sink((index_path / "additional.index").string(), 0, mio::map_entire_file, ec);
 	}
 	if (ec) {
-		log::write(3, "index: map: error when mapping index files.");
+		log::write(3, "Index: map: error when mapping index files.");
 		return 1;
 	}
-	log::write(1, "index: map: mapped all successfully.");
+	log::write(1, "Index: map: mapped all successfully.");
 	return 0;
 }
 
-int index::get_actual_size(const mio::mmap_sink& mmap) {
+int Index::get_actual_size(const mio::mmap_sink& mmap) {
 	std::error_code ec;
 	if (!mmap.is_mapped()) {
-		log::write(3, "index: get_actual_size: not mapped. can not count.");
+		log::write(3, "Index: get_actual_size: not mapped. can not count.");
 		return -1;
 	}
 	int size = 0;
@@ -169,26 +169,26 @@ int index::get_actual_size(const mio::mmap_sink& mmap) {
 		++size;
 	}
 	if (ec) {
-		log::write(3, "index: get_actual_size: error when couting actual size");
+		log::write(3, "Index: get_actual_size: error when couting actual size");
 		return -1;
 	}
-	log::write(1, "index: get_actual_size: successfully counted size: " + std::to_string(size));
+	log::write(1, "Index: get_actual_size: successfully counted size: " + std::to_string(size));
 	return size;
 }
 
-void index::check_files() {
+void Index::check_files() {
 	if (!is_config_loaded) {
-		log::error("index: check_files: config not loaded. can not continue.");
+		log::error("Index: check_files: config not loaded. can not continue.");
 	}
-	log::write(1, "index: check_files: checking files.");
+	log::write(1, "Index: check_files: checking files.");
 	std::error_code ec;
 	if (!std::filesystem::is_directory(index_path)) {
-		log::write(1, "index: check_files: creating index directory.");
+		log::write(1, "Index: check_files: creating index directory.");
 		std::filesystem::create_directories(index_path);
 	}
 	if (!std::filesystem::exists(index_path / "paths.index") || helper::file_size(index_path / "paths.index") == 0 || !std::filesystem::exists(index_path / "paths_count.index")  || helper::file_size(index_path / "paths_count.index") == 0 || !std::filesystem::exists(index_path / "words.index")  || helper::file_size(index_path / "words.index") == 0|| !std::filesystem::exists(index_path / "words_f.index")  || helper::file_size(index_path / "words_f.index") == 0 || !std::filesystem::exists(index_path / "reversed.index")  || helper::file_size(index_path / "reversed.index") == 0 || !std::filesystem::exists(index_path / "additional.index") || helper::file_size(index_path / "additional.index") == 0) {
 		first_time = true;
-		log::write(1, "index: check_files: index files damaged / not existing, recreating.");
+		log::write(1, "Index: check_files: index files damaged / not existing, recreating.");
 		std::ofstream { index_path / "paths.index" };
 		std::ofstream { index_path / "paths_count.index" };
 		std::ofstream { index_path / "words.index" };
@@ -197,14 +197,14 @@ void index::check_files() {
 		std::ofstream { index_path / "additional.index" };
 	}
 	if (ec) {
-		log::error("index: check_files: error accessing/creating index files in " + (index_path).string() + ".");
+		log::error("Index: check_files: error accessing/creating index files in " + (index_path).string() + ".");
 	}
 	return;
 }
 
-int index::initialize() {
+int Index::initialize() {
 	if (!is_config_loaded) {
-		log::write(4, "index: initialize: config not loaded. can not continue.");
+		log::write(4, "Index: initialize: config not loaded. can not continue.");
 		return 1;
 	}
 	is_mapped = false;
@@ -220,7 +220,7 @@ int index::initialize() {
 	if (int reversed_size = get_actual_size(mmap_reversed); reversed_size == -1 && helper::file_size(index_path / "reversed.index") > 0) reversed_size = 0;
 	if (int additional_size = get_actual_size(mmap_additional); additional_size == -1 && helper::file_size(index_path / "additional.index") > 0) additional_size = 0;
 	if ( paths_size == -1 || words_size == -1 || words_f_size == -1 || reversed_size == -1 || additional_size == -1) {
-		log::write(4, "index: initialize: could not get actual size of index files, exiting.");
+		log::write(4, "Index: initialize: could not get actual size of index files, exiting.");
 		return 1;
 	}
 	paths_size_buffer = paths_size + buffer_size;
@@ -230,7 +230,7 @@ int index::initialize() {
 	reversed_size_buffer = reversed_size + buffer_size;
 	additional_size_buffer = additional_size + buffer_size;
 	if (unmap() == 1) { // unmap to resize
-		log::write(4, "index: initialize: could not unmap, see above log message, exiting.");
+		log::write(4, "Index: initialize: could not unmap, see above log message, exiting.");
 		return 1;
 	}
 	//resize actual size + buffer size
@@ -242,31 +242,31 @@ int index::initialize() {
 	resize(index_path / "additional.index", additional_size_buffer);
 	// map after resizing
 	if (map() == 1) { // map files
-		log::write(4, "index: initialize: could not map, see above log message, exiting.");
+		log::write(4, "Index: initialize: could not map, see above log message, exiting.");
 		return 1;
 	}
 	is_mapped = true;
 	return 0;
 }
 
-int index::uninitialize() {
+int Index::uninitialize() {
 	if (!is_config_loaded) {
-		log::write(4, "index: uninitialize: config not loaded. can not continue.");
+		log::write(4, "Index: uninitialize: config not loaded. can not continue.");
 		return 1;
 	}
 	is_mapped = false;
 	// write caches, etc...
 	if (unmap() == 1) {
-		log::write(4, "index: uninitialize: could not unmap.");
+		log::write(4, "Index: uninitialize: could not unmap.");
 		return 1;
 	}
 	return 0;
 }
 
-int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed_l, const size_t& words_size_l, const size_t& reversed_size_l) {
+int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std::vector<uint32_t>& paths_count, const size_t& paths_count_size_l, std::vector<words_reversed>& words_reversed_l, const size_t& words_size_l, const size_t& reversed_size_l) {
 	std::error_code ec;
 	if (first_time) {
-		log::write(2, "index: add: first time write.");
+		log::write(2, "Index: add: first time write.");
 		// paths
 		uint64_t file_location = 0;
 		paths_size_buffer = (paths.size() * 2) + paths_size_l;	
@@ -304,7 +304,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_size = file_location; // -1 to remove the last newline character
 		paths.clear(); // free memory
 
-		log::write(2, "index: add: paths written.");
+		log::write(2, "Index: add: paths written.");
 		//paths_count
 		file_location = 0;
 		for (const uint32_t& path_count : paths_count) {
@@ -317,7 +317,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_count_size = file_location;
 		paths_count.clear(); // free memory
 		
-		log::write(2, "index: add: paths_count written.");
+		log::write(2, "Index: add: paths_count written.");
 		// words & words_f & reversed
 		std::array<uint64_t, 26> words_f;
 		char current_char = '0';
@@ -476,7 +476,7 @@ int index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		first_time = false;
 		
 		if (ec) {
-			log::write(3, "index: add: error");
+			log::write(3, "Index: add: error");
 			return 1;
 		}
 	} else {
