@@ -522,8 +522,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				next_path_end = path_offset.offset;
 				++on_disk_count;
 			} else { 
-				log::write(3, "Index: Combine: invalid path content length indicator. Skipping. The Index could be corrupted.");
-				on_disk_count = paths_size; 
+				// Abort. A corrupted index would mess things up. If the corruption could not get detectet or fixed before here it is most likely broken.
+				log::error("Index: Combine: invalid path content length indicator. Aborting. The Index could be corrupted.");
 			}
 
 			if (on_disk_count + next_path_end < paths_size) { // check if we can read all of it.
@@ -533,8 +533,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 					paths_search.erase(path_to_compare);
 				}
 			} else { 
-				log::write(3, "Index: Combine: invalid path content length. Skipping. The Index could be corrupted.");
-				on_disk_count = paths_size; 
+				log::error("Index: Combine: invalid path content length. Aborting. The Index could be corrupted.");
 			}
 			++on_disk_id;
 		}
