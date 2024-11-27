@@ -14,6 +14,18 @@ union BitByte {
 	BitByte() : all(0) {}
 };
 
+union FiveBitByte {
+	// we can read 5 bytes per time from disk and read 8x 5bits from it.
+	std::bitset<5> bits[8];
+	unsigned char all[5];
+
+}
+
+union WordsFValue {
+	uint64_t value;
+	char bytes[8];
+}
+
 union ReversedBlock {
 	uint16_t ids [5];
 	char bytes [10];
@@ -553,6 +565,59 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			transactions.push_back(to_add_path_transaction);
 		}
 		paths_search.clear();
+	
+		// local index words needs to have atleast 1 value. else it crashes. should be checked when combining.
+		on_disk_count = 0;
+		on_disk_id = 0;
+		size_t local_word_count = 0;
+		char current_first_char = 'a';
+		std::wstring current_word = "";
+		while(on_disk_count < words_size) {
+			if (current_first_char < words_reversed[local_word_count].word[0]) {
+				WordsFValue* wordsFValuePtr = (WordsFValue*)&mmap_words_f[(current_first_char - 'a') * 8];	
+				on_disk_count = wordsFValuePtr->value / 5; // is a 5 bit value. we need to go to the nearest 5 byte value. doesnt matter if its before because we will compare and changing first char to a value before is not possible. 
+			}
+			if (on_disk_count + 4 < words_size) {
+				FiveBitByte* fiveBitPtr = (FiveBitByte*)&mmap_words[on_disk_count];
+				for (int i = 0; i < 5; ++i) {
+					uint8_t c = (uint8_t)fiveBitPtr->bits[i].to_ulong();
+					if(c == 29) { // word done
+						if(current_word == words_reversed[local_word_count].word) {
+							// insert into reversed and additional, maybe new additional
+							++local_word_count;
+							if (local_word_count => words_reversed.size()) {
+								// DONE.
+								on_disk_count = words_size;
+								break;
+							}
+						} else if (current_word > words_reversed[local_word_count].word) {
+							// insert new word before this word and reversed and maybe additional.
+							++local_word_count;
+							if (local_word_count => words_reversed.size()) {
+								// DONE.
+								on_disk_count = words_size;
+								break;
+							}
+
+						}
+						++on_disk_id;
+						current_word = "";
+					} else if (c == 30) {
+						// DONE
+					} else {
+						if (current_word == "" && c < words_reversed[local_word_count].word[0]) {
+							current_first_char = c;
+							break;
+						}
+						current_word += c;
+					}
+				}
+				on_disk_count += 5;
+			} else {
+				// read one by one
+			}
+		}
+
 	}
 	return 0;
 }
