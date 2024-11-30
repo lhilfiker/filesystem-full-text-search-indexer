@@ -32,10 +32,10 @@ union TransactionHeader {
 	struct {
 		uint8_t status; // 0 = no status, 1 = started, 2 = completed
 		uint8_t index_type; // paths = 0, words = 1, words_f = 2, reversed = 3, additional = 4
-		uint64_t location; // byte count in file(or bit for words)
+		uint64_t location; // byte count in file(or bit for words), resize = 0.
 		uint64_t backup_id; // 0 = none
 		uint8_t operation_type; // 0 = Move, 1 = write, 2 = resize
-		uint64_t content_length; // length of content
+		uint64_t content_length; // length of content. for resize this indicates the new size
 	};
 	char bytes[15];
 };
@@ -498,21 +498,43 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			}
 			++on_disk_id;
 		}
-
-		// go through all remaining paths_search elements, add a transaction and add a new id to paths_mapping.
+		
+		// go through all remaining paths_search elements, add a transaction and add a new id to paths_mapping and create a resize transaction.
+		size_t needed_space = 0;
+		std::string paths_add_content = "";
 		for (const auto& [key, value] : paths_search) {
 			paths_mapping[value] = on_disk_id;
+			PathOffset path_offset;
+			path_offset.offset = key.length();
+			paths_add_content += path_offset.bytes[0];
+			paths_add_content += path_offset.bytes[1];
+			paths_add_content += key; 
+			++on_disk_id;
+		}
+		
+		if (needed_space != 0) {
+			// resize
+			Transaction resize_transaction;
+			resize_transaction.header.status = 0;
+			resize_transaction.header.index_type = 0;
+			resize_transaction.header.location = 0;
+			resize_transaction.header.backup_id = 0;
+			resize_transaction.header.operation_type = 2;
+			resize_transaction.header.content_length = paths_size + needed_space;
+			transactions.push_back(resize_transaction);
+			// insert
 			Transaction to_add_path_transaction;
-			to_add_path_transaction.content = key;
+			to_add_path_transaction.content = paths_add_content;
 			to_add_path_transaction.header.status = 0;
 			to_add_path_transaction.header.index_type = 0;
 			to_add_path_transaction.header.location = paths_size - 1;
 			to_add_path_transaction.header.backup_id = 0;
 			to_add_path_transaction.header.operation_type = 1;
-			to_add_path_transaction.header.content_length = key.length();
-			++on_disk_id;
+			to_add_path_transaction.header.content_length = paths_add_content.length();
 			transactions.push_back(to_add_path_transaction);
+		
 		}
+		paths_add_content = "";
 		paths_search.clear();
 
 		// copy words_f into memory
