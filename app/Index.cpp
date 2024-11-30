@@ -388,8 +388,10 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			// it just needs a reversed block and no additional.
 			ReversedBlock current_ReversedBlock{};
 			if (reversed.reversed.size() <= 4) {
-				for (int i = 0; i < reversed.reversed.size(); ++i) {
-					current_ReversedBlock.ids[i] = reversed.reversed[i] + 1; //paths are indexed from 1 because 0 is reserved for empty values.	
+				int i = 0;
+				for (const uint32_t& r_id: reversed.reversed) {
+					current_ReversedBlock.ids[i] = r_id + 1; // paths are indexed from 1
+					++i;
 				}
 			} else {
 				int additional_i = 0;

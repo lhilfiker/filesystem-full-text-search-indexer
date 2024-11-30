@@ -46,7 +46,7 @@ void LocalIndex::add_words(std::unordered_set<std::wstring>& words_to_insert, ui
 	uint32_t word_count = 0;
 	for (words_reversed& word_r : words_and_reversed) {
 		if (words_to_insert.erase(word_r.word) == 1) {
-			word_r.reversed.push_back(path_id);
+			word_r.reversed.insert(path_id);
 			reversed_size += sizeof(path_id);
 			++word_count;
 		}
@@ -122,15 +122,15 @@ void LocalIndex::combine(LocalIndex& to_combine_index) {
 		// if found add converted path ids
 		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
 			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-					words_and_reversed[local_counter].reversed.push_back(paths_id[remote_id]);
+					words_and_reversed[local_counter].reversed.insert(paths_id[remote_id]);
 					reversed_size += sizeof(paths_id[remote_id]);
 			}	
 		}
 		// if it wasn't found and we went passed it, add a new word.
 		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {	
-			std::vector<uint32_t> to_add_ids;
+			std::unordered_set<uint32_t> to_add_ids;
 			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-					to_add_ids.push_back(paths_id[remote_id]);
+					to_add_ids.insert(paths_id[remote_id]);
                                 	reversed_size += sizeof(paths_id[remote_id]);
                         
 			}
@@ -147,9 +147,9 @@ void LocalIndex::combine(LocalIndex& to_combine_index) {
 
 	// add missing
 	while(to_combine_counter >= to_combine_count) {
-		std::vector<uint32_t> to_add_ids;
+		std::unordered_set<uint32_t> to_add_ids;
                 for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-				to_add_ids.push_back(paths_id[remote_id]);
+				to_add_ids.insert(paths_id[remote_id]);
                         	reversed_size += sizeof(paths_id[remote_id]);
 		}
                 words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});

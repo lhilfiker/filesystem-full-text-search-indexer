@@ -16,7 +16,7 @@
 
 struct words_reversed {
 	std::wstring word;
-	std::vector<uint32_t> reversed;
+	std::unordered_set<uint32_t> reversed;
 
 	bool operator<(const words_reversed& other) const {
      		return word < other.word;
