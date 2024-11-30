@@ -13,7 +13,7 @@ LocalIndex::LocalIndex() {
 }
 
 int LocalIndex::size() {
-	return paths_size + words_size + paths_size + path_word_count_size;
+	return paths_size + words_size + paths_size + path_word_count_size + reversed_size;
 }
 
 void LocalIndex::clear() {
