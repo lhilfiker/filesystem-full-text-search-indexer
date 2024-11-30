@@ -357,11 +357,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		log::write(2, "indexer: add: words written");
 		
 		// write words_f
-		//
-		//
-		// rewrite.
-		// also: check each char and if its 0, then set it to the value the next one has.
 		std::vector<int> to_set;
+		// check words_f. If any character is 0, set it to the value of the next non 0 word. 
 		for (int i = 1; i < 26; ++i) { //first one is always 0 so we skip it.
 			if (words_f[i].value == 0) {
 				to_set.push_back(i);
@@ -515,59 +512,63 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_search.clear();
 
 		// TODO: update words_f
-		/*	
-		// local index words needs to have atleast 1 value. else it crashes. should be checked when combining.
+			
+		// local index words needs to have atleast 1 value. else it crashes. should be checked before combining.
 		on_disk_count = 0;
 		on_disk_id = 0;
 		size_t local_word_count = 0;
+		size_t local_word_length = words_reversed_l[0].word.length();
 		char current_first_char = 'a';
+		char local_first_char = words_reversed_l[local_word_count].word[0];
 		std::wstring current_word = L"";
-		while(on_disk_count < words_size) {
-			if (current_first_char < words_reversed[local_word_count].word[0]) {
-				WordsFValue* wordsFValuePtr = (WordsFValue*)&mmap_words_f[(current_first_char - 'a') * 8];	
-				on_disk_count = wordsFValuePtr->value / 5; // is a 5 bit value. we need to go to the nearest 5 byte value. doesnt matter if its before because we will compare and changing first char to a value before is not possible. 
+		
+		while (on_disk_count < words_size) {
+			if (current_first_char < local_first_char) {
+				WordsFValue* wordsFValuePtr = (WordsFValue*)&mmap_words_f[(current_first_char - 'a') * 8];
+				on_disk_count = wordsFValuePtr->value;
 			}
-			if (on_disk_count + 4 < words_size) {
-				FiveBitByte* fiveBitPtr = (FiveBitByte*)&mmap_words[on_disk_count];
-				for (int i = 0; i < 5; ++i) {
-					uint8_t c = (uint8_t)fiveBitPtr->bits[i].to_ulong();
-					if(c == 29) { // word done
-						if(current_word == words_reversed[local_word_count].word) {
-							// insert into reversed and additional, maybe new additional
-							++local_word_count;
-							if (local_word_count => words_reversed.size()) {
-								// DONE.
-								on_disk_count = words_size;
-								break;
-							}
-						} else if (current_word > words_reversed[local_word_count].word) {
-							// insert new word before this word and reversed and maybe additional.
-							++local_word_count;
-							if (local_word_count => words_reversed.size()) {
-								// DONE.
-								on_disk_count = words_size;
-								break;
-							}
-
-						}
-						++on_disk_id;
-						current_word = "";
-					} else if (c == 30) {
-						// DONE
-					} else {
-						if (current_word == "" && c < words_reversed[local_word_count].word[0]) {
-							current_first_char = c;
-							break;
-						}
-						current_word += c;
-					}
+			// read word length
+			uint8_t word_seperator = mmap_words[on_disk_count];
+			if (on_disk_count + word_seperator - 29 > words_size) break; // if we cant read the whole word break. Maybe call a index check as this would mean it is corrupted.
+			current_first_char = mmap_words[on_disk_count + 1];
+			if (word_seperator - 30 != local_word_length && word_seperator != 255) { // skip word if not same length
+				++on_disk_id;
+				on_disk_count += word_seperator - 29; // include word seperator
+				continue;
+			}
+			on_disk_count += 2;
+			current_word += current_first_char;
+			if (word_seperator == 255) { // read until we have a number over 30
+				// when it will be basic string, read until 235 in one batch.
+				while(true) {
+					if (mmap_words[on_disk_count] > 29) break;
+					current_word += mmap_words[on_disk_count];
+					++on_disk_count;
 				}
-				on_disk_count += 5;
 			} else {
-				// read one by one
+				// we will read the chars 1 by 1 to add it to the wstring for now. when we have changed the type from wstring to basic string we can copy it.
+				for (; on_disk_count < on_disk_count + word_seperator - 1; ++on_disk_count) {
+					current_word += mmap_words[on_disk_count];
+				}
 			}
+			
+			if (current_word == words_reversed_l[local_word_count].word) {
+				// word found. insert into reversed and additional. create new additional if needed.
+				++local_word_count;
+				if (local_word_count < words_reversed_l.size()) break; // done with all.
+			} else if (current_word > words_reversed_l[local_word_count].word) {
+				//insert a new word before this word. create new reversed and if needed additional.
+				//update words_f: update all after this character by how long it is + seperator. do in one.
+				++local_word_count;
+				if (local_word_count < words_reversed_l.size()) break; // done with all.
+			}
+
+			++on_disk_id;
 		}
-		*/
+		for (; local_word_count < words_reversed_l.size(); ++local_word_count) {
+			// insert the remaining at the end. update words_f if needed.
+		}
+		
 
 	}
 	return 0;
