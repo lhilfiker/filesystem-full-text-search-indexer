@@ -10,22 +10,22 @@
 
 union WordsFValue {
 	uint64_t value;
-	char bytes[8];
+	unsigned char bytes[8];
 };
 
 union ReversedBlock {
 	uint16_t ids[5];
-	char bytes[10];
+	unsigned char bytes[10];
 };
 
 union AdditionalBlock {
 	uint16_t ids[25];
-	char bytes[50];
+	unsigned char bytes[50];
 };
 
 union PathOffset {
 	uint16_t offset;
-	char bytes[2];
+	unsigned char bytes[2];
 };
 
 union TransactionHeader {
@@ -37,7 +37,7 @@ union TransactionHeader {
 		uint8_t operation_type; // 0 = Move, 1 = write, 2 = resize
 		uint64_t content_length; // length of content. for resize this indicates the new size
 	};
-	char bytes[15];
+	unsigned char bytes[15];
 };
 
 struct Transaction {
@@ -50,7 +50,7 @@ union InsertionHeader {
 		uint64_t location;
 		uint64_t content_length;
 	};
-	char bytes[8];
+	unsigned char bytes[8];
 };
 
 struct Insertion {
@@ -374,7 +374,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 
 		file_location = 0;
 		for (const WordsFValue& word_f: words_f) {
-			std::memcpy(&mmap_words_f[file_location], word_f.bytes, 8);
+			std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0], 8);
 			file_location += 8;
 		}
 
@@ -459,8 +459,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		std::vector<Insertion> reversed_insertions;
 		std::vector<Insertion> additional_insertions;
 
-		size_t paths_size = paths.size();
-		uint16_t paths_mapping[paths_size] = {};
+		size_t paths_l_size = paths.size();
+		uint16_t paths_mapping[paths_l_size] = {};
 
 		//convert local paths to a map with path -> id
 		std::unordered_map<std::string, uint16_t> paths_search;
@@ -472,8 +472,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths.clear();
 
 		//go through index on disk and map disk Id to local Id.
-		size_t on_disk_count = 0;
-		size_t on_disk_id = 0;
+		uint64_t on_disk_count = 0;
+		uint64_t on_disk_id = 0;
 		uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
 		while (on_disk_count < paths_size) {
@@ -484,21 +484,23 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				path_offset.bytes[1] = mmap_paths[on_disk_count];
 				next_path_end = path_offset.offset;
 				++on_disk_count;
+			
+				if (on_disk_count + next_path_end < paths_size) { // check if we can read all of it.
+					std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
+					if (paths_search.find(path_to_compare) != paths_search.end()) {
+						paths_mapping[paths_search[path_to_compare]] = on_disk_id;
+						paths_search.erase(path_to_compare);
+					}
+					on_disk_count += next_path_end;
+				} else { 
+					log::error("Index: Combine: invalid path content length. Aborting. The Index could be corrupted.");
+				}
+				++on_disk_id;
+
 			} else { 
 				// Abort. A corrupted index would mess things up. If the corruption could not get detectet or fixed before here it is most likely broken.
 				log::error("Index: Combine: invalid path content length indicator. Aborting. The Index could be corrupted.");
 			}
-
-			if (on_disk_count + next_path_end < paths_size) { // check if we can read all of it.
-				std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
-				if (paths_search.find(path_to_compare) != paths_search.end()) {
-					paths_mapping[paths_search[path_to_compare]] = on_disk_id;
-					paths_search.erase(path_to_compare);
-				}
-			} else { 
-				log::error("Index: Combine: invalid path content length. Aborting. The Index could be corrupted.");
-			}
-			++on_disk_id;
 		}
 		
 		// go through all remaining paths_search elements, add a transaction and add a new id to paths_mapping and create a resize transaction.
@@ -541,7 +543,9 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 
 		// copy words_f into memory
 		std::array<WordsFValue, 26> words_f;
-		std::memcpy(&words_f[0], &mmap_words_f[0], 26 * 8);
+		for (int i = 0; i < 26; i++) {
+			std::memcpy(&words_f[i].bytes[0], &mmap_words_f[i * 8], 8);
+		}
 
 		// local index words needs to have atleast 1 value. else it crashes. should be checked before combining.
 		on_disk_count = 0;
