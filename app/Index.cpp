@@ -526,7 +526,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		
 		while (on_disk_count < words_size) {
 			if (current_first_char < local_first_char) {
-				on_disk_count = words_f[current_first_char - 'a'];
+				on_disk_count = words_f[current_first_char - 'a'].value;
 			}
 			// read word length
 			uint8_t word_seperator = mmap_words[on_disk_count];
