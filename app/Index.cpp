@@ -511,8 +511,10 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 		paths_search.clear();
 
-		// TODO: update words_f
-			
+		// copy words_f into memory
+		std::array<WordsFValue, 26> words_f;
+		std::memcpy(&words_f[0], &mmap_words_f[0], 26 * 8);
+
 		// local index words needs to have atleast 1 value. else it crashes. should be checked before combining.
 		on_disk_count = 0;
 		on_disk_id = 0;
@@ -524,8 +526,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		
 		while (on_disk_count < words_size) {
 			if (current_first_char < local_first_char) {
-				WordsFValue* wordsFValuePtr = (WordsFValue*)&mmap_words_f[(current_first_char - 'a') * 8];
-				on_disk_count = wordsFValuePtr->value;
+				on_disk_count = words_f[current_first_char - 'a'];
 			}
 			// read word length
 			uint8_t word_seperator = mmap_words[on_disk_count];
