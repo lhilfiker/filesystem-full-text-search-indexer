@@ -14,8 +14,8 @@ union WordsFValue {
 };
 
 union ReversedBlock {
-	uint16_t ids [5];
-	char bytes [10];
+	uint16_t ids[5];
+	char bytes[10];
 };
 
 union AdditionalBlock {
@@ -581,12 +581,26 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			
 			if (current_word == words_reversed_l[local_word_count].word) {
 				// word found. insert into reversed and additional. create new additional if needed.
+				
+				
+				ReversedBlock disk_reversed;
+				std::memcpy(&disk_reversed.bytes[0], &mmap_reversed[on_disk_id * 10], 10);
+				for (int i = 0; i < 4; ++i) {
+					// erase those from reversed.	
+				}
+
+
+
+
+
 				++local_word_count;
+				local_first_char = words_reversed_l[local_word_count].word[0];
 				if (local_word_count < words_reversed_l.size()) break; // done with all.
 			} else if (current_word > words_reversed_l[local_word_count].word) {
 				//insert a new word before this word. create new reversed and if needed additional.
 				//update words_f: update all after this character by how long it is + seperator. do in one.
 				++local_word_count;
+				local_first_char = words_reversed_l[local_word_count].word[0];
 				if (local_word_count < words_reversed_l.size()) break; // done with all.
 			}
 
