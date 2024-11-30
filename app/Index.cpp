@@ -6,25 +6,12 @@
 #include <fstream>
 #include <array>
 #include <bitset>
-
-union BitByte {
-	std::bitset<8> bits;
-	unsigned char all;
-
-	BitByte() : all(0) {}
-};
-
-union FiveBitByte {
-	// we can read 5 bytes per time from disk and read 8x 5bits from it.
-	std::bitset<5> bits[8];
-	unsigned char all[5];
-
-}
+#include <cstring>
 
 union WordsFValue {
 	uint64_t value;
 	char bytes[8];
-}
+};
 
 union ReversedBlock {
 	uint16_t ids [5];
@@ -297,7 +284,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		uint64_t file_location = 0;
 		paths_size_buffer = (paths.size() * 2) + paths_size_l;	
 		paths_count_size_buffer = paths_count_size_l;
-		words_size_buffer = (((words_size_l + words_reversed_l.size()) * 5) / 8) + 5; // we save one char  as 5 bits instead of 8 (1 byte) + place for end of file char and buffer.
+		words_size_buffer = words_size_l + words_reversed_l.size();
 		// words_f_size maybe needs to be extended to allow larger numbers if 8 bytes turn out to be too small. maybe automaticly resize if running out of space?
 		words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for each letter in the alphabet.
 		reversed_size_buffer = words_reversed_l.size() * 10; // each word id has a 10 byte block.
@@ -345,95 +332,56 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		
 		log::write(2, "Index: add: paths_count written.");
 		// words & words_f & reversed
-		std::array<uint64_t, 26> words_f;
+		std::array<WordsFValue, 26> words_f = {0};
 		char current_char = '0';
-		uint32_t current_word = 0;
 		file_location = 0;
-		// needed for words_f as it saves a letter as 5 bits instead of 8.
-		uint64_t file_five_bit_location = 0;
-		BitByte current_byte;
-		int bit_count = 7;
-		for (const words_reversed& word : words_reversed_l ) {
-			// if a word with a new letter comes, add its location to words_f
-			if (word.word[0] != current_char) {
+	
+		for (const words_reversed& word : words_reversed_l) {
+			if (word.word[0] != current_char) { // save file location if a new letter appears.
 				current_char = word.word[0];
-				words_f[current_char - 'a'] = file_five_bit_location;
+				words_f[current_char - 'a'].value = file_location;
 			}
-			std::vector<bool> all_bits;
-			all_bits.reserve(word.word.length() * 5);
-			for (const char c: word.word) {
-
-				unsigned char value = c - 'a';
-				std::bitset<5> bits(value);
-				int word_bit_count = 5;
-				while (0 < word_bit_count) {
-					current_byte.bits[bit_count] = bits[word_bit_count];
-					if (bit_count == 0) {
-						mmap_words[file_location] = current_byte.all;
-						++file_location;
-						bit_count = 7;
-						current_byte.all = 0;
-					} else {
-						--bit_count;
-					}
-					--word_bit_count;
-				}
-				++file_five_bit_location;
-			}
-			//insert new word char
-			std::bitset<5> bits(29);
-			int word_bit_count = 5;
-			while (0 < word_bit_count) {
-				current_byte.bits[bit_count] = bits[word_bit_count];
-				if (bit_count == 0) {
-					mmap_words[file_location] = current_byte.all;
-					++file_location;
-					bit_count = 7;
-					current_byte.all = 0;
-				} else {
-					--bit_count;
-				}
-				--word_bit_count;
-			}
-			++file_five_bit_location;
-			++current_word;
-		}
-		// write rest the remaining byte if needed and then write the end of file char (30)
-		std::bitset<5> bits(30);
-		int word_bit_count = 5;
-		while (0 < word_bit_count) {
-			current_byte.bits[bit_count] = bits[word_bit_count];
-			if (bit_count == 0) {
-				mmap_words[file_location] = current_byte.all;
-				++file_location;
-				bit_count = 7;
-				current_byte.all = 0;
+			size_t word_length = word.word.length();
+			if (word_length + 30 > 254) { // if the word is under 225 in length we can save it directly, if not we set 255 to indicate that we need to count manually. +30 as under is reserved for actual chars.
+				mmap_words[file_location] = 255;
 			} else {
-				--bit_count;
+				mmap_words[file_location] = word_length + 30;
 			}
-			--word_bit_count;
-		}
-		if (bit_count != 7) {
-			mmap_words[file_location] = current_byte.all;
 			++file_location;
+			for(const char& c: word.word) {
+				mmap_words[file_location] = c - 'a';
+				++file_location;
+			}
 		}
-		file_five_bit_location = 0;
 		words_size = file_location;
 		log::write(2, "indexer: add: words written");
 		
 		// write words_f
+		//
+		//
+		// rewrite.
+		// also: check each char and if its 0, then set it to the value the next one has.
+		std::vector<int> to_set;
+		for (int i = 1; i < 26; ++i) { //first one is always 0 so we skip it.
+			if (words_f[i].value == 0) {
+				to_set.push_back(i);
+			} else {
+				for (const int& j: to_set) {
+					words_f[j].value = words_f[i].value;
+				}
+				to_set.clear();
+			}
+		}
+		for (const int& j: to_set) { // if there are any left we set them to the end of words
+			words_f[j].value = file_location; 
+		}
+
 		file_location = 0;
-                for (const uint64_t& word_start_f : words_f) {
-                        mmap_words_f[file_location]     = (word_start_f >> 56) & 0xFF;
-                        mmap_words_f[file_location + 1] = (word_start_f >> 48) & 0xFF;
-                        mmap_words_f[file_location + 2] = (word_start_f >> 40)  & 0xFF; 
-                        mmap_words_f[file_location + 3] = (word_start_f >> 32)  & 0xFF;
-                        mmap_words_f[file_location + 4] = (word_start_f >> 24)  & 0xFF;
-                        mmap_words_f[file_location + 5] = (word_start_f >> 16)  & 0xFF;
-                        mmap_words_f[file_location + 6] = (word_start_f >> 8)  & 0xFF;
-			mmap_words_f[file_location + 7] = word_start_f & 0xFF;
-                        file_location += 8;
-                }
+		for (const WordsFValue& word_f: words_f) {
+			std::memcpy(&mmap_words_f[file_location], word_f.bytes, 8);
+			file_location += 8;
+		}
+
 		words_f_size = file_location;
 		log::write(2, "indexer: add: words_f written");
 		// reversed & additional
@@ -565,13 +513,15 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			transactions.push_back(to_add_path_transaction);
 		}
 		paths_search.clear();
-	
+
+		// TODO: update words_f
+		/*	
 		// local index words needs to have atleast 1 value. else it crashes. should be checked when combining.
 		on_disk_count = 0;
 		on_disk_id = 0;
 		size_t local_word_count = 0;
 		char current_first_char = 'a';
-		std::wstring current_word = "";
+		std::wstring current_word = L"";
 		while(on_disk_count < words_size) {
 			if (current_first_char < words_reversed[local_word_count].word[0]) {
 				WordsFValue* wordsFValuePtr = (WordsFValue*)&mmap_words_f[(current_first_char - 'a') * 8];	
@@ -617,6 +567,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				// read one by one
 			}
 		}
+		*/
 
 	}
 	return 0;
