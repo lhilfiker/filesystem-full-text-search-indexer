@@ -30,11 +30,11 @@ union PathOffset {
 
 union TransactionHeader {
 	struct {
-		uint8_t status;
+		uint8_t status; // 0 = no status, 1 = started, 2 = completed
 		uint8_t index_type; // paths = 0, words = 1, words_f = 2, reversed = 3, additional = 4
 		uint64_t location; // byte count in file(or bit for words)
 		uint64_t backup_id; // 0 = none
-		uint8_t operation_type; // 0 = Move, 1 = write
+		uint8_t operation_type; // 0 = Move, 1 = write, 2 = resize
 		uint64_t content_length; // length of content
 	};
 	char bytes[15];
@@ -47,11 +47,10 @@ struct Transaction {
 
 union InsertionHeader {
 	struct {
-		uint8_t index_type;
 		uint64_t location;
 		uint64_t content_length;
 	};
-	char bytes[9];
+	char bytes[8];
 };
 
 struct Insertion {
@@ -452,7 +451,12 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 	} else {
 		log::write(2, "indexer: add: adding to existing index.");
-		std::vector<Transaction> transactions;		
+		
+		std::vector<Transaction> transactions;
+		std::vector<Insertion> words_insertions;
+		std::vector<Insertion> reversed_insertions;
+		std::vector<Insertion> additional_insertions;
+
 		size_t paths_size = paths.size();
 		uint16_t paths_mapping[paths_size] = {};
 
