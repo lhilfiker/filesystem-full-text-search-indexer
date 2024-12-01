@@ -453,7 +453,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		}
 	} else {
 		log::write(2, "indexer: add: adding to existing index.");
-		
+		map();
+
 		std::vector<Transaction> transactions;
 		std::vector<Insertion> words_insertions;
 		std::vector<Insertion> reversed_insertions;
@@ -542,10 +543,11 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		paths_search.clear();
 
 		// copy words_f into memory
-		std::array<WordsFValue, 26> words_f;
-		for (int i = 0; i < 26; i++) {
-			std::memcpy(&words_f[i].bytes[0], &mmap_words_f[i * 8], 8);
+		std::array<WordsFValue, 26> words_f = {0};
+		for (int i = 0; i < 26; ++i) {
+			std::memcpy(words_f[i].bytes, &mmap_words_f[i * 8], 8);	
 		}
+
 
 		// local index words needs to have atleast 1 value. else it crashes. should be checked before combining.
 		on_disk_count = 0;
