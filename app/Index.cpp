@@ -597,17 +597,102 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			if (current_word == words_reversed_l[local_word_count].word) {
 				// word found. insert into reversed and additional. create new additional if needed.
 				
-				
-				ReversedBlock disk_reversed;
-				std::memcpy(&disk_reversed.bytes[0], &mmap_reversed[on_disk_id * 10], 10);
-				for (int i = 0; i < 4; ++i) {
-					words_reversed_l[local_word_count].reversed.erase(disk_reversed.ids[i]);	
+				if (on_disk_id * 10 + 10 >= reversed_size) {
+					log::error("Index: Reversed out of range. Index corrupted."); // index most likely corrupted.
 				}
+				ReversedBlock* disk_reversed = reinterpret_cast<ReversedBlock*>(&mmap_reversed[on_disk_id * 10]);
+				bool current_has_place = false;
+				for (int i = 0; i < 4; ++i) {
+					if (disk_reversed->ids[i] != 0) {
+						words_reversed_l[local_word_count].reversed.erase(paths_mapping.by_disk[disk_reversed->ids[i]]);	
+					} else {current_has_place = true;}
+				}
+				if (words_reversed_l[local_word_count].reversed.size() != 0 && current_has_place) {
+					for( int i = 0; i < 4; ++i) {
+						if(disk_reversed->ids[i] == 0) {
+							Transaction reversed_add_transaction;
+		                        		reversed_add_transaction.header.status = 0;
+                		        		reversed_add_transaction.header.index_type = 3;
+                		        		reversed_add_transaction.header.location = (on_disk_id * 10) + (i * 2);
+                			        	reversed_add_transaction.header.backup_id = 0;
+                			        	reversed_add_transaction.header.operation_type = 1;
+                			        	reversed_add_transaction.header.content_length = 2;
+							const auto& r_id = *words_reversed_l[local_word_count].reversed.begin();
+							PathOffset content;
+							content.offset = paths_mapping.by_local[r_id];
+							reversed_add_transaction.content = content.bytes[0] + content.bytes[1];
+							words_reversed_l[local_word_count].reversed.erase(r_id);
+                			        	transactions.push_back(reversed_add_transaction);
+
+						}
+					}
+				}
+				uint16_t last_additional = 0;
 				if (words_reversed_l[local_word_count].reversed.size() != 0) {
-					if (uint16_t additional_id = disk_reversed.ids[4]; additional_id != 0) {
+					if (uint16_t additional_id = disk_reversed->ids[4]; additional_id != 0) {
+						while(true) {
+							AdditionalBlock* disk_additional = reinterpret_cast<AdditionalBlock*>(&mmap_additional[(additional_id -1) * 50]);	
+							current_has_place = false;
+							for (int i = 0; i < 24; ++i) {
+								if (disk_additional->ids[i] != 0) {
+									words_reversed_l[local_word_count].reversed.erase(paths_mapping.by_disk[disk_additional->ids[i]]);	
+								} else {current_has_place = true;}
+							}
+							if (words_reversed_l[local_word_count].reversed.size() != 0 && current_has_place) {
+								for( int i = 0; i < 24; ++i) {
+									if(disk_additional->ids[i] == 0) {
+										Transaction additional_add_transaction;
+		                        					additional_add_transaction.header.status = 0;
+                		        					additional_add_transaction.header.index_type = 4;
+                		        					additional_add_transaction.header.location = (on_disk_id * 50) + (i * 2);
+                			        				additional_add_transaction.header.backup_id = 0;
+                			        				additional_add_transaction.header.operation_type = 1;
+                			        				additional_add_transaction.header.content_length = 2;
+										PathOffset content;
+										const auto& r_id = *words_reversed_l[local_word_count].reversed.begin();
+										content.offset = paths_mapping.by_local[r_id];
+										additional_add_transaction.content = content.bytes[0] + content.bytes[1];
+										words_reversed_l[local_word_count].reversed.erase(r_id);
+										transactions.push_back(additional_add_transaction);
+
+									}
+								}
+							}
+							if(words_reversed_l[local_word_count].reversed.size() != 0 && disk_additional->ids[24] != 0) {
+								additional_id = disk_additional->ids[24];
+							} else if(words_reversed_l[local_word_count].reversed.size() != 0 && disk_additional->ids[24] == 0) {
+								last_additional = (on_disk_id * 50) + (24 * 2);
+								break;
+							} else {
+								break;
+							}
+						}
+					}
+					if (disk_reversed->ids[4] == 0 || last_additional != 0) {
+						std::vector<AdditionalBlock> new_additionals;
 						
-					} else {
-						// create
+						PathOffset last_additional_id;
+						last_additional_id.offset = (additional_size / 50) + 1;
+						
+						Transaction additional_add_transaction;
+		                        	additional_add_transaction.header.status = 0;
+                		        	if (last_additional == 0) {
+							additional_add_transaction.header.index_type = 3;
+							additional_add_transaction.header.location = (on_disk_id * 10) + 8;
+						}
+						else {
+							additional_add_transaction.header.index_type = 4;
+							additional_add_transaction.header.location = (on_disk_id * 50) + 48;
+						}
+                			        additional_add_transaction.header.backup_id = 0;
+                			        additional_add_transaction.header.operation_type = 1;
+                			        additional_add_transaction.header.content_length = 2;
+						additional_add_transaction.content = last_additional_id.bytes[0] + last_additional_id.bytes[1];
+                			        transactions.push_back(additional_add_transaction);
+
+						// create new additonals and create insertions at the end.
+
+
 					}
 				}
 
