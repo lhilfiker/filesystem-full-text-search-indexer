@@ -461,7 +461,12 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		std::vector<Insertion> additional_insertions;
 
 		size_t paths_l_size = paths.size();
-		uint16_t paths_mapping[paths_l_size] = {};
+
+		struct PathsMapping {
+			std::unordered_map<uint16_t, uint16_t> by_local;
+			std::unordered_map<uint16_t, uint16_t> by_disk;
+		};
+		PathsMapping paths_mapping;
 
 		//convert local paths to a map with path -> id
 		std::unordered_map<std::string, uint16_t> paths_search;
@@ -489,7 +494,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				if (on_disk_count + next_path_end < paths_size) { // check if we can read all of it.
 					std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
 					if (paths_search.find(path_to_compare) != paths_search.end()) {
-						paths_mapping[paths_search[path_to_compare]] = on_disk_id;
+						paths_mapping.by_local[paths_search[path_to_compare]] = on_disk_id;
+						paths_mapping.by_disk[on_disk_id] = paths_search[path_to_compare];
 						paths_search.erase(path_to_compare);
 					}
 					on_disk_count += next_path_end;
@@ -508,7 +514,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		size_t needed_space = 0;
 		std::string paths_add_content = "";
 		for (const auto& [key, value] : paths_search) {
-			paths_mapping[value] = on_disk_id;
+			paths_mapping.by_local[value] = on_disk_id;
+			paths_mapping.by_disk[on_disk_id] = value;
 			PathOffset path_offset;
 			path_offset.offset = key.length();
 			paths_add_content += path_offset.bytes[0];
@@ -594,7 +601,14 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 				ReversedBlock disk_reversed;
 				std::memcpy(&disk_reversed.bytes[0], &mmap_reversed[on_disk_id * 10], 10);
 				for (int i = 0; i < 4; ++i) {
-					// erase those from reversed.	
+					words_reversed_l[local_word_count].reversed.erase(disk_reversed.ids[i]);	
+				}
+				if (words_reversed_l[local_word_count].reversed.size() != 0) {
+					if (uint16_t additional_id = disk_reversed.ids[4]; additional_id != 0) {
+						
+					} else {
+						// create
+					}
 				}
 
 
