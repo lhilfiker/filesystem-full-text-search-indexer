@@ -32,7 +32,7 @@ union TransactionHeader {
 	struct {
 		uint8_t status; // 0 = no status, 1 = started, 2 = completed
 		uint8_t index_type; // paths = 0, words = 1, words_f = 2, reversed = 3, additional = 4
-		uint64_t location; // byte count in file(or bit for words), resize = 0.
+		uint64_t location; // byte count in file, resize = 0.
 		uint64_t backup_id; // 0 = none
 		uint8_t operation_type; // 0 = Move, 1 = write, 2 = resize
 		uint64_t content_length; // length of content. for resize this indicates the new size
@@ -458,7 +458,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		std::vector<Transaction> transactions;
 		std::vector<Insertion> words_insertions;
 		std::vector<Insertion> reversed_insertions;
-		std::vector<Insertion> additional_insertions;
+		uint64_t additional_new_needed_size = 0;
 
 		size_t paths_l_size = paths.size();
 
@@ -565,6 +565,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		char local_first_char = words_reversed_l[local_word_count].word[0];
 		std::wstring current_word = L"";
 		
+		uint64_t disk_additional_ids = (additional_size / 50) + 1;
+
 		while (on_disk_count < words_size) {
 			if (current_first_char < local_first_char) {
 				on_disk_count = words_f[current_first_char - 'a'].value;
@@ -672,7 +674,7 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 						std::vector<AdditionalBlock> new_additionals;
 						
 						PathOffset last_additional_id;
-						last_additional_id.offset = (additional_size / 50) + 1;
+						last_additional_id.offset = disk_additional_ids;
 						
 						Transaction additional_add_transaction;
 		                        	additional_add_transaction.header.status = 0;
@@ -691,6 +693,44 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
                 			        transactions.push_back(additional_add_transaction);
 
 						// create new additonals and create insertions at the end.
+						size_t current_additional = 0;
+						AdditionalBlock current_additional_block{};
+						for (const uint16_t& p_id: words_reversed_l[local_word_count].reversed) {
+							if (current_additional == 24) {
+								++disk_additional_ids;
+								current_additional_block.ids[24] = disk_additional_ids;
+								new_additionals.push_back(current_additional_block);
+								current_additional_block = {};
+								current_additional = 0;
+							}
+							current_additional_block.ids[current_additional] = p_id;
+							++current_additional;
+						}
+						if(current_additional_block.ids[0] != 0) {
+							if (current_additional_block.ids[24] != 0) {
+								current_additional_block.ids[24] = 0;
+							}
+							new_additionals.push_back(current_additional_block);
+						}
+						
+						std::string insert_content = "";
+						for (const AdditionalBlock& a_block: new_additionals) {
+							for(int i = 0; i < 50; ++i) {
+								insert_content += a_block.bytes[i]; // TODO: more efficent copying.
+							}
+						}
+
+						additional_new_needed_size += insert_content.length();
+
+						Transaction additional_append_transaction;
+                                                additional_append_transaction.header.status = 0;
+                                                additional_append_transaction.header.index_type = 4;
+                                                additional_append_transaction.header.location = additional_size + additional_new_needed_size;
+                                                additional_append_transaction.header.backup_id = 0;
+                                                additional_append_transaction.header.operation_type = 1;
+                                                additional_append_transaction.header.content_length = insert_content.length();
+                                                additional_append_transaction.content = insert_content;
+                                                transactions.push_back(additional_append_transaction);
 
 
 					}
@@ -716,6 +756,10 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 		for (; local_word_count < words_reversed_l.size(); ++local_word_count) {
 			// insert the remaining at the end. update words_f if needed.
 		}
+
+
+		// resize additional based on additional_new_needed_size
+		//
 		
 
 	}
