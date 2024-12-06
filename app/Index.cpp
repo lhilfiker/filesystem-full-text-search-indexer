@@ -598,6 +598,8 @@ int Index::add(std::vector<std::string>& paths, const size_t& paths_size_l, std:
 			
 			if (current_word == words_reversed_l[local_word_count].word) {
 				// word found. insert into reversed and additional. create new additional if needed.
+				//
+				// TODO: Overwrite path word count with inputet value.
 				
 				if (on_disk_id * 10 + 10 >= reversed_size) {
 					log::error("Index: Reversed out of range. Index corrupted."); // index most likely corrupted.
