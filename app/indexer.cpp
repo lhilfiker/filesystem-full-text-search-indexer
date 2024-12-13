@@ -49,20 +49,22 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 	std::unordered_set<std::wstring> words_return;
 	file.map(path.string(), ec);
 	std::wstring current_word = L"";
-	for (char c : file) {
-		helper::convert_char(c);
-		if (c == '!') {
-			if  (current_word.length() > 4 && current_word.length() < 15) {				
-				StemEnglish(current_word);	
-				words_return.insert(current_word);
+	if (ec) {
+		for (char c : file) {
+			helper::convert_char(c);
+			if (c == '!') {
+				if  (current_word.length() > 4 && current_word.length() < 15) {				
+					StemEnglish(current_word);	
+					words_return.insert(current_word);
+				}
+				current_word.clear();
+			} else {
+				current_word.push_back(c);
 			}
-			current_word.clear();
-		} else {
-			current_word.push_back(c);
 		}
 	}
 	if  (current_word.length() > 3 && current_word.length() < 20) {
-                StemEnglish(current_word);
+		StemEnglish(current_word);
                 words_return.insert(current_word);
         }
 	file.unmap();
@@ -72,7 +74,7 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 		helper::convert_char(c);
                 if (c == '!') {
                         if  (current_word.length() > 4 && current_word.length() < 15) {
-                                words_return.insert(current_word);
+				words_return.insert(current_word);
                         }
                         current_word.clear();
                 } else {
@@ -81,7 +83,7 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 
 	}
 	if  (current_word.length() > 3 && current_word.length() < 20) {
-                StemEnglish(current_word);
+		StemEnglish(current_word);
                 words_return.insert(current_word);
         }
 

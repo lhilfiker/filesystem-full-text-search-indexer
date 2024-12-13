@@ -33,5 +33,6 @@ int main() {
 		log::write(4, "main: test function returned error, exiting");
 		return 1;
 	}
+	log::write(1, "done all");
 	return 0;
 }
