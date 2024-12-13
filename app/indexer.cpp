@@ -49,7 +49,7 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 
 	std::error_code ec;
 	mio::mmap_source file;
-	std::unordered_set<std::wstring> words_return;
+	std::unordered_set<std::wstring> words_return{};
 	file.map(path.string(), ec);
 	std::string current_word = "";
 	if (!ec) {

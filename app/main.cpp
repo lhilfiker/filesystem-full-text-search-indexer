@@ -18,7 +18,7 @@ int test() {
 		log::write(4, "uninitialize failed.");
 		return 1;
 	}
-	indexer::save_config(false, "/home/lukas/", 4, 1500000000);
+	indexer::save_config(false, "/home/lukas/Dokumente/tests", 4, 1500000000);
 	indexer::start_from();
 	log::write(2, "done, uninitializing...");
 	if (Index::uninitialize() == 1) {
