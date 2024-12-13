@@ -133,10 +133,11 @@ void LocalIndex::combine(LocalIndex& to_combine_index) {
 				for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
 						to_add_ids.insert(paths_id[remote_id]);
         	                        	reversed_size += sizeof(paths_id[remote_id]);
-        	                
+ 
 				}
 				words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
 				words_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+				// we insert it at the end. We will not update local counter or max size because we dont need to reprocess already proccessed ones.
 				++to_combine_counter;
 				if (to_combine_counter >= to_combine_count) {
 					to_combine_index.clear();
