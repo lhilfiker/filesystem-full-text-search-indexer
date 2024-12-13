@@ -118,43 +118,45 @@ void LocalIndex::combine(LocalIndex& to_combine_index) {
 	if (to_combine_index.words_and_reversed.empty()) return;
 	int local_counter = 0;
 	int to_combine_counter = 0;
-	while(local_counter < words_reversed_count) {
-		// if found add converted path ids
-		if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
-			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-					words_and_reversed[local_counter].reversed.insert(paths_id[remote_id]);
-					reversed_size += sizeof(paths_id[remote_id]);
-			}	
+	if (to_combine_index.words_and_reversed.size() != 0) {
+		while(local_counter < words_reversed_count) {
+			// if found add converted path ids
+			if (words_and_reversed[local_counter].word == to_combine_index.words_and_reversed[to_combine_counter].word) {
+				for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
+						words_and_reversed[local_counter].reversed.insert(paths_id[remote_id]);
+						reversed_size += sizeof(paths_id[remote_id]);
+				}	
+			}
+			// if it wasn't found and we went passed it, add a new word.
+			if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {	
+				std::unordered_set<uint32_t> to_add_ids;
+				for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
+						to_add_ids.insert(paths_id[remote_id]);
+        	                        	reversed_size += sizeof(paths_id[remote_id]);
+        	                
+				}
+				words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
+				words_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+				++to_combine_counter;
+				if (to_combine_counter >= to_combine_count) {
+					to_combine_index.clear();
+					return; // finished if no more to_combine_elements.
+				}
+			}
+			++local_counter;
 		}
-		// if it wasn't found and we went passed it, add a new word.
-		if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {	
+	
+		// add missing
+		while(to_combine_counter >= to_combine_count) {
 			std::unordered_set<uint32_t> to_add_ids;
-			for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
+        	        for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
 					to_add_ids.insert(paths_id[remote_id]);
-                                	reversed_size += sizeof(paths_id[remote_id]);
-                        
+        	                	reversed_size += sizeof(paths_id[remote_id]);
 			}
-			words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
-			words_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
-			++to_combine_counter;
-			if (to_combine_counter >= to_combine_count) {
-				to_combine_index.clear();
-				return; // finished if no more to_combine_elements.
-			}
+        	        words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
+        	        words_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
+        		++to_combine_counter;
 		}
-		++local_counter;
-	}
-
-	// add missing
-	while(to_combine_counter >= to_combine_count) {
-		std::unordered_set<uint32_t> to_add_ids;
-                for (const uint32_t& remote_id : to_combine_index.words_and_reversed[to_combine_counter].reversed) {
-				to_add_ids.insert(paths_id[remote_id]);
-                        	reversed_size += sizeof(paths_id[remote_id]);
-		}
-                words_and_reversed.push_back({to_combine_index.words_and_reversed[to_combine_counter].word,to_add_ids});
-                words_size += to_combine_index.words_and_reversed[to_combine_counter].word.length();
-        	++to_combine_counter;
 	}
 	to_combine_index.clear();
 	return;

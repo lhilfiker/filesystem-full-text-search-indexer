@@ -44,18 +44,22 @@ bool indexer::extension_allowed(const std::filesystem::path& path) {
 }
 
 std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::path& path) {
+	// This will need to be redone.
+	// It needs to consider Character encoding and proper error handling.
+
 	std::error_code ec;
 	mio::mmap_source file;
 	std::unordered_set<std::wstring> words_return;
 	file.map(path.string(), ec);
-	std::wstring current_word = L"";
-	if (ec) {
+	std::string current_word = "";
+	if (!ec) {
 		for (char c : file) {
 			helper::convert_char(c);
 			if (c == '!') {
 				if  (current_word.length() > 4 && current_word.length() < 15) {				
-					StemEnglish(current_word);	
-					words_return.insert(current_word);
+					std::wstring wide_word = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(current_word);
+					StemEnglish(wide_word);	
+					words_return.insert(wide_word);
 				}
 				current_word.clear();
 			} else {
@@ -64,8 +68,9 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 		}
 	}
 	if  (current_word.length() > 3 && current_word.length() < 20) {
-		StemEnglish(current_word);
-                words_return.insert(current_word);
+		std::wstring wide_word = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(current_word);
+		StemEnglish(wide_word);
+                words_return.insert(wide_word);
         }
 	file.unmap();
 	// file name
@@ -74,7 +79,9 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 		helper::convert_char(c);
                 if (c == '!') {
                         if  (current_word.length() > 4 && current_word.length() < 15) {
-				words_return.insert(current_word);
+				
+				std::wstring wide_word = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(current_word);
+				words_return.insert(wide_word);
                         }
                         current_word.clear();
                 } else {
@@ -83,9 +90,12 @@ std::unordered_set<std::wstring> indexer::get_words_text(const std::filesystem::
 
 	}
 	if  (current_word.length() > 3 && current_word.length() < 20) {
-		StemEnglish(current_word);
-                words_return.insert(current_word);
+	
+		std::wstring wide_word = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(current_word);
+		StemEnglish(wide_word);
+                words_return.insert(wide_word);
         }
+	
 
 	if (ec) {
 		log::write(3, "indexerer: get_words: error reading / normalizing file.");
