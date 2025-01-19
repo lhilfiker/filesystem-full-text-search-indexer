@@ -324,28 +324,24 @@ int Index::uninitialize() {
   return 0;
 }
 
-int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
-               std::vector<uint32_t> &paths_count,
-               const size_t &paths_count_size_l,
-               std::vector<words_reversed> &words_reversed_l,
-               const size_t &words_size_l, const size_t &reversed_size_l) {
+int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
   if (first_time) {
     log::write(2, "Index: add: first time write.");
     // paths
     uint64_t file_location = 0;
-    paths_size_buffer = (paths.size() * 2) + paths_size_l;
-    paths_count_size_buffer = paths_count_size_l;
-    words_size_buffer = words_size_l + words_reversed_l.size();
+    paths_size_buffer = (index_to_add.paths.size() * 2) + index_to_add.paths_size;
+    paths_count_size_buffer = index_to_add.paths_count_size;
+    words_size_buffer = index_to_add.words_size + index_to_add.words_reversed.size();
     // words_f_size maybe needs to be extended to allow larger numbers if 8
     // bytes turn out to be too small. maybe automaticly resize if running out
     // of space?
     words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for
                                   // each letter in the alphabet.
     reversed_size_buffer =
-        words_reversed_l.size() * 10; // each word id has a 10 byte block.
+        index_to_add.words_reversed.size() * 10; // each word id has a 10 byte block.
     additional_size_buffer = 0;
-    for (const words_reversed &additional_reversed_counter : words_reversed_l) {
+    for (const words_reversed &additional_reversed_counter : index_to_add.words_reversed) {
       if (additional_reversed_counter.reversed.size() < 5)
         continue; // if under 4 words, no additional is requiered.
       additional_size_buffer +=
@@ -360,7 +356,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
     resize(index_path / "reversed.index", reversed_size_buffer);
     resize(index_path / "additional.index", additional_size_buffer);
     map();
-    for (const std::string &path : paths) {
+    for (const std::string &path : index_to_add.paths) {
       PathOffset offset = {};
       offset.offset = path.length();
       mmap_paths[file_location] = offset.bytes[0];
@@ -373,12 +369,12 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
       }
     }
     paths_size = file_location; // -1 to remove the last newline character
-    paths.clear();              // free memory
+    index_to_add.paths.clear();              // free memory
 
     log::write(2, "Index: add: paths written.");
     // paths_count
     file_location = 0;
-    for (const uint32_t &path_count : paths_count) {
+    for (const uint32_t &path_count : index_to_add.paths_count) {
       mmap_paths_count[file_location] = (path_count >> 24) & 0xFF;
       mmap_paths_count[file_location + 1] = (path_count >> 16) & 0xFF;
       mmap_paths_count[file_location + 2] = (path_count >> 8) & 0xFF;
@@ -386,7 +382,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
       file_location += 4;
     }
     paths_count_size = file_location;
-    paths_count.clear(); // free memory
+    index_to_add.paths_count.clear(); // free memory
 
     log::write(2, "Index: add: paths_count written.");
     // words & words_f & reversed
@@ -394,7 +390,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
     char current_char = '0';
     file_location = 0;
 
-    for (const words_reversed &word : words_reversed_l) {
+    for (const words_reversed &word : index_to_add.words_reversed) {
       if (word.word[0] !=
           current_char) { // save file location if a new letter appears.
         current_char = word.word[0];
@@ -449,7 +445,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
     file_location = 0;
     size_t additional_file_location = 0;
     size_t additional_id = 1;
-    for (const words_reversed &reversed : words_reversed_l) {
+    for (const words_reversed &reversed : index_to_add.words_reversed) {
       // it just needs a reversed block and no additional.
       ReversedBlock current_ReversedBlock{};
       if (reversed.reversed.size() <= 4) {
@@ -526,7 +522,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
     std::vector<Insertion> reversed_insertions;
     uint64_t additional_new_needed_size = 0;
 
-    size_t paths_l_size = paths.size();
+    size_t paths_l_size = index_to_add.paths.size();
 
     struct PathsMapping {
       std::unordered_map<uint16_t, uint16_t> by_local;
@@ -537,11 +533,11 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
     // convert local paths to a map with path -> id
     std::unordered_map<std::string, uint16_t> paths_search;
     size_t path_insertion_count = 0;
-    for (const std::string &s : paths) {
+    for (const std::string &s : index_to_add.paths) {
       paths_search[s] = path_insertion_count;
       ++path_insertion_count;
     }
-    paths.clear();
+    index_to_add.paths.clear();
 
     // go through index on disk and map disk Id to local Id.
     uint64_t on_disk_count = 0;
@@ -635,9 +631,9 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
     on_disk_count = 0;
     on_disk_id = 0;
     size_t local_word_count = 0;
-    size_t local_word_length = words_reversed_l[0].word.length();
+    size_t local_word_length = index_to_add.words_reversed[0].word.length();
     char current_first_char = 'a';
-    char local_first_char = words_reversed_l[local_word_count].word[0];
+    char local_first_char = index_to_add.words_reversed[local_word_count].word[0];
     std::wstring current_word = L"";
 
     uint64_t disk_additional_ids = (additional_size / 50) + 1;
@@ -677,7 +673,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
         }
       }
 
-      if (current_word == words_reversed_l[local_word_count].word) {
+      if (current_word == index_to_add.words_reversed[local_word_count].word) {
         // word found. insert into reversed and additional. create new
         // additional if needed.
         //
@@ -694,13 +690,13 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
         bool current_has_place = false;
         for (int i = 0; i < 4; ++i) {
           if (disk_reversed->ids[i] != 0) {
-            words_reversed_l[local_word_count].reversed.erase(
+            index_to_add.words_reversed[local_word_count].reversed.erase(
                 paths_mapping.by_disk[disk_reversed->ids[i]]);
           } else {
             current_has_place = true;
           }
         }
-        if (words_reversed_l[local_word_count].reversed.size() != 0 &&
+        if (index_to_add.words_reversed[local_word_count].reversed.size() != 0 &&
             current_has_place) {
           for (int i = 0; i < 4; ++i) {
             if (disk_reversed->ids[i] == 0) {
@@ -713,18 +709,18 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
               reversed_add_transaction.header.operation_type = 1;
               reversed_add_transaction.header.content_length = 2;
               const auto &r_id =
-                  *words_reversed_l[local_word_count].reversed.begin();
+                  *index_to_add.words_reversed[local_word_count].reversed.begin();
               PathOffset content;
               content.offset = paths_mapping.by_local[r_id];
               reversed_add_transaction.content =
                   content.bytes[0] + content.bytes[1];
-              words_reversed_l[local_word_count].reversed.erase(r_id);
+              index_to_add.words_reversed[local_word_count].reversed.erase(r_id);
               transactions.push_back(reversed_add_transaction);
             }
           }
         }
         uint16_t last_additional = 0;
-        if (words_reversed_l[local_word_count].reversed.size() != 0) {
+        if (index_to_add.words_reversed[local_word_count].reversed.size() != 0) {
           if (uint16_t additional_id = disk_reversed->ids[4];
               additional_id != 0) {
             while (true) {
@@ -734,13 +730,13 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
               current_has_place = false;
               for (int i = 0; i < 24; ++i) {
                 if (disk_additional->ids[i] != 0) {
-                  words_reversed_l[local_word_count].reversed.erase(
+                  index_to_add.words_reversed[local_word_count].reversed.erase(
                       paths_mapping.by_disk[disk_additional->ids[i]]);
                 } else {
                   current_has_place = true;
                 }
               }
-              if (words_reversed_l[local_word_count].reversed.size() != 0 &&
+              if (index_to_add.words_reversed[local_word_count].reversed.size() != 0 &&
                   current_has_place) {
                 for (int i = 0; i < 24; ++i) {
                   if (disk_additional->ids[i] == 0) {
@@ -754,19 +750,19 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
                     additional_add_transaction.header.content_length = 2;
                     PathOffset content;
                     const auto &r_id =
-                        *words_reversed_l[local_word_count].reversed.begin();
+                        *index_to_add.words_reversed[local_word_count].reversed.begin();
                     content.offset = paths_mapping.by_local[r_id];
                     additional_add_transaction.content =
                         content.bytes[0] + content.bytes[1];
-                    words_reversed_l[local_word_count].reversed.erase(r_id);
+                    index_to_add.words_reversed[local_word_count].reversed.erase(r_id);
                     transactions.push_back(additional_add_transaction);
                   }
                 }
               }
-              if (words_reversed_l[local_word_count].reversed.size() != 0 &&
+              if (index_to_add.words_reversed[local_word_count].reversed.size() != 0 &&
                   disk_additional->ids[24] != 0) {
                 additional_id = disk_additional->ids[24];
-              } else if (words_reversed_l[local_word_count].reversed.size() !=
+              } else if (index_to_add.words_reversed[local_word_count].reversed.size() !=
                              0 &&
                          disk_additional->ids[24] == 0) {
                 last_additional = (on_disk_id * 50) + (24 * 2);
@@ -804,7 +800,7 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
             size_t current_additional = 0;
             AdditionalBlock current_additional_block{};
             for (const uint16_t &p_id :
-                 words_reversed_l[local_word_count].reversed) {
+                 index_to_add.words_reversed[local_word_count].reversed) {
               if (current_additional == 24) {
                 ++disk_additional_ids;
                 current_additional_block.ids[24] = disk_additional_ids;
@@ -847,22 +843,22 @@ int Index::add(std::vector<std::string> &paths, const size_t &paths_size_l,
         }
 
         ++local_word_count;
-        local_first_char = words_reversed_l[local_word_count].word[0];
-        if (local_word_count < words_reversed_l.size())
+        local_first_char = index_to_add.words_reversed[local_word_count].word[0];
+        if (local_word_count < index_to_add.words_reversed.size())
           break; // done with all.
-      } else if (current_word > words_reversed_l[local_word_count].word) {
+      } else if (current_word > index_to_add.words_reversed[local_word_count].word) {
         // insert a new word before this word. create new reversed and if needed
         // additional. update words_f: update all after this character by how
         // long it is + seperator. do in one.
         ++local_word_count;
-        local_first_char = words_reversed_l[local_word_count].word[0];
-        if (local_word_count < words_reversed_l.size())
+        local_first_char = index_to_add.words_reversed[local_word_count].word[0];
+        if (local_word_count < index_to_add.words_reversed.size())
           break; // done with all.
       }
 
       ++on_disk_id;
     }
-    for (; local_word_count < words_reversed_l.size(); ++local_word_count) {
+    for (; local_word_count < index_to_add.words_reversed.size(); ++local_word_count) {
       // insert the remaining at the end. update words_f if needed.
     }
 

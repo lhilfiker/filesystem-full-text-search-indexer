@@ -68,7 +68,8 @@ void LocalIndex::sort() {
 }
 
 void LocalIndex::add_to_disk() {
-	Index::add(paths, paths_size, path_word_count, path_word_count_size, words_and_reversed, words_size, reversed_size);
+	index_combine_data index_to_add{paths, paths_size, path_word_count, path_word_count_size, words_and_reversed, words_size, reversed_size };
+	Index::add(index_to_add);
 	clear();
 	return;
 }
