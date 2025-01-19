@@ -26,7 +26,7 @@ struct index_combine_data {
   const size_t &paths_size;
   std::vector<uint32_t> &paths_count;
   const size_t &paths_count_size;
-  std::vector<words_reversed> &words_reversed;
+  std::vector<words_reversed> &words_and_reversed;
   const size_t &words_size;
   const size_t &reversed_size;
 };
