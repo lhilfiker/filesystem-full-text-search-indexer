@@ -151,6 +151,8 @@ private:
   static int unmap();
   static void resize(const std::filesystem::path &path_to_resize,
                      const int size);
+  static int add_new(index_combine_data &index_to_add);
+  static int merge(index_combine_data &index_to_add);
 
 public:
   static void save_config(const std::filesystem::path &config_index_path,
