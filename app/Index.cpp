@@ -547,6 +547,7 @@ int Index::merge(index_combine_data &index_to_add) {
   PathsMapping paths_mapping;
 
   // convert local paths to a map with path -> id
+  // TODO: more memory efficent converting.
   std::unordered_map<std::string, uint16_t> paths_search;
   size_t path_insertion_count = 0;
   for (const std::string &s : index_to_add.paths) {
@@ -560,6 +561,7 @@ int Index::merge(index_combine_data &index_to_add) {
   uint64_t on_disk_id = 0;
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
+  // paths_size is the count of bytes of the index on disk.
   while (on_disk_count < paths_size) {
     if (on_disk_count + 1 <
         paths_size) { // as we read 1 byte ahead to prevent accessing invalid
@@ -575,10 +577,16 @@ int Index::merge(index_combine_data &index_to_add) {
       if (on_disk_count + next_path_end <
           paths_size) { // check if we can read all of it.
         std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
-        if (paths_search.find(path_to_compare) != paths_search.end()) {
-          paths_mapping.by_local[paths_search[path_to_compare]] = on_disk_id;
-          paths_mapping.by_disk[on_disk_id] = paths_search[path_to_compare];
-          paths_search.erase(path_to_compare);
+        if (paths_search.find(path_to_compare) !=
+            paths_search
+                .end()) { // check if the disk path is found in memory index.
+          paths_mapping.by_local[paths_search[path_to_compare]] =
+              on_disk_id; // map disk id to memory id.
+          paths_mapping.by_disk[on_disk_id] =
+              paths_search[path_to_compare]; // map memory id to disk id.
+          paths_search.erase(
+              path_to_compare); // remove already found items so we know later
+                                // which ones are not on disk.
         }
         on_disk_count += next_path_end;
       } else {
@@ -602,6 +610,8 @@ int Index::merge(index_combine_data &index_to_add) {
   for (const auto &[key, value] : paths_search) {
     paths_mapping.by_local[value] = on_disk_id;
     paths_mapping.by_disk[on_disk_id] = value;
+    // add all 2 byte offset + path to a string because all missing paths will
+    // be added one after another
     PathOffset path_offset;
     path_offset.offset = key.length();
     paths_add_content += path_offset.bytes[0];
@@ -609,12 +619,11 @@ int Index::merge(index_combine_data &index_to_add) {
     paths_add_content += key;
     ++on_disk_id;
   }
-
   if (needed_space != 0) {
-    // resize
+    // resize all paths + offset fit.
     Transaction resize_transaction{0, 0, 0, 0, 2, paths_size + needed_space};
     transactions.push_back(resize_transaction);
-    // insert
+    // write it to the now free space at the end of the file.
     Transaction to_add_path_transaction{0,
                                         0,
                                         static_cast<uint64_t>(paths_size - 1),
@@ -633,17 +642,32 @@ int Index::merge(index_combine_data &index_to_add) {
     std::memcpy(words_f[i].bytes, &mmap_words_f[i * 8], 8);
   }
 
-  // local index words needs to have atleast 1 value. else it crashes. should
-  // be checked before combining.
+  // local index words needs to have atleast 1 value. Is checked by LocalIndex
+  // add_to_disk.
   on_disk_count = 0;
   on_disk_id = 0;
   size_t local_word_count = 0;
   size_t local_word_length = index_to_add.words_and_reversed[0].word.length();
   char current_first_char = 'a';
-  char local_first_char = index_to_add.words_and_reversed[local_word_count].word[0];
+  char local_first_char =
+      index_to_add.words_and_reversed[local_word_count].word[0];
   std::wstring current_word = L"";
 
   uint64_t disk_additional_ids = (additional_size / 50) + 1;
+
+  // go through each word on disk. First we read the offset and compare its
+  // value to the length of the current local word. Because both are sorted we
+  // can compare them to see if it is the same, passed or will first come.
+
+  // This can't work. If we just skip a word just because it's not the same
+  // length as current local word we never detect if we are past a word if no
+  // word comes with the same length or we are insert it at the wrong place.
+
+  // Move parts when a word is found and when it is not found into their own
+  // functions. Then if the length is not the same we just reach each character
+  // until its bytes values are not the same. If it is larger it means we are
+  // passed and we should call new word function. if not we skip it. If it is
+  // the same length and same word we will call word found function.
 
   while (on_disk_count < words_size) {
     if (current_first_char < local_first_char) {
@@ -680,7 +704,8 @@ int Index::merge(index_combine_data &index_to_add) {
       }
     }
 
-    if (current_word == index_to_add.words_and_reversed[local_word_count].word) {
+    if (current_word ==
+        index_to_add.words_and_reversed[local_word_count].word) {
       // word found. insert into reversed and additional. create new
       // additional if needed.
       //
@@ -703,25 +728,29 @@ int Index::merge(index_combine_data &index_to_add) {
           current_has_place = true;
         }
       }
-      if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0 &&
+      if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+              0 &&
           current_has_place) {
         for (int i = 0; i < 4; ++i) {
           if (disk_reversed->ids[i] == 0) {
             Transaction reversed_add_transaction{
                 0, 3, (on_disk_id * 10) + (i * 2), 0, 1, 2};
             const auto &r_id =
-                *index_to_add.words_and_reversed[local_word_count].reversed.begin();
+                *index_to_add.words_and_reversed[local_word_count]
+                     .reversed.begin();
             PathOffset content;
             content.offset = paths_mapping.by_local[r_id];
             reversed_add_transaction.content =
                 content.bytes[0] + content.bytes[1];
-            index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
+            index_to_add.words_and_reversed[local_word_count].reversed.erase(
+                r_id);
             transactions.push_back(reversed_add_transaction);
           }
         }
       }
       uint16_t last_additional = 0;
-      if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
+      if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+          0) {
         if (uint16_t additional_id = disk_reversed->ids[4];
             additional_id != 0) {
           while (true) {
@@ -731,14 +760,15 @@ int Index::merge(index_combine_data &index_to_add) {
             current_has_place = false;
             for (int i = 0; i < 24; ++i) {
               if (disk_additional->ids[i] != 0) {
-                index_to_add.words_and_reversed[local_word_count].reversed.erase(
-                    paths_mapping.by_disk[disk_additional->ids[i]]);
+                index_to_add.words_and_reversed[local_word_count]
+                    .reversed.erase(
+                        paths_mapping.by_disk[disk_additional->ids[i]]);
               } else {
                 current_has_place = true;
               }
             }
-            if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-                    0 &&
+            if (index_to_add.words_and_reversed[local_word_count]
+                        .reversed.size() != 0 &&
                 current_has_place) {
               for (int i = 0; i < 24; ++i) {
                 if (disk_additional->ids[i] == 0) {
@@ -751,14 +781,14 @@ int Index::merge(index_combine_data &index_to_add) {
                   content.offset = paths_mapping.by_local[r_id];
                   additional_add_transaction.content =
                       content.bytes[0] + content.bytes[1];
-                  index_to_add.words_and_reversed[local_word_count].reversed.erase(
-                      r_id);
+                  index_to_add.words_and_reversed[local_word_count]
+                      .reversed.erase(r_id);
                   transactions.push_back(additional_add_transaction);
                 }
               }
             }
-            if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-                    0 &&
+            if (index_to_add.words_and_reversed[local_word_count]
+                        .reversed.size() != 0 &&
                 disk_additional->ids[24] != 0) {
               additional_id = disk_additional->ids[24];
             } else if (index_to_add.words_and_reversed[local_word_count]
@@ -834,7 +864,8 @@ int Index::merge(index_combine_data &index_to_add) {
       }
 
       ++local_word_count;
-      local_first_char = index_to_add.words_and_reversed[local_word_count].word[0];
+      local_first_char =
+          index_to_add.words_and_reversed[local_word_count].word[0];
       if (local_word_count < index_to_add.words_and_reversed.size())
         break; // done with all.
     } else if (current_word >
@@ -843,7 +874,8 @@ int Index::merge(index_combine_data &index_to_add) {
       // additional. update words_f: update all after this character by how
       // long it is + seperator. do in one.
       ++local_word_count;
-      local_first_char = index_to_add.words_and_reversed[local_word_count].word[0];
+      local_first_char =
+          index_to_add.words_and_reversed[local_word_count].word[0];
       if (local_word_count < index_to_add.words_and_reversed.size())
         break; // done with all.
     }
