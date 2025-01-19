@@ -375,7 +375,8 @@ int Index::add_new(index_combine_data &index_to_add) {
     }
   }
   paths_size = file_location;
-  index_to_add.paths.clear(); // free memory as we have written this to memory already and don't need it anymore.
+  index_to_add.paths.clear(); // free memory as we have written this to memory
+                              // already and don't need it anymore.
 
   log::write(2, "Index: add: paths written.");
 
@@ -395,18 +396,20 @@ int Index::add_new(index_combine_data &index_to_add) {
   log::write(2, "Index: add: paths_count written.");
 
   // words & words_f & reversed
-  std::array<WordsFValue, 26> words_f = {0};
+  std::vector<WordsFValue> words_f(26);
   char current_char = '0';
   file_location = 0;
 
   for (const words_reversed &word : index_to_add.words_reversed) {
-    // check if the first char is different from the last. if so, save the location to words_f. words_reversed is sorted already.
+    // check if the first char is different from the last. if so, save the
+    // location to words_f. words_reversed is sorted already.
     if (word.word[0] !=
         current_char) { // save file location if a new letter appears.
       current_char = word.word[0];
       words_f[current_char - 'a'].value = file_location;
     }
-    // We use a 1byte seperator beetween each word. We also directly use it to indicate how long the word is.
+    // We use a 1byte seperator beetween each word. We also directly use it to
+    // indicate how long the word is.
     size_t word_length = word.word.length();
     if (word_length + 30 >
         254) { // if the word is under 225 in length we can save it directly,
@@ -428,9 +431,12 @@ int Index::add_new(index_combine_data &index_to_add) {
   // write words_f
   std::vector<int> to_set;
   // check words_f. If any character is 0, set it to the value of the next non
-  // 0 word. This can happen if no word with a specific letter occured. We set it to the next char start.
+  // 0 word. This can happen if no word with a specific letter occured. We set
+  // it to the next char start.
   for (int i = 1; i < 26; ++i) { // first one is always 0 so we skip it.
-    // we add it to a list of items with 0. If we find one with a number we write all in the list to the same number. At the end if there are still 0 in the list we write it with the last location of the file.
+    // we add it to a list of items with 0. If we find one with a number we
+    // write all in the list to the same number. At the end if there are still 0
+    // in the list we write it with the last location of the file.
     if (words_f[i].value == 0) {
       to_set.push_back(i);
     } else {
@@ -469,7 +475,8 @@ int Index::add_new(index_combine_data &index_to_add) {
         ++i;
       }
     } else {
-      // create additional blocks and write if full. At the end write current additional that has not been written.
+      // create additional blocks and write if full. At the end write current
+      // additional that has not been written.
       int additional_i = 0;
       int reversed_i = 0;
       AdditionalBlock additional{};
@@ -609,14 +616,20 @@ int Index::merge(index_combine_data &index_to_add) {
     Transaction resize_transaction{0, 0, 0, 0, 2, paths_size + needed_space};
     transactions.push_back(resize_transaction);
     // insert
-    Transaction to_add_path_transaction{0, 0, static_cast<uint64_t>(paths_size - 1), 0 , 1, paths_add_content.length(), paths_add_content};
+    Transaction to_add_path_transaction{0,
+                                        0,
+                                        static_cast<uint64_t>(paths_size - 1),
+                                        0,
+                                        1,
+                                        paths_add_content.length(),
+                                        paths_add_content};
     transactions.push_back(to_add_path_transaction);
   }
   paths_add_content = "";
   paths_search.clear();
 
   // copy words_f into memory
-  std::array<WordsFValue, 26> words_f = {0};
+  std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
     std::memcpy(words_f[i].bytes, &mmap_words_f[i * 8], 8);
   }
@@ -695,7 +708,8 @@ int Index::merge(index_combine_data &index_to_add) {
           current_has_place) {
         for (int i = 0; i < 4; ++i) {
           if (disk_reversed->ids[i] == 0) {
-            Transaction reversed_add_transaction{0, 3, (on_disk_id * 10) + (i*2), 0, 1, 2};
+            Transaction reversed_add_transaction{
+                0, 3, (on_disk_id * 10) + (i * 2), 0, 1, 2};
             const auto &r_id =
                 *index_to_add.words_reversed[local_word_count].reversed.begin();
             PathOffset content;
@@ -729,7 +743,8 @@ int Index::merge(index_combine_data &index_to_add) {
                 current_has_place) {
               for (int i = 0; i < 24; ++i) {
                 if (disk_additional->ids[i] == 0) {
-                  Transaction additional_add_transaction{0, 4, (on_disk_id * 50) +(i * 2), 0 ,1, 2};
+                  Transaction additional_add_transaction{
+                      0, 4, (on_disk_id * 50) + (i * 2), 0, 1, 2};
                   PathOffset content;
                   const auto &r_id =
                       *index_to_add.words_reversed[local_word_count]
@@ -763,7 +778,7 @@ int Index::merge(index_combine_data &index_to_add) {
           PathOffset last_additional_id;
           last_additional_id.offset = disk_additional_ids;
 
-          Transaction additional_add_transaction {0, 0, 0, 0, 1, 2};
+          Transaction additional_add_transaction{0, 0, 0, 0, 1, 2};
           if (last_additional == 0) {
             additional_add_transaction.header.index_type = 3;
             additional_add_transaction.header.location = (on_disk_id * 10) + 8;
@@ -807,7 +822,14 @@ int Index::merge(index_combine_data &index_to_add) {
 
           additional_new_needed_size += insert_content.length();
 
-          Transaction additional_append_transaction{ 0, 4, additional_size + additional_new_needed_size, 0, 1, insert_content.length(), insert_content};
+          Transaction additional_append_transaction{
+              0,
+              4,
+              additional_size + additional_new_needed_size,
+              0,
+              1,
+              insert_content.length(),
+              insert_content};
           transactions.push_back(additional_append_transaction);
         }
       }
