@@ -1,8 +1,6 @@
 #include "functions.h"
 #include "lib/mio.hpp"
-#include <algorithm>
 #include <array>
-#include <bitset>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
