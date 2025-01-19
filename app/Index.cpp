@@ -606,23 +606,10 @@ int Index::merge(index_combine_data &index_to_add) {
 
   if (needed_space != 0) {
     // resize
-    Transaction resize_transaction;
-    resize_transaction.header.status = 0;
-    resize_transaction.header.index_type = 0;
-    resize_transaction.header.location = 0;
-    resize_transaction.header.backup_id = 0;
-    resize_transaction.header.operation_type = 2;
-    resize_transaction.header.content_length = paths_size + needed_space;
+    Transaction resize_transaction{0, 0, 0, 0, 2, paths_size + needed_space};
     transactions.push_back(resize_transaction);
     // insert
-    Transaction to_add_path_transaction;
-    to_add_path_transaction.content = paths_add_content;
-    to_add_path_transaction.header.status = 0;
-    to_add_path_transaction.header.index_type = 0;
-    to_add_path_transaction.header.location = paths_size - 1;
-    to_add_path_transaction.header.backup_id = 0;
-    to_add_path_transaction.header.operation_type = 1;
-    to_add_path_transaction.header.content_length = paths_add_content.length();
+    Transaction to_add_path_transaction{0, 0, static_cast<uint64_t>(paths_size - 1), 0 , 1, paths_add_content.length(), paths_add_content};
     transactions.push_back(to_add_path_transaction);
   }
   paths_add_content = "";
@@ -708,14 +695,7 @@ int Index::merge(index_combine_data &index_to_add) {
           current_has_place) {
         for (int i = 0; i < 4; ++i) {
           if (disk_reversed->ids[i] == 0) {
-            Transaction reversed_add_transaction;
-            reversed_add_transaction.header.status = 0;
-            reversed_add_transaction.header.index_type = 3;
-            reversed_add_transaction.header.location =
-                (on_disk_id * 10) + (i * 2);
-            reversed_add_transaction.header.backup_id = 0;
-            reversed_add_transaction.header.operation_type = 1;
-            reversed_add_transaction.header.content_length = 2;
+            Transaction reversed_add_transaction{0, 3, (on_disk_id * 10) + (i*2), 0, 1, 2};
             const auto &r_id =
                 *index_to_add.words_reversed[local_word_count].reversed.begin();
             PathOffset content;
@@ -749,14 +729,7 @@ int Index::merge(index_combine_data &index_to_add) {
                 current_has_place) {
               for (int i = 0; i < 24; ++i) {
                 if (disk_additional->ids[i] == 0) {
-                  Transaction additional_add_transaction;
-                  additional_add_transaction.header.status = 0;
-                  additional_add_transaction.header.index_type = 4;
-                  additional_add_transaction.header.location =
-                      (on_disk_id * 50) + (i * 2);
-                  additional_add_transaction.header.backup_id = 0;
-                  additional_add_transaction.header.operation_type = 1;
-                  additional_add_transaction.header.content_length = 2;
+                  Transaction additional_add_transaction{0, 4, (on_disk_id * 50) +(i * 2), 0 ,1, 2};
                   PathOffset content;
                   const auto &r_id =
                       *index_to_add.words_reversed[local_word_count]
@@ -790,8 +763,7 @@ int Index::merge(index_combine_data &index_to_add) {
           PathOffset last_additional_id;
           last_additional_id.offset = disk_additional_ids;
 
-          Transaction additional_add_transaction;
-          additional_add_transaction.header.status = 0;
+          Transaction additional_add_transaction {0, 0, 0, 0, 1, 2};
           if (last_additional == 0) {
             additional_add_transaction.header.index_type = 3;
             additional_add_transaction.header.location = (on_disk_id * 10) + 8;
@@ -799,9 +771,6 @@ int Index::merge(index_combine_data &index_to_add) {
             additional_add_transaction.header.index_type = 4;
             additional_add_transaction.header.location = (on_disk_id * 50) + 48;
           }
-          additional_add_transaction.header.backup_id = 0;
-          additional_add_transaction.header.operation_type = 1;
-          additional_add_transaction.header.content_length = 2;
           additional_add_transaction.content =
               last_additional_id.bytes[0] + last_additional_id.bytes[1];
           transactions.push_back(additional_add_transaction);
@@ -838,16 +807,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
           additional_new_needed_size += insert_content.length();
 
-          Transaction additional_append_transaction;
-          additional_append_transaction.header.status = 0;
-          additional_append_transaction.header.index_type = 4;
-          additional_append_transaction.header.location =
-              additional_size + additional_new_needed_size;
-          additional_append_transaction.header.backup_id = 0;
-          additional_append_transaction.header.operation_type = 1;
-          additional_append_transaction.header.content_length =
-              insert_content.length();
-          additional_append_transaction.content = insert_content;
+          Transaction additional_append_transaction{ 0, 4, additional_size + additional_new_needed_size, 0, 1, insert_content.length(), insert_content};
           transactions.push_back(additional_append_transaction);
         }
       }
