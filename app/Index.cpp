@@ -678,9 +678,11 @@ int Index::merge(index_combine_data &index_to_add) {
     for (int i = 0; i < word_seperator; ++i) {
       if (local_word_length < i) { // if the local word is smaller then the on disk one and we already reached this point we know the disk word is bigger.
         // insert a new word and reversed and additional. Update words_f if needed.
+        break;
       }
       if (mmap_words[on_disk_count + 1 + i] > index_to_add.words_and_reversed[local_word_count].word[i]) {// if the on disk char is bigger it means we went already past the word.
         // insert a new word and reversed and additional. Update words_f if needed.
+        break;
       }
       if (mmap_words[on_disk_count + 1 + i] < index_to_add.words_and_reversed[local_word_count].word[i]) {
         // this means the on disk is smaller than the local. Skip to the next word.
@@ -689,6 +691,7 @@ int Index::merge(index_combine_data &index_to_add) {
       if (word_seperator == i && word_seperator == local_word_count) { // if we reach this point and they are the same word we found the word.
         // update reversed and additionals if needed.
         add_reversed_to_word(index_to_add, on_disk_id, transactions, additional_new_needed_size);
+        break;
       }
     }
     ++local_word_count;
