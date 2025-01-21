@@ -151,6 +151,11 @@ struct Insertion {
   std::string content;
 };
 
+struct PathsMapping {
+    std::unordered_map<uint16_t, uint16_t> by_local;
+    std::unordered_map<uint16_t, uint16_t> by_disk;
+};
+
 class Index {
 private:
   static bool is_config_loaded;
@@ -189,7 +194,9 @@ private:
                                    uint64_t &on_disk_count,
                                    std::vector<Transaction> &transactions,
                                    uint64_t &additional_new_needed_size,
-                                   uint32_t &on_disk_id);
+                                   uint32_t &on_disk_id,
+                                   const size_t &local_word_count,
+                                   PathsMapping &paths_mapping);
   static int merge(index_combine_data &index_to_add);
 
 public:

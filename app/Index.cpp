@@ -304,8 +304,9 @@ int Index::add_new(index_combine_data &index_to_add) {
   // words_f_size maybe needs to be extended to allow larger numbers if 8
   // bytes turn out to be too small. maybe automatically resize if running out
   // of space?
-  words_f_size_buffer = 26 * 12; // uint64_t stored as 8 bytes(disk location)) + uint32_t stored as 4 bytes(disk id) for
-                                // each letter in the alphabet.
+  words_f_size_buffer =
+      26 * 12; // uint64_t stored as 8 bytes(disk location)) + uint32_t stored
+               // as 4 bytes(disk id) for each letter in the alphabet.
   reversed_size_buffer = index_to_add.words_and_reversed.size() *
                          10; // each word id has a 10 byte block.
   additional_size_buffer = 0;
@@ -502,11 +503,151 @@ int Index::add_new(index_combine_data &index_to_add) {
   return 0;
 }
 
-void add_reversed_to_word(index_combine_data &index_to_add,
-                          uint64_t &on_disk_count,
-                          std::vector<Transaction> &transactions,
-                          uint64_t &additional_new_needed_size,
-                          uint32_t &on_disk_id) {}
+void Index::add_reversed_to_word(index_combine_data &index_to_add,
+                                 uint64_t &on_disk_count,
+                                 std::vector<Transaction> &transactions,
+                                 uint64_t &additional_new_needed_size,
+                                 uint32_t &on_disk_id,
+                                 const size_t &local_word_count,
+                                 PathsMapping &paths_mapping) {
+
+  // TODO: Overwrite path word count with inputet value. We need to pass the
+  // path word count data from LocalIndex to here too first.
+
+  if (on_disk_id * 10 + 10 >= reversed_size) {
+    log::error("Index: Reversed out of range. Index corrupted."); // index most
+                                                                  // likely
+                                                                  // corrupted.
+  }
+
+  size_t last_additional_id = 0;
+  // we save all the slots that are free in here.
+  std::vector<uint16_t> reversed_free;
+
+  struct AdditionalFree {
+    size_t additional_id;
+    std::vector<uint16_t> free;
+  };
+  std::vector<AdditionalFree> additional_free;
+
+  // load reversed block by reference.
+  ReversedBlock *disk_reversed =
+      reinterpret_cast<ReversedBlock *>(&mmap_reversed[on_disk_id * 10]);
+
+  // we remove already existing path_ids from the local reversed and save slots
+  // that are empty.
+  for (int i = 0; i < 4; ++i) { // 4 blocks per reversed
+    if (disk_reversed->ids[i] != 0) {
+      index_to_add.words_and_reversed[local_word_count].reversed.erase(
+          paths_mapping.by_disk[disk_reversed->ids[i]]);
+    } else {
+      reversed_free.push_back(i);
+    }
+  }
+
+  // If there are additionals connected to reversed and there are still ids in
+  // local reversed then we check each additional block for each item and remove
+  // it from local until we either are out of local ids or there are no more
+  // additionals connected.
+  if (disk_reversed->ids[4] != 0 &&
+      index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
+    size_t current_additional = disk_reversed->ids[4];
+    additional_free.push_back(
+        {current_additional,
+         {}}); // create an empty additional_free for the first one.
+
+    AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
+        &mmap_additional[(current_additional - 1) * 50]);
+    // load the current additional block. -1 because additional IDs start at 1.
+    int i = 0;
+    while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+           0) { // Or when there is no new additional left it will break out
+                // inside.
+      if (i == 24) {
+        if (disk_additional->ids[24] == 0) {
+          // no additionals are left.
+          break;
+        } else {
+          // load the new additional block
+          current_additional = disk_additional->ids[24];
+          disk_additional = reinterpret_cast<AdditionalBlock *>(
+              &mmap_additional[(current_additional - 1) * 50]);
+          i = 0;
+          additional_free.push_back(
+              {current_additional,
+               {}}); // create an empty additional_free for the new one
+        }
+      }
+      if (disk_additional->ids[i] == 0) {
+        // save the free place in the current additional free. An empty one for
+        // each additional is always created first.
+        additional_free[additional_free.size()].free.push_back(
+            disk_additional->ids[i]);
+      } else { // remove if it exists
+        index_to_add.words_and_reversed[local_word_count].reversed.erase(
+            paths_mapping.by_disk[disk_additional->ids[i]]);
+      }
+
+      ++i;
+    }
+  }
+
+  // If there are still some left we will add them to the free slots.
+  if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
+    // reversed free slots
+    for (const uint16_t &free_slot : reversed_free) {
+      Transaction reversed_add_transaction{
+          0, 3, (on_disk_id * 10) + (free_slot * 2), 0, 1, 2};
+      const auto &r_id =
+          *index_to_add.words_and_reversed[local_word_count].reversed.begin();
+      // get the first local id. then convert it to disk id and save it to the
+      // offset. PathOffset is the same as The 2 Byte value of a reversed slot.
+      PathOffset content;
+      content.offset = paths_mapping.by_local[r_id];
+      // add it to the transaction to overwrite the empty place with the new
+      // disk id and then delete it from the local reversed list.
+      reversed_add_transaction.content = content.bytes[0] + content.bytes[1];
+      index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
+      transactions.push_back(reversed_add_transaction);
+
+      if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
+          0)
+        break;
+    }
+    reversed_free.clear();
+    for (const AdditionalFree &free_slot_block : additional_free) {
+      for (const uint16_t &free_slot : free_slot_block.free) {
+        Transaction additional_add_transaction{
+            0, 4, ((free_slot_block.additional_id - 1) * 50) + (free_slot * 2),
+            0, 1, 2};
+        const auto &a_id =
+            *index_to_add.words_and_reversed[local_word_count].reversed.begin();
+        // get the first local id. then convert it to disk id and save it to the
+        // offset. PathOffset is the same as The 2 Byte value of a reversed
+        // slot.
+        PathOffset content;
+        content.offset = paths_mapping.by_local[a_id];
+        // add it to the transaction to overwrite the empty place with the new
+        // disk id and then delete it from the local reversed list.
+        additional_add_transaction.content =
+            content.bytes[0] + content.bytes[1];
+        index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
+        transactions.push_back(additional_add_transaction);
+
+        if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
+            0)
+          break;
+      }
+    }
+  }
+
+  // if there are still some left we need to create new additionals.
+  if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
+  }
+
+  // everything got checked, free slots filled and new additional if needed
+  // created. it is done.
+}
 
 int Index::merge(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: adding to existing index.");
@@ -520,10 +661,6 @@ int Index::merge(index_combine_data &index_to_add) {
   size_t paths_l_size = index_to_add.paths.size();
 
   // So we can easily covert disk or local IDs fast.
-  struct PathsMapping {
-    std::unordered_map<uint16_t, uint16_t> by_local;
-    std::unordered_map<uint16_t, uint16_t> by_disk;
-  };
   PathsMapping paths_mapping;
 
   // convert local paths to a map with value path and key id. We will go through
@@ -645,19 +782,10 @@ int Index::merge(index_combine_data &index_to_add) {
 
   uint64_t disk_additional_ids = (additional_size / 50) + 1;
 
-  // go through each word on disk. First we read the offset and compare its
-  // value to the length of the current local word. Because both are sorted we
-  // can compare them to see if it is the same, passed or will first come.
-
-  // This can't work. If we just skip a word just because it's not the same
-  // length as current local word we never detect if we are past a word if no
-  // word comes with the same length or we are insert it at the wrong place.
-
-  // Move parts when a word is found and when it is not found into their own
-  // functions. Then if the length is not the same we just reach each character
-  // until its bytes values are not the same. If it is larger it means we are
-  // passed and we should call new word function. if not we skip it. If it is
-  // the same length and same word we will call word found function.
+  // check each word on disk. if it is different first letter we will skip using
+  // words_f. we will compare chars to chars until they differ. we then know if
+  // it is coming first or we are passed it and need to insert the word or we
+  // are at the same word.
 
   while (on_disk_count + 1 < words_size) {
     // If the current word first char is different we use words_f to set the
@@ -728,7 +856,8 @@ int Index::merge(index_combine_data &index_to_add) {
                                   // same word we found the word.
         // update reversed and additionals if needed.
         add_reversed_to_word(index_to_add, on_disk_count, transactions,
-                             additional_new_needed_size, on_disk_id);
+                             additional_new_needed_size, on_disk_id,
+                             local_word_count, paths_mapping);
         break;
       }
     }
@@ -739,227 +868,9 @@ int Index::merge(index_combine_data &index_to_add) {
         index_to_add.words_and_reversed[local_word_count].word.length();
   }
 
-  /*  while (on_disk_count < words_size) {
-      if (current_first_char < local_first_char) {
-        on_disk_count = words_f[current_first_char - 'a'].value;
-      }
-      // read word length
-      uint8_t word_seperator = mmap_words[on_disk_count];
-      if (on_disk_count + word_seperator - 29 > words_size)
-        break; // if we cant read the whole word break. Maybe call a index check
-               // as this would mean it is corrupted.
-      current_first_char = mmap_words[on_disk_count + 1];
-      if (word_seperator - 30 != local_word_length &&
-          word_seperator != 255) { // skip word if not same length
-        ++on_disk_id;
-        on_disk_count += word_seperator - 29; // include word seperator
-        continue;
-      }
-      on_disk_count += 2;
-      current_word += current_first_char;
-      if (word_seperator == 255) { // read until we have a number over 30
-        // when it will be basic string, read until 235 in one batch.
-        while (true) {
-          if (mmap_words[on_disk_count] > 29)
-            break;
-          current_word += mmap_words[on_disk_count];
-          ++on_disk_count;
-        }
-      } else {
-        // we will read the chars 1 by 1 to add it to the wstring for now. when
-        // we have changed the type from wstring to basic string we can copy it.
-        for (; on_disk_count < on_disk_count + word_seperator - 1;
-             ++on_disk_count) {
-          current_word += mmap_words[on_disk_count];
-        }
-      }
+  // we need to insert all words that came after the last word on disk.
+  
 
-      if (current_word ==
-          index_to_add.words_and_reversed[local_word_count].word) {
-        // word found. insert into reversed and additional. create new
-        // additional if needed.
-        //
-        // TODO: Overwrite path word count with inputet value.
-
-        if (on_disk_id * 10 + 10 >= reversed_size) {
-          log::error(
-              "Index: Reversed out of range. Index corrupted."); // index most
-                                                                 // likely
-                                                                 // corrupted.
-        }
-        ReversedBlock *disk_reversed =
-            reinterpret_cast<ReversedBlock *>(&mmap_reversed[on_disk_id * 10]);
-        bool current_has_place = false;
-        for (int i = 0; i < 4; ++i) {
-          if (disk_reversed->ids[i] != 0) {
-            index_to_add.words_and_reversed[local_word_count].reversed.erase(
-                paths_mapping.by_disk[disk_reversed->ids[i]]);
-          } else {
-            current_has_place = true;
-          }
-        }
-        if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-                0 &&
-            current_has_place) {
-          for (int i = 0; i < 4; ++i) {
-            if (disk_reversed->ids[i] == 0) {
-              Transaction reversed_add_transaction{
-                  0, 3, (on_disk_id * 10) + (i * 2), 0, 1, 2};
-              const auto &r_id =
-                  *index_to_add.words_and_reversed[local_word_count]
-                       .reversed.begin();
-              PathOffset content;
-              content.offset = paths_mapping.by_local[r_id];
-              reversed_add_transaction.content =
-                  content.bytes[0] + content.bytes[1];
-              index_to_add.words_and_reversed[local_word_count].reversed.erase(
-                  r_id);
-              transactions.push_back(reversed_add_transaction);
-            }
-          }
-        }
-        uint16_t last_additional = 0;
-        if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-            0) {
-          if (uint16_t additional_id = disk_reversed->ids[4];
-              additional_id != 0) {
-            while (true) {
-              AdditionalBlock *disk_additional =
-                  reinterpret_cast<AdditionalBlock *>(
-                      &mmap_additional[(additional_id - 1) * 50]);
-              current_has_place = false;
-              for (int i = 0; i < 24; ++i) {
-                if (disk_additional->ids[i] != 0) {
-                  index_to_add.words_and_reversed[local_word_count]
-                      .reversed.erase(
-                          paths_mapping.by_disk[disk_additional->ids[i]]);
-                } else {
-                  current_has_place = true;
-                }
-              }
-              if (index_to_add.words_and_reversed[local_word_count]
-                          .reversed.size() != 0 &&
-                  current_has_place) {
-                for (int i = 0; i < 24; ++i) {
-                  if (disk_additional->ids[i] == 0) {
-                    Transaction additional_add_transaction{
-                        0, 4, (on_disk_id * 50) + (i * 2), 0, 1, 2};
-                    PathOffset content;
-                    const auto &r_id =
-                        *index_to_add.words_and_reversed[local_word_count]
-                             .reversed.begin();
-                    content.offset = paths_mapping.by_local[r_id];
-                    additional_add_transaction.content =
-                        content.bytes[0] + content.bytes[1];
-                    index_to_add.words_and_reversed[local_word_count]
-                        .reversed.erase(r_id);
-                    transactions.push_back(additional_add_transaction);
-                  }
-                }
-              }
-              if (index_to_add.words_and_reversed[local_word_count]
-                          .reversed.size() != 0 &&
-                  disk_additional->ids[24] != 0) {
-                additional_id = disk_additional->ids[24];
-              } else if (index_to_add.words_and_reversed[local_word_count]
-                                 .reversed.size() != 0 &&
-                         disk_additional->ids[24] == 0) {
-                last_additional = (on_disk_id * 50) + (24 * 2);
-                break;
-              } else {
-                break;
-              }
-            }
-          }
-          if (disk_reversed->ids[4] == 0 || last_additional != 0) {
-            std::vector<AdditionalBlock> new_additionals;
-
-            PathOffset last_additional_id;
-            last_additional_id.offset = disk_additional_ids;
-
-            Transaction additional_add_transaction{0, 0, 0, 0, 1, 2};
-            if (last_additional == 0) {
-              additional_add_transaction.header.index_type = 3;
-              additional_add_transaction.header.location = (on_disk_id * 10) +
-    8; } else { additional_add_transaction.header.index_type = 4;
-              additional_add_transaction.header.location = (on_disk_id * 50) +
-    48;
-            }
-            additional_add_transaction.content =
-                last_additional_id.bytes[0] + last_additional_id.bytes[1];
-            transactions.push_back(additional_add_transaction);
-
-            // create new additonals and create insertions at the end.
-            size_t current_additional = 0;
-            AdditionalBlock current_additional_block{};
-            for (const uint16_t &p_id :
-                 index_to_add.words_and_reversed[local_word_count].reversed) {
-              if (current_additional == 24) {
-                ++disk_additional_ids;
-                current_additional_block.ids[24] = disk_additional_ids;
-                new_additionals.push_back(current_additional_block);
-                current_additional_block = {};
-                current_additional = 0;
-              }
-              current_additional_block.ids[current_additional] = p_id;
-              ++current_additional;
-            }
-            if (current_additional_block.ids[0] != 0) {
-              if (current_additional_block.ids[24] != 0) {
-                current_additional_block.ids[24] = 0;
-              }
-              new_additionals.push_back(current_additional_block);
-            }
-
-            std::string insert_content = "";
-            for (const AdditionalBlock &a_block : new_additionals) {
-              for (int i = 0; i < 50; ++i) {
-                insert_content +=
-                    a_block.bytes[i]; // TODO: more efficent copying.
-              }
-            }
-
-            additional_new_needed_size += insert_content.length();
-
-            Transaction additional_append_transaction{
-                0,
-                4,
-                additional_size + additional_new_needed_size,
-                0,
-                1,
-                insert_content.length(),
-                insert_content};
-            transactions.push_back(additional_append_transaction);
-          }
-        }
-
-        ++local_word_count;
-        local_first_char =
-            index_to_add.words_and_reversed[local_word_count].word[0];
-        if (local_word_count < index_to_add.words_and_reversed.size())
-          break; // done with all.
-      } else if (current_word >
-                 index_to_add.words_and_reversed[local_word_count].word) {
-        // insert a new word before this word. create new reversed and if needed
-        // additional. update words_f: update all after this character by how
-        // long it is + seperator. do in one.
-        ++local_word_count;
-        local_first_char =
-            index_to_add.words_and_reversed[local_word_count].word[0];
-        if (local_word_count < index_to_add.words_and_reversed.size())
-          break; // done with all.
-      }
-
-      ++on_disk_id;
-    }
-    for (; local_word_count < index_to_add.words_and_reversed.size();
-         ++local_word_count) {
-      // insert the remaining at the end. update words_f if needed.
-    }
-    */
-
-  // resize additional based on additional_new_needed_size
-  //
   return 0;
 }
 
