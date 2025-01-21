@@ -185,7 +185,11 @@ private:
   static void resize(const std::filesystem::path &path_to_resize,
                      const int size);
   static int add_new(index_combine_data &index_to_add);
-  static void add_reversed_to_word(index_combine_data &index_to_add, uint64_t &on_disk_id, std::vector<Transaction> &transactions, uint64_t &additional_new_needed_size);
+  static void add_reversed_to_word(index_combine_data &index_to_add,
+                                   uint64_t &on_disk_count,
+                                   std::vector<Transaction> &transactions,
+                                   uint64_t &additional_new_needed_size,
+                                   uint32_t &on_disk_id);
   static int merge(index_combine_data &index_to_add);
 
 public:

@@ -497,9 +497,11 @@ int Index::add_new(index_combine_data &index_to_add) {
   return 0;
 }
 
-void add_reversed_to_word(index_combine_data &index_to_add, uint64_t &on_disk_id, std::vector<Transaction> &transactions, uint64_t &additional_new_needed_size) {
-
-}
+void add_reversed_to_word(index_combine_data &index_to_add,
+                          uint64_t &on_disk_count,
+                          std::vector<Transaction> &transactions,
+                          uint64_t &additional_new_needed_size,
+                          uint32_t &on_disk_id) {}
 
 int Index::merge(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: adding to existing index.");
@@ -535,7 +537,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
   // go through index on disk and map disk Id to local Id.
   uint64_t on_disk_count = 0;
-  uint64_t on_disk_id = 0;
+  uint32_t on_disk_id = 0;
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
   // paths_size is the count of bytes of the index on disk.
@@ -554,10 +556,13 @@ int Index::merge(index_combine_data &index_to_add) {
       ++on_disk_count;
 
       if (on_disk_count + next_path_end <
-          paths_size) { // check if we can read the whole path based on the offset.
-        // refrence the path to a string and then search in the unordered map we created earlier.
+          paths_size) { // check if we can read the whole path based on the
+                        // offset.
+        // refrence the path to a string and then search in the unordered map we
+        // created earlier.
         std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
-        if (paths_search.find(path_to_compare) != paths_search
+        if (paths_search.find(path_to_compare) !=
+            paths_search
                 .end()) { // check if the disk path is found in memory index.
 
           paths_mapping.by_local[paths_search[path_to_compare]] =
@@ -649,273 +654,301 @@ int Index::merge(index_combine_data &index_to_add) {
   // passed and we should call new word function. if not we skip it. If it is
   // the same length and same word we will call word found function.
 
-  while(on_disk_count + 1 < words_size) {
-    // If the current word first char is different we use words_f to set the location to the start of that char.
+  while (on_disk_count + 1 < words_size) {
+    // If the current word first char is different we use words_f to set the
+    // location to the start of that char.
     if (current_first_char < local_first_char) {
       if (words_f[current_first_char - 'a'].value < words_size) {
         on_disk_count = words_f[current_first_char - 'a'].value;
       } else {
         // This should not happen. Index is corrupted.
-        log::error("Index: Combine: Words_f char value is higher than words index size. This means the index is corrupted. Reset the index and report this problem.");
+        log::error("Index: Combine: Words_f char value is higher than words "
+                   "index size. This means the index is corrupted. Reset the "
+                   "index and report this problem.");
       }
     }
 
     // read the one byte word sperator.
     uint8_t word_seperator = mmap_words[on_disk_count];
-    if (word_seperator < 31 || word_seperator + on_disk_count > words_size) { // 0-30 is reserved. if it is higher it is for seperator. If the seperator here is 0-30 the index is corrupted.
-      log::error("Index: Combine: word seperator is invalid. This means the index is most likely corrupted. Stopping to protect the index.");
+    if (word_seperator < 31 ||
+        word_seperator + on_disk_count >
+            words_size) { // 0-30 is reserved. if it is higher it is for
+                          // seperator. If the seperator here is 0-30 the index
+                          // is corrupted.
+      log::error(
+          "Index: Combine: word seperator is invalid. This means the index is "
+          "most likely corrupted. Stopping to protect the index.");
     }
-    if (local_first_char != mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
+    if (local_first_char !=
+        mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
       current_first_char = mmap_words[on_disk_count + 1];
-      continue; // at the start we will then go to the correct first char of that word and repeat the whole block. 
+      continue; // at the start we will then go to the correct first char of
+                // that word and repeat the whole block.
     }
-    if (word_seperator == 255) { // This means the word is larger than 255 bytes. We need to count it manually until we reach another 30< byte.
-      // go through start position until end position comparing each char until either it is smaller or bigger. then just try to find the next seperator.
-      // update word_lentgh and count and first char.
+    if (word_seperator ==
+        255) { // This means the word is larger than 255 bytes. We need to count
+               // it manually until we reach another 30< byte.
+      // go through start position until end position comparing each char until
+      // either it is smaller or bigger. then just try to find the next
+      // seperator. update word_lentgh and count and first char.
       continue;
     }
 
     for (int i = 0; i < word_seperator; ++i) {
-      if (local_word_length < i) { // if the local word is smaller then the on disk one and we already reached this point we know the disk word is bigger.
-        // insert a new word and reversed and additional. Update words_f if needed.
+      if (local_word_length <
+          i) { // if the local word is smaller then the on disk one and we
+               // already reached this point we know the disk word is bigger.
+        // insert a new word and reversed and additional. Update words_f if
+        // needed.
         break;
       }
-      if (mmap_words[on_disk_count + 1 + i] > index_to_add.words_and_reversed[local_word_count].word[i]) {// if the on disk char is bigger it means we went already past the word.
-        // insert a new word and reversed and additional. Update words_f if needed.
+      if (mmap_words[on_disk_count + 1 + i] >
+          index_to_add.words_and_reversed[local_word_count]
+              .word[i]) { // if the on disk char is bigger it means we went
+                          // already past the word.
+        // insert a new word and reversed and additional. Update words_f if
+        // needed.
         break;
       }
-      if (mmap_words[on_disk_count + 1 + i] < index_to_add.words_and_reversed[local_word_count].word[i]) {
-        // this means the on disk is smaller than the local. Skip to the next word.
+      if (mmap_words[on_disk_count + 1 + i] <
+          index_to_add.words_and_reversed[local_word_count].word[i]) {
+        // this means the on disk is smaller than the local. Skip to the next
+        // word.
         break;
       }
-      if (word_seperator == i && word_seperator == local_word_count) { // if we reach this point and they are the same word we found the word.
+      if (word_seperator == i &&
+          word_seperator ==
+              local_word_count) { // if we reach this point and they are the
+                                  // same word we found the word.
         // update reversed and additionals if needed.
-        add_reversed_to_word(index_to_add, on_disk_id, transactions, additional_new_needed_size);
+        add_reversed_to_word(index_to_add, on_disk_count, transactions,
+                             additional_new_needed_size, on_disk_id);
         break;
       }
     }
     ++local_word_count;
-    local_word_length = index_to_add.words_and_reversed[local_word_count].word.length();
+    local_word_length =
+        index_to_add.words_and_reversed[local_word_count].word.length();
   }
 
-/*  while (on_disk_count < words_size) {
-    if (current_first_char < local_first_char) {
-      on_disk_count = words_f[current_first_char - 'a'].value;
-    }
-    // read word length
-    uint8_t word_seperator = mmap_words[on_disk_count];
-    if (on_disk_count + word_seperator - 29 > words_size)
-      break; // if we cant read the whole word break. Maybe call a index check
-             // as this would mean it is corrupted.
-    current_first_char = mmap_words[on_disk_count + 1];
-    if (word_seperator - 30 != local_word_length &&
-        word_seperator != 255) { // skip word if not same length
-      ++on_disk_id;
-      on_disk_count += word_seperator - 29; // include word seperator
-      continue;
-    }
-    on_disk_count += 2;
-    current_word += current_first_char;
-    if (word_seperator == 255) { // read until we have a number over 30
-      // when it will be basic string, read until 235 in one batch.
-      while (true) {
-        if (mmap_words[on_disk_count] > 29)
-          break;
-        current_word += mmap_words[on_disk_count];
-        ++on_disk_count;
+  /*  while (on_disk_count < words_size) {
+      if (current_first_char < local_first_char) {
+        on_disk_count = words_f[current_first_char - 'a'].value;
       }
-    } else {
-      // we will read the chars 1 by 1 to add it to the wstring for now. when
-      // we have changed the type from wstring to basic string we can copy it.
-      for (; on_disk_count < on_disk_count + word_seperator - 1;
-           ++on_disk_count) {
-        current_word += mmap_words[on_disk_count];
+      // read word length
+      uint8_t word_seperator = mmap_words[on_disk_count];
+      if (on_disk_count + word_seperator - 29 > words_size)
+        break; // if we cant read the whole word break. Maybe call a index check
+               // as this would mean it is corrupted.
+      current_first_char = mmap_words[on_disk_count + 1];
+      if (word_seperator - 30 != local_word_length &&
+          word_seperator != 255) { // skip word if not same length
+        ++on_disk_id;
+        on_disk_count += word_seperator - 29; // include word seperator
+        continue;
       }
-    }
-
-    if (current_word ==
-        index_to_add.words_and_reversed[local_word_count].word) {
-      // word found. insert into reversed and additional. create new
-      // additional if needed.
-      //
-      // TODO: Overwrite path word count with inputet value.
-
-      if (on_disk_id * 10 + 10 >= reversed_size) {
-        log::error(
-            "Index: Reversed out of range. Index corrupted."); // index most
-                                                               // likely
-                                                               // corrupted.
-      }
-      ReversedBlock *disk_reversed =
-          reinterpret_cast<ReversedBlock *>(&mmap_reversed[on_disk_id * 10]);
-      bool current_has_place = false;
-      for (int i = 0; i < 4; ++i) {
-        if (disk_reversed->ids[i] != 0) {
-          index_to_add.words_and_reversed[local_word_count].reversed.erase(
-              paths_mapping.by_disk[disk_reversed->ids[i]]);
-        } else {
-          current_has_place = true;
+      on_disk_count += 2;
+      current_word += current_first_char;
+      if (word_seperator == 255) { // read until we have a number over 30
+        // when it will be basic string, read until 235 in one batch.
+        while (true) {
+          if (mmap_words[on_disk_count] > 29)
+            break;
+          current_word += mmap_words[on_disk_count];
+          ++on_disk_count;
+        }
+      } else {
+        // we will read the chars 1 by 1 to add it to the wstring for now. when
+        // we have changed the type from wstring to basic string we can copy it.
+        for (; on_disk_count < on_disk_count + word_seperator - 1;
+             ++on_disk_count) {
+          current_word += mmap_words[on_disk_count];
         }
       }
-      if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-              0 &&
-          current_has_place) {
+
+      if (current_word ==
+          index_to_add.words_and_reversed[local_word_count].word) {
+        // word found. insert into reversed and additional. create new
+        // additional if needed.
+        //
+        // TODO: Overwrite path word count with inputet value.
+
+        if (on_disk_id * 10 + 10 >= reversed_size) {
+          log::error(
+              "Index: Reversed out of range. Index corrupted."); // index most
+                                                                 // likely
+                                                                 // corrupted.
+        }
+        ReversedBlock *disk_reversed =
+            reinterpret_cast<ReversedBlock *>(&mmap_reversed[on_disk_id * 10]);
+        bool current_has_place = false;
         for (int i = 0; i < 4; ++i) {
-          if (disk_reversed->ids[i] == 0) {
-            Transaction reversed_add_transaction{
-                0, 3, (on_disk_id * 10) + (i * 2), 0, 1, 2};
-            const auto &r_id =
-                *index_to_add.words_and_reversed[local_word_count]
-                     .reversed.begin();
-            PathOffset content;
-            content.offset = paths_mapping.by_local[r_id];
-            reversed_add_transaction.content =
-                content.bytes[0] + content.bytes[1];
+          if (disk_reversed->ids[i] != 0) {
             index_to_add.words_and_reversed[local_word_count].reversed.erase(
-                r_id);
-            transactions.push_back(reversed_add_transaction);
+                paths_mapping.by_disk[disk_reversed->ids[i]]);
+          } else {
+            current_has_place = true;
           }
         }
-      }
-      uint16_t last_additional = 0;
-      if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-          0) {
-        if (uint16_t additional_id = disk_reversed->ids[4];
-            additional_id != 0) {
-          while (true) {
-            AdditionalBlock *disk_additional =
-                reinterpret_cast<AdditionalBlock *>(
-                    &mmap_additional[(additional_id - 1) * 50]);
-            current_has_place = false;
-            for (int i = 0; i < 24; ++i) {
-              if (disk_additional->ids[i] != 0) {
-                index_to_add.words_and_reversed[local_word_count]
-                    .reversed.erase(
-                        paths_mapping.by_disk[disk_additional->ids[i]]);
-              } else {
-                current_has_place = true;
-              }
+        if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+                0 &&
+            current_has_place) {
+          for (int i = 0; i < 4; ++i) {
+            if (disk_reversed->ids[i] == 0) {
+              Transaction reversed_add_transaction{
+                  0, 3, (on_disk_id * 10) + (i * 2), 0, 1, 2};
+              const auto &r_id =
+                  *index_to_add.words_and_reversed[local_word_count]
+                       .reversed.begin();
+              PathOffset content;
+              content.offset = paths_mapping.by_local[r_id];
+              reversed_add_transaction.content =
+                  content.bytes[0] + content.bytes[1];
+              index_to_add.words_and_reversed[local_word_count].reversed.erase(
+                  r_id);
+              transactions.push_back(reversed_add_transaction);
             }
-            if (index_to_add.words_and_reversed[local_word_count]
-                        .reversed.size() != 0 &&
-                current_has_place) {
+          }
+        }
+        uint16_t last_additional = 0;
+        if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+            0) {
+          if (uint16_t additional_id = disk_reversed->ids[4];
+              additional_id != 0) {
+            while (true) {
+              AdditionalBlock *disk_additional =
+                  reinterpret_cast<AdditionalBlock *>(
+                      &mmap_additional[(additional_id - 1) * 50]);
+              current_has_place = false;
               for (int i = 0; i < 24; ++i) {
-                if (disk_additional->ids[i] == 0) {
-                  Transaction additional_add_transaction{
-                      0, 4, (on_disk_id * 50) + (i * 2), 0, 1, 2};
-                  PathOffset content;
-                  const auto &r_id =
-                      *index_to_add.words_and_reversed[local_word_count]
-                           .reversed.begin();
-                  content.offset = paths_mapping.by_local[r_id];
-                  additional_add_transaction.content =
-                      content.bytes[0] + content.bytes[1];
+                if (disk_additional->ids[i] != 0) {
                   index_to_add.words_and_reversed[local_word_count]
-                      .reversed.erase(r_id);
-                  transactions.push_back(additional_add_transaction);
+                      .reversed.erase(
+                          paths_mapping.by_disk[disk_additional->ids[i]]);
+                } else {
+                  current_has_place = true;
                 }
               }
-            }
-            if (index_to_add.words_and_reversed[local_word_count]
-                        .reversed.size() != 0 &&
-                disk_additional->ids[24] != 0) {
-              additional_id = disk_additional->ids[24];
-            } else if (index_to_add.words_and_reversed[local_word_count]
-                               .reversed.size() != 0 &&
-                       disk_additional->ids[24] == 0) {
-              last_additional = (on_disk_id * 50) + (24 * 2);
-              break;
-            } else {
-              break;
+              if (index_to_add.words_and_reversed[local_word_count]
+                          .reversed.size() != 0 &&
+                  current_has_place) {
+                for (int i = 0; i < 24; ++i) {
+                  if (disk_additional->ids[i] == 0) {
+                    Transaction additional_add_transaction{
+                        0, 4, (on_disk_id * 50) + (i * 2), 0, 1, 2};
+                    PathOffset content;
+                    const auto &r_id =
+                        *index_to_add.words_and_reversed[local_word_count]
+                             .reversed.begin();
+                    content.offset = paths_mapping.by_local[r_id];
+                    additional_add_transaction.content =
+                        content.bytes[0] + content.bytes[1];
+                    index_to_add.words_and_reversed[local_word_count]
+                        .reversed.erase(r_id);
+                    transactions.push_back(additional_add_transaction);
+                  }
+                }
+              }
+              if (index_to_add.words_and_reversed[local_word_count]
+                          .reversed.size() != 0 &&
+                  disk_additional->ids[24] != 0) {
+                additional_id = disk_additional->ids[24];
+              } else if (index_to_add.words_and_reversed[local_word_count]
+                                 .reversed.size() != 0 &&
+                         disk_additional->ids[24] == 0) {
+                last_additional = (on_disk_id * 50) + (24 * 2);
+                break;
+              } else {
+                break;
+              }
             }
           }
-        }
-        if (disk_reversed->ids[4] == 0 || last_additional != 0) {
-          std::vector<AdditionalBlock> new_additionals;
+          if (disk_reversed->ids[4] == 0 || last_additional != 0) {
+            std::vector<AdditionalBlock> new_additionals;
 
-          PathOffset last_additional_id;
-          last_additional_id.offset = disk_additional_ids;
+            PathOffset last_additional_id;
+            last_additional_id.offset = disk_additional_ids;
 
-          Transaction additional_add_transaction{0, 0, 0, 0, 1, 2};
-          if (last_additional == 0) {
-            additional_add_transaction.header.index_type = 3;
-            additional_add_transaction.header.location = (on_disk_id * 10) + 8;
-          } else {
-            additional_add_transaction.header.index_type = 4;
-            additional_add_transaction.header.location = (on_disk_id * 50) + 48;
-          }
-          additional_add_transaction.content =
-              last_additional_id.bytes[0] + last_additional_id.bytes[1];
-          transactions.push_back(additional_add_transaction);
+            Transaction additional_add_transaction{0, 0, 0, 0, 1, 2};
+            if (last_additional == 0) {
+              additional_add_transaction.header.index_type = 3;
+              additional_add_transaction.header.location = (on_disk_id * 10) +
+    8; } else { additional_add_transaction.header.index_type = 4;
+              additional_add_transaction.header.location = (on_disk_id * 50) +
+    48;
+            }
+            additional_add_transaction.content =
+                last_additional_id.bytes[0] + last_additional_id.bytes[1];
+            transactions.push_back(additional_add_transaction);
 
-          // create new additonals and create insertions at the end.
-          size_t current_additional = 0;
-          AdditionalBlock current_additional_block{};
-          for (const uint16_t &p_id :
-               index_to_add.words_and_reversed[local_word_count].reversed) {
-            if (current_additional == 24) {
-              ++disk_additional_ids;
-              current_additional_block.ids[24] = disk_additional_ids;
+            // create new additonals and create insertions at the end.
+            size_t current_additional = 0;
+            AdditionalBlock current_additional_block{};
+            for (const uint16_t &p_id :
+                 index_to_add.words_and_reversed[local_word_count].reversed) {
+              if (current_additional == 24) {
+                ++disk_additional_ids;
+                current_additional_block.ids[24] = disk_additional_ids;
+                new_additionals.push_back(current_additional_block);
+                current_additional_block = {};
+                current_additional = 0;
+              }
+              current_additional_block.ids[current_additional] = p_id;
+              ++current_additional;
+            }
+            if (current_additional_block.ids[0] != 0) {
+              if (current_additional_block.ids[24] != 0) {
+                current_additional_block.ids[24] = 0;
+              }
               new_additionals.push_back(current_additional_block);
-              current_additional_block = {};
-              current_additional = 0;
             }
-            current_additional_block.ids[current_additional] = p_id;
-            ++current_additional;
-          }
-          if (current_additional_block.ids[0] != 0) {
-            if (current_additional_block.ids[24] != 0) {
-              current_additional_block.ids[24] = 0;
+
+            std::string insert_content = "";
+            for (const AdditionalBlock &a_block : new_additionals) {
+              for (int i = 0; i < 50; ++i) {
+                insert_content +=
+                    a_block.bytes[i]; // TODO: more efficent copying.
+              }
             }
-            new_additionals.push_back(current_additional_block);
+
+            additional_new_needed_size += insert_content.length();
+
+            Transaction additional_append_transaction{
+                0,
+                4,
+                additional_size + additional_new_needed_size,
+                0,
+                1,
+                insert_content.length(),
+                insert_content};
+            transactions.push_back(additional_append_transaction);
           }
-
-          std::string insert_content = "";
-          for (const AdditionalBlock &a_block : new_additionals) {
-            for (int i = 0; i < 50; ++i) {
-              insert_content +=
-                  a_block.bytes[i]; // TODO: more efficent copying.
-            }
-          }
-
-          additional_new_needed_size += insert_content.length();
-
-          Transaction additional_append_transaction{
-              0,
-              4,
-              additional_size + additional_new_needed_size,
-              0,
-              1,
-              insert_content.length(),
-              insert_content};
-          transactions.push_back(additional_append_transaction);
         }
+
+        ++local_word_count;
+        local_first_char =
+            index_to_add.words_and_reversed[local_word_count].word[0];
+        if (local_word_count < index_to_add.words_and_reversed.size())
+          break; // done with all.
+      } else if (current_word >
+                 index_to_add.words_and_reversed[local_word_count].word) {
+        // insert a new word before this word. create new reversed and if needed
+        // additional. update words_f: update all after this character by how
+        // long it is + seperator. do in one.
+        ++local_word_count;
+        local_first_char =
+            index_to_add.words_and_reversed[local_word_count].word[0];
+        if (local_word_count < index_to_add.words_and_reversed.size())
+          break; // done with all.
       }
 
-      ++local_word_count;
-      local_first_char =
-          index_to_add.words_and_reversed[local_word_count].word[0];
-      if (local_word_count < index_to_add.words_and_reversed.size())
-        break; // done with all.
-    } else if (current_word >
-               index_to_add.words_and_reversed[local_word_count].word) {
-      // insert a new word before this word. create new reversed and if needed
-      // additional. update words_f: update all after this character by how
-      // long it is + seperator. do in one.
-      ++local_word_count;
-      local_first_char =
-          index_to_add.words_and_reversed[local_word_count].word[0];
-      if (local_word_count < index_to_add.words_and_reversed.size())
-        break; // done with all.
+      ++on_disk_id;
     }
-
-    ++on_disk_id;
-  }
-  for (; local_word_count < index_to_add.words_and_reversed.size();
-       ++local_word_count) {
-    // insert the remaining at the end. update words_f if needed.
-  }
-  */
+    for (; local_word_count < index_to_add.words_and_reversed.size();
+         ++local_word_count) {
+      // insert the remaining at the end. update words_f if needed.
+    }
+    */
 
   // resize additional based on additional_new_needed_size
   //
