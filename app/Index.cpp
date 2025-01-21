@@ -26,38 +26,6 @@ union PathOffset {
   unsigned char bytes[2];
 };
 
-union TransactionHeader {
-  struct {
-    uint8_t status;          // 0 = no status, 1 = started, 2 = completed
-    uint8_t index_type;      // paths = 0, words = 1, words_f = 2, reversed = 3,
-                             // additional = 4
-    uint64_t location;       // byte count in file, resize = 0.
-    uint64_t backup_id;      // 0 = none
-    uint8_t operation_type;  // 0 = Move, 1 = write, 2 = resize
-    uint64_t content_length; // length of content. for resize this indicates the
-                             // new size
-  };
-  unsigned char bytes[15];
-};
-
-struct Transaction {
-  TransactionHeader header;
-  std::string content;
-};
-
-union InsertionHeader {
-  struct {
-    uint64_t location;
-    uint64_t content_length;
-  };
-  unsigned char bytes[8];
-};
-
-struct Insertion {
-  InsertionHeader header;
-  std::string content;
-};
-
 bool Index::is_config_loaded = false;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
@@ -529,6 +497,10 @@ int Index::add_new(index_combine_data &index_to_add) {
   return 0;
 }
 
+void add_reversed_to_word(index_combine_data &index_to_add, uint64_t &on_disk_id, std::vector<Transaction> &transactions, uint64_t &additional_new_needed_size) {
+
+}
+
 int Index::merge(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: adding to existing index.");
   map();
@@ -712,9 +684,11 @@ int Index::merge(index_combine_data &index_to_add) {
       }
       if (mmap_words[on_disk_count + 1 + i] < index_to_add.words_and_reversed[local_word_count].word[i]) {
         // this means the on disk is smaller than the local. Skip to the next word.
+        break;
       }
       if (word_seperator == i && word_seperator == local_word_count) { // if we reach this point and they are the same word we found the word.
         // update reversed and additionals if needed.
+        add_reversed_to_word(index_to_add, on_disk_id, transactions, additional_new_needed_size);
       }
     }
     ++local_word_count;

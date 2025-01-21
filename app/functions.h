@@ -118,6 +118,39 @@ public:
 };
 
 // Index.cpp
+
+union TransactionHeader {
+  struct {
+    uint8_t status;          // 0 = no status, 1 = started, 2 = completed
+    uint8_t index_type;      // paths = 0, words = 1, words_f = 2, reversed = 3,
+                             // additional = 4
+    uint64_t location;       // byte count in file, resize = 0.
+    uint64_t backup_id;      // 0 = none
+    uint8_t operation_type;  // 0 = Move, 1 = write, 2 = resize
+    uint64_t content_length; // length of content. for resize this indicates the
+                             // new size
+  };
+  unsigned char bytes[15];
+};
+
+struct Transaction {
+  TransactionHeader header;
+  std::string content;
+};
+
+union InsertionHeader {
+  struct {
+    uint64_t location;
+    uint64_t content_length;
+  };
+  unsigned char bytes[8];
+};
+
+struct Insertion {
+  InsertionHeader header;
+  std::string content;
+};
+
 class Index {
 private:
   static bool is_config_loaded;
@@ -152,6 +185,7 @@ private:
   static void resize(const std::filesystem::path &path_to_resize,
                      const int size);
   static int add_new(index_combine_data &index_to_add);
+  static void add_reversed_to_word(index_combine_data &index_to_add, uint64_t &on_disk_id, std::vector<Transaction> &transactions, uint64_t &additional_new_needed_size);
   static int merge(index_combine_data &index_to_add);
 
 public:
