@@ -87,9 +87,9 @@ The index uses multiple specialized files to optimize search performance while m
 ```mermaid
 graph LR
     subgraph "words_f.index"
-        WF1[a: offset 0] 
-        WF2[b: offset 120]
-        WF3[c: offset 250]
+        WF1[a: offset 0, ID 0] 
+        WF2[b: offset 120, ID 67]
+        WF3[c: offset 250, ID 90]
         WF4[...]
     end
 
