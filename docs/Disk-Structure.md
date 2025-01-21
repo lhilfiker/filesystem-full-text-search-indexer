@@ -42,18 +42,19 @@ The index uses multiple specialized files to optimize search performance while m
     - 255: Words longer than 255 chars
   - One byte per character(letter 'a' starts at 0.)
   - Alphabetically sorted for binary search
-  - Words are linked to reversed based on ID. The first word is linked to reversed ID1. The fifth to ID5.
+  - Words are linked to reversed based on ID. The first word is linked to reversed ID0. The fifth to ID4.
+  - WordsID or on Disk ID start from 0 and are only actually used on disk in words_f.
 
 ### 4. Word Fast Index (`words_f.index`)
 - **Purpose**: Fast first-letter lookup table
 - **Format**: 
   ```
-  [8-byte value for 'a'][8-byte value for 'b']...[8-byte value for 'z']
+  [8-byte value for 'a'][4-Byte value for ID '0' for 'a'][8-byte value for 'b'][4-Byte value for ID '35' for 'b']...[8-byte value for 'z'][4-Byte value for ID '3434' for 'z']
   ```
 - **Details**:
   - 26 entries (a-z)
-  - Each entry is an 8-byte uin64_t
-  - Points to first occurrence in words.index as a byte location.(e.g the words with letter 'b' begin t byte 300.)
+  - Each entry is an 8-byte uin64_t and a 4 byte uint32_t. total 12 bytes per letter.
+  - Points to first occurrence in words.index as a byte location.(e.g the words with letter 'b' begin t byte 300.) and it's ID. ID is needed to then access its reversed or additional.
   - Enables quick letter-based searches
   - In the future will be able to also seperate the second char of a char. e.g aa, ab, ac ... da, db..
 
