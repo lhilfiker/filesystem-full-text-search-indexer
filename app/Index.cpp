@@ -660,7 +660,6 @@ int Index::merge(index_combine_data &index_to_add) {
   char current_first_char = 'a';
   char local_first_char =
       index_to_add.words_and_reversed[local_word_count].word[0];
-  std::wstring current_word = L"";
 
   uint64_t disk_additional_ids = (additional_size / 50) + 1;
 
@@ -678,8 +677,48 @@ int Index::merge(index_combine_data &index_to_add) {
   // passed and we should call new word function. if not we skip it. If it is
   // the same length and same word we will call word found function.
 
-  while(on_disk_count < words_size) {
+  while(on_disk_count + 1 < words_size) {
+    // If the current word first char is different we use words_f to set the location to the start of that char.
+    if (current_first_char < local_first_char) {
+      if (words_f[current_first_char - 'a'].value < words_size) {
+        on_disk_count = words_f[current_first_char - 'a'].value;
+      } else {
+        // This should not happen. Index is corrupted.
+        log::error("Index: Combine: Words_f char value is higher than words index size. This means the index is corrupted. Reset the index and report this problem.");
+      }
+    }
 
+    // read the one byte word sperator.
+    uint8_t word_seperator = mmap_words[on_disk_count];
+    if (word_seperator < 31 || word_seperator + on_disk_count > words_size) { // 0-30 is reserved. if it is higher it is for seperator. If the seperator here is 0-30 the index is corrupted.
+      log::error("Index: Combine: word seperator is invalid. This means the index is most likely corrupted. Stopping to protect the index.");
+    }
+    if (local_first_char != mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
+      current_first_char = mmap_words[on_disk_count + 1];
+      continue; // at the start we will then go to the correct first char of that word and repeat the whole block. 
+    }
+    if (word_seperator == 255) { // This means the word is larger than 255 bytes. We need to count it manually until we reach another 30< byte.
+      // go through start position until end position comparing each char until either it is smaller or bigger. then just try to find the next seperator.
+      // update word_lentgh and count and first char.
+      continue;
+    }
+
+    for (int i = 0; i < word_seperator; ++i) {
+      if (local_word_length < i) { // if the local word is smaller then the on disk one and we already reached this point we know the disk word is bigger.
+        // insert a new word and reversed and additional. Update words_f if needed.
+      }
+      if (mmap_words[on_disk_count + 1 + i] > index_to_add.words_and_reversed[local_word_count].word[i]) {// if the on disk char is bigger it means we went already past the word.
+        // insert a new word and reversed and additional. Update words_f if needed.
+      }
+      if (mmap_words[on_disk_count + 1 + i] < index_to_add.words_and_reversed[local_word_count].word[i]) {
+        // this means the on disk is smaller than the local. Skip to the next word.
+      }
+      if (word_seperator == i && word_seperator == local_word_count) { // if we reach this point and they are the same word we found the word.
+        // update reversed and additionals if needed.
+      }
+    }
+    ++local_word_count;
+    local_word_length = index_to_add.words_and_reversed[local_word_count].word.length();
   }
 
 /*  while (on_disk_count < words_size) {
