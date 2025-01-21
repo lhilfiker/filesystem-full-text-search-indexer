@@ -630,7 +630,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // copy words_f into memory
   std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
-    std::memcpy(words_f[i].bytes, &mmap_words_f[i * 8], 8);
+    std::memcpy(words_f[i].bytes, &mmap_words_f[i * 12], 12);
   }
 
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
@@ -663,8 +663,9 @@ int Index::merge(index_combine_data &index_to_add) {
     // If the current word first char is different we use words_f to set the
     // location to the start of that char.
     if (current_first_char < local_first_char) {
-      if (words_f[current_first_char - 'a'].value < words_size) {
-        on_disk_count = words_f[current_first_char - 'a'].value;
+      if (words_f[current_first_char - 'a'].location < words_size) {
+        on_disk_count = words_f[current_first_char - 'a'].location;
+        on_disk_id = words_f[current_first_char - 'a'].id;
       } else {
         // This should not happen. Index is corrupted.
         log::error("Index: Combine: Words_f char value is higher than words "
@@ -731,6 +732,8 @@ int Index::merge(index_combine_data &index_to_add) {
         break;
       }
     }
+    on_disk_count += word_seperator;
+    ++on_disk_id;
     ++local_word_count;
     local_word_length =
         index_to_add.words_and_reversed[local_word_count].word.length();
