@@ -7,8 +7,9 @@
 #include <string>
 
 union WordsFValue {
-  uint64_t value;
-  unsigned char bytes[8];
+  uint64_t location;
+  uint32_t id;
+  unsigned char bytes[12];
 };
 
 union ReversedBlock {
@@ -303,7 +304,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   // words_f_size maybe needs to be extended to allow larger numbers if 8
   // bytes turn out to be too small. maybe automatically resize if running out
   // of space?
-  words_f_size_buffer = 26 * 8; // uint64_t stored as 8 bytes(64 bits) for
+  words_f_size_buffer = 26 * 12; // uint64_t stored as 8 bytes(disk location)) + uint32_t stored as 4 bytes(disk id) for
                                 // each letter in the alphabet.
   reversed_size_buffer = index_to_add.words_and_reversed.size() *
                          10; // each word id has a 10 byte block.
@@ -365,6 +366,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   std::vector<WordsFValue> words_f(26);
   char current_char = '0';
   file_location = 0;
+  uint32_t on_disk_id = 0;
 
   for (const words_reversed &word : index_to_add.words_and_reversed) {
     // check if the first char is different from the last. if so, save the
@@ -372,7 +374,8 @@ int Index::add_new(index_combine_data &index_to_add) {
     if (word.word[0] !=
         current_char) { // save file location if a new letter appears.
       current_char = word.word[0];
-      words_f[current_char - 'a'].value = file_location;
+      words_f[current_char - 'a'].location = file_location;
+      words_f[current_char - 'a'].id = on_disk_id;
     }
     // We use a 1byte seperator beetween each word. We also directly use it to
     // indicate how long the word is.
@@ -390,6 +393,7 @@ int Index::add_new(index_combine_data &index_to_add) {
       mmap_words[file_location] = c - 'a';
       ++file_location;
     }
+    ++on_disk_id;
   }
   words_size = file_location;
   log::write(2, "indexer: add: words written");
@@ -403,24 +407,25 @@ int Index::add_new(index_combine_data &index_to_add) {
     // we add it to a list of items with 0. If we find one with a number we
     // write all in the list to the same number. At the end if there are still 0
     // in the list we write it with the last location of the file.
-    if (words_f[i].value == 0) {
+    if (words_f[i].location == 0) {
       to_set.push_back(i);
     } else {
       for (const int &j : to_set) {
-        words_f[j].value = words_f[i].value;
+        words_f[j] = words_f[i];
       }
       to_set.clear();
     }
   }
   for (const int &j :
        to_set) { // if there are any left we set them to the end of words
-    words_f[j].value = file_location;
+    words_f[j].location = file_location;
+    words_f[j].id = on_disk_id;
   }
 
   file_location = 0;
   for (const WordsFValue &word_f : words_f) {
-    std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0], 8);
-    file_location += 8;
+    std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0], 12);
+    file_location += 12;
   }
 
   words_f_size = file_location;
@@ -582,7 +587,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
     } else {
       // Abort. A corrupted index would mess things up. If the corruption
-      // could not get detectet or fixed before here it is most likely broken.
+      // could not get detected or fixed before here it is most likely broken.
       log::error("Index: Combine: invalid path content length indicator. "
                  "Aborting. The Index could be corrupted.");
     }
