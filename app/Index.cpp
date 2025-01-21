@@ -540,14 +540,19 @@ int Index::merge(index_combine_data &index_to_add) {
 
   size_t paths_l_size = index_to_add.paths.size();
 
+  // So we can easily covert disk or local IDs fast.
   struct PathsMapping {
     std::unordered_map<uint16_t, uint16_t> by_local;
     std::unordered_map<uint16_t, uint16_t> by_disk;
   };
   PathsMapping paths_mapping;
 
-  // convert local paths to a map with path -> id
-  // TODO: more memory efficent converting.
+  // convert local paths to a map with value path and key id. We will go through
+  // each path on disk and see if it is in the local index. Using a unordered
+  // map we can check that very fast and get the local id so we can map the
+  // local id to disk id and vica versa.
+  // TODO: more memory efficent converting. Currently this would double the RAM
+  // usage and violate the memory limit set by the user.
   std::unordered_map<std::string, uint16_t> paths_search;
   size_t path_insertion_count = 0;
   for (const std::string &s : index_to_add.paths) {
@@ -564,10 +569,12 @@ int Index::merge(index_combine_data &index_to_add) {
   // paths_size is the count of bytes of the index on disk.
   while (on_disk_count < paths_size) {
     if (on_disk_count + 1 <
-        paths_size) { // as we read 1 byte ahead to prevent accessing invalid
-                      // data. The index format would allow it but it could be
-                      // corrupted and not detected.
+        paths_size) { // we read 1 byte ahead for the offset to prevent
+                      // accessing invalid data. The index format would allow it
+                      // but it could be corrupted and not detected.
       PathOffset path_offset;
+      // we read the offset so we know how long the path is and where the next
+      // path starts.
       path_offset.bytes[0] = mmap_paths[on_disk_count];
       ++on_disk_count;
       path_offset.bytes[1] = mmap_paths[on_disk_count];
@@ -575,11 +582,12 @@ int Index::merge(index_combine_data &index_to_add) {
       ++on_disk_count;
 
       if (on_disk_count + next_path_end <
-          paths_size) { // check if we can read all of it.
+          paths_size) { // check if we can read the whole path based on the offset.
+        // refrence the path to a string and then search in the unordered map we created earlier.
         std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
-        if (paths_search.find(path_to_compare) !=
-            paths_search
+        if (paths_search.find(path_to_compare) != paths_search
                 .end()) { // check if the disk path is found in memory index.
+
           paths_mapping.by_local[paths_search[path_to_compare]] =
               on_disk_id; // map disk id to memory id.
           paths_mapping.by_disk[on_disk_id] =
@@ -619,6 +627,7 @@ int Index::merge(index_combine_data &index_to_add) {
     paths_add_content += key;
     ++on_disk_id;
   }
+  // write it at the end at once if needed.
   if (needed_space != 0) {
     // resize all paths + offset fit.
     Transaction resize_transaction{0, 0, 0, 0, 2, paths_size + needed_space};
@@ -669,7 +678,11 @@ int Index::merge(index_combine_data &index_to_add) {
   // passed and we should call new word function. if not we skip it. If it is
   // the same length and same word we will call word found function.
 
-  while (on_disk_count < words_size) {
+  while(on_disk_count < words_size) {
+
+  }
+
+/*  while (on_disk_count < words_size) {
     if (current_first_char < local_first_char) {
       on_disk_count = words_f[current_first_char - 'a'].value;
     }
@@ -886,6 +899,7 @@ int Index::merge(index_combine_data &index_to_add) {
        ++local_word_count) {
     // insert the remaining at the end. update words_f if needed.
   }
+  */
 
   // resize additional based on additional_new_needed_size
   //
