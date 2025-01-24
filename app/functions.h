@@ -130,7 +130,7 @@ union TransactionHeader {
     uint64_t content_length; // length of content. for resize this indicates the
                              // new size
   };
-  unsigned char bytes[15];
+  unsigned char bytes[27];
 };
 
 struct Transaction {
@@ -143,7 +143,7 @@ union InsertionHeader {
     uint64_t location;
     uint64_t content_length;
   };
-  unsigned char bytes[8];
+  unsigned char bytes[16];
 };
 
 struct Insertion {
