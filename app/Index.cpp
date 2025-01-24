@@ -520,7 +520,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
                                                                   // corrupted.
   }
 
-  size_t last_additional_id = 0;
+  size_t current_additional = 0;
   // we save all the slots that are free in here.
   std::vector<uint16_t> reversed_free;
 
@@ -551,7 +551,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
   // additionals connected.
   if (disk_reversed->ids[4] != 0 &&
       index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
-    size_t current_additional = disk_reversed->ids[4];
+    current_additional = disk_reversed->ids[4];
     additional_free.push_back(
         {current_additional,
          {}}); // create an empty additional_free for the first one.
@@ -643,6 +643,92 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
 
   // if there are still some left we need to create new additionals.
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
+    additional_new_needed_size += 50;
+    Transaction additional_add_transaction;
+
+    // If we need to append to a additional block or reversed
+    if (current_additional != 0) {
+      // Create a new additional transaction for the end
+      additional_add_transaction = {
+          0,
+          4,
+          (current_additional * 50) -
+              2, // we overwrite the last additionals additional_id.
+          0,
+          1,
+          2};
+    } else { // reversed
+      additional_add_transaction = {
+          0, 3,
+          (on_disk_id * 10) + 8, // we overwrite the reversed additional_id.
+                                 // on_disk_id starts from 0.
+          0, 1, 2};
+    }
+
+    PathOffset content;
+    current_additional = ((additional_size + additional_new_needed_size) / 50) +
+                         1; // get the ID of the new additional ID at the end.
+    content.offset = current_additional;
+    // add it to the transaction
+    additional_add_transaction.content = content.bytes[0] + content.bytes[1];
+    transactions.push_back(additional_add_transaction);
+
+    // go through all missing local Ids and add them to additionals
+    Transaction additional_new_transaction;
+    additional_new_transaction.content.reserve(
+        ((index_to_add.words_and_reversed[local_word_count].reversed.size() +
+          19) /
+         24) *
+        50); // so many additional we need.
+    int in_additional_counter = 0;
+    for (int i = 0;
+         i < index_to_add.words_and_reversed[local_word_count].reversed.size();
+         ++i) {
+
+      const auto &a_id =
+          *index_to_add.words_and_reversed[local_word_count].reversed.begin();
+      // add path id for local id and then erase it.
+      PathOffset content;
+      content.offset = paths_mapping.by_local[a_id];
+      additional_new_transaction.content += content.bytes[0] + content.bytes[1];
+      index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
+
+      ++in_additional_counter;
+      if (in_additional_counter ==
+          24) { // if the current additional is full we add reference to the new
+                // additional and go to the next.
+        if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
+            0) { // If this will be the last one we will add 0.
+          PathOffset add;
+          add.offset = 0;
+          additional_new_transaction.content += add.bytes[0] + add.bytes[1];
+          in_additional_counter = 0;
+          break;
+        }
+        in_additional_counter = 0;
+        ++current_additional;
+        PathOffset add;
+        add.offset = current_additional;
+        additional_new_transaction.content += add.bytes[0] + add.bytes[1];
+      }
+    }
+    // If an additional is not full we fill it with 0.
+    if (in_additional_counter != 0) {
+      for (; in_additional_counter < 25; ++in_additional_counter) {
+        PathOffset add;
+        add.offset = 0;
+        additional_new_transaction.content += add.bytes[0] + add.bytes[1];
+      }
+    }
+    // add the transaction
+    additional_new_transaction = {
+        0,
+        4,
+        additional_size + additional_new_needed_size, // add to the end
+        0,
+        1,
+        additional_add_transaction.content.length()};
+    transactions.push_back(additional_new_transaction);
   }
 
   // everything got checked, free slots filled and new additional if needed
@@ -869,7 +955,6 @@ int Index::merge(index_combine_data &index_to_add) {
   }
 
   // we need to insert all words that came after the last word on disk.
-  
 
   return 0;
 }
