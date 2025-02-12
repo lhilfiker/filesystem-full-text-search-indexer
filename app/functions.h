@@ -152,8 +152,8 @@ struct Insertion {
 };
 
 struct PathsMapping {
-    std::unordered_map<uint16_t, uint16_t> by_local;
-    std::unordered_map<uint16_t, uint16_t> by_disk;
+  std::unordered_map<uint16_t, uint16_t> by_local;
+  std::unordered_map<uint16_t, uint16_t> by_disk;
 };
 
 class Index {
@@ -197,6 +197,14 @@ private:
                                    uint32_t &on_disk_id,
                                    const size_t &local_word_count,
                                    PathsMapping &paths_mapping);
+  static void add_new_word(index_combine_data &index_to_add,
+                           uint64_t &on_disk_count,
+                           std::vector<Transaction> &transactions,
+                           std::vector<Insertion> words_insertions,
+                           std::vector<Insertion> reversed_insertions,
+                           uint64_t &additional_new_needed_size,
+                           uint32_t &on_disk_id, const size_t &local_word_count,
+                           PathsMapping &paths_mapping);
   static int merge(index_combine_data &index_to_add);
 
 public:
