@@ -743,7 +743,6 @@ void Index::add_new_word(index_combine_data &index_to_add,
                          uint64_t &additional_new_needed_size,
                          uint32_t &on_disk_id, const size_t &local_word_count,
                          PathsMapping &paths_mapping) {
-  // TODO: words_F
 
   // We create a insertion for the new word + word seperator at the start
   size_t word_length =
@@ -1028,8 +1027,11 @@ int Index::merge(index_combine_data &index_to_add) {
       if (local_word_length <
           i) { // if the local word is smaller then the on disk one and we
                // already reached this point we know the disk word is bigger.
-        // insert a new word and reversed and additional. Update words_f if
-        // needed.
+        // insert a new word and reversed and additional.
+        add_new_word(index_to_add, on_disk_count, transactions,
+                     words_insertions, reversed_insertions,
+                     additional_new_needed_size, on_disk_id, local_word_count,
+                     paths_mapping);
         break;
       }
       if (mmap_words[on_disk_count + 1 + i] >
@@ -1038,9 +1040,10 @@ int Index::merge(index_combine_data &index_to_add) {
                           // already past the word.
         // insert a new word and reversed and additional. Update words_f if
         // needed.
-        add_reversed_to_word(index_to_add, on_disk_count, transactions,
-                             additional_new_needed_size, on_disk_id,
-                             local_word_count, paths_mapping);
+        add_new_word(index_to_add, on_disk_count, transactions,
+                     words_insertions, reversed_insertions,
+                     additional_new_needed_size, on_disk_id, local_word_count,
+                     paths_mapping);
         // TODO: words_F
         break;
       }
