@@ -56,6 +56,7 @@ The index uses multiple specialized files to optimize search performance while m
   - Each entry is an 8-byte uin64_t and a 4 byte uint32_t. total 12 bytes per letter.
   - Points to first occurrence in words.index as a byte location.(e.g the words with letter 'b' begin t byte 300.) and it's ID. ID is needed to then access its reversed or additional.
   - Enables quick letter-based searches
+  - If one entry doesn't have a word connected yet we set its location to the value of the next entry that has one or the end of the file location.
   - In the future will be able to also seperate the second char of a char. e.g aa, ab, ac ... da, db..
 
 ### 5. Reversed Index (`reversed.index`)
