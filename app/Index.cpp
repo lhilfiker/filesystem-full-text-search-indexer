@@ -965,6 +965,15 @@ int Index::merge(index_combine_data &index_to_add) {
     std::memcpy(words_f[i].bytes, &mmap_words_f[i * 12], 12);
   }
 
+  // This is needed when we add new words. Each time we add a new word the start
+  // of all following chars will change by how much we add. Here we will note
+  // down how many now bytes got added at the next char. E.g new word at 'f'. We
+  // add 5 (word is 4 letters + 1 seperator) to the location of 'g' because its
+  // the next occurence. After all words got added we will update the real
+  // words_f by combining the current with all the ones that came before. e.g a
+  // has 2, b has 5, c has 9. wordsf for b adds 5+2. c = 9+5+2.
+  std::vector<uint64_t> words_F_change(26);
+
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
   // add_to_disk.
   on_disk_count = 0;
@@ -1032,6 +1041,8 @@ int Index::merge(index_combine_data &index_to_add) {
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
+        words_F_change[current_first_char] += local_word_length + 1;
+
         break;
       }
       if (mmap_words[on_disk_count + 1 + i] >
@@ -1044,6 +1055,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
+        words_F_change[current_first_char] += local_word_length + 1;
         // TODO: words_F
         break;
       }
@@ -1071,7 +1083,22 @@ int Index::merge(index_combine_data &index_to_add) {
         index_to_add.words_and_reversed[local_word_count].word.length();
   }
 
-  // we need to insert all words that came after the last word on disk.
+  // we need to insert all words that came after the last word on disk. Update
+  // words_f_change too.
+
+  // calculate the new words f values and create a transaction to update all.
+  // This is not an ideal implementation because we copy the whole thing. When
+  // we add custom words_f length then we can make a better implementation that
+  // is faster and saves memory and space.
+  Transaction words_f_new{0, 2, 0, 0, 1, 312};
+  uint64_t all_size = 0;
+  for (int i = 0; i < 26; ++i) {
+    all_size += words_F_change[i];
+    words_f[i].location += all_size;
+    std::memcpy(&words_f_new.content[i * 12], &words_f[i].bytes[0], 12);
+  }
+  transactions.push_back(words_f_new);
+  words_f_new.content.clear(); // free some memory.
 
   return 0;
 }
