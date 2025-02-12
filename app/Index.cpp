@@ -971,8 +971,10 @@ int Index::merge(index_combine_data &index_to_add) {
   // add 5 (word is 4 letters + 1 seperator) to the location of 'g' because its
   // the next occurence. After all words got added we will update the real
   // words_f by combining the current with all the ones that came before. e.g a
-  // has 2, b has 5, c has 9. wordsf for b adds 5+2. c = 9+5+2.
-  std::vector<uint64_t> words_F_change(26);
+  // has 2, b has 5, c has 9. wordsf for b adds 5+2. c = 9+5+2. We have 27
+  // because when adding new words we add to + 1 and when its z + 1 its invalid.
+  // we will just ignore it
+  std::vector<uint64_t> words_F_change(27);
 
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
   // add_to_disk.
@@ -1085,6 +1087,21 @@ int Index::merge(index_combine_data &index_to_add) {
 
   // we need to insert all words that came after the last word on disk. Update
   // words_f_change too.
+
+  for (; local_word_count < index_to_add.words_and_reversed.size();
+       ++local_word_count) {
+    local_word_length =
+        index_to_add.words_and_reversed[local_word_count].word.length();
+    // Even tho we add multiple words at the same on_disk_id or on_disk_count it
+    // doesnt matter because when insertions are processed it will add all the
+    // newly added word count to the insertion location.
+    add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
+                 reversed_insertions, additional_new_needed_size, on_disk_id,
+                 local_word_count, paths_mapping);
+    words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
+                    'a') +
+                   1] += local_word_length + 1;
+  }
 
   // calculate the new words f values and create a transaction to update all.
   // This is not an ideal implementation because we copy the whole thing. When
