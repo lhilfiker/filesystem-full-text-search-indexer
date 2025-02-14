@@ -1104,7 +1104,8 @@ int Index::merge(index_combine_data &index_to_add) {
         // insert a new word and reversed and additional.
         add_new_word(index_to_add, on_disk_count, transactions,
                      words_insertions, reversed_insertions,
-                     additional_new_needed_size, words_new_needed_size, reversed_new_needed_size, on_disk_id, local_word_count,
+                     additional_new_needed_size, words_new_needed_size,
+                     reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
         words_F_change[current_first_char] += local_word_length + 1;
 
@@ -1118,7 +1119,8 @@ int Index::merge(index_combine_data &index_to_add) {
         // needed.
         add_new_word(index_to_add, on_disk_count, transactions,
                      words_insertions, reversed_insertions,
-                     additional_new_needed_size, words_new_needed_size, reversed_new_needed_size, on_disk_id, local_word_count,
+                     additional_new_needed_size, words_new_needed_size,
+                     reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
         words_F_change[current_first_char] += local_word_length + 1;
         // TODO: words_F
@@ -1159,7 +1161,8 @@ int Index::merge(index_combine_data &index_to_add) {
     // doesnt matter because when insertions are processed it will add all the
     // newly added word count to the insertion location.
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
-                 reversed_insertions, additional_new_needed_size, words_new_needed_size, reversed_new_needed_size, on_disk_id,
+                 reversed_insertions, additional_new_needed_size,
+                 words_new_needed_size, reversed_new_needed_size, on_disk_id,
                  local_word_count, paths_mapping);
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
@@ -1181,8 +1184,18 @@ int Index::merge(index_combine_data &index_to_add) {
   words_f_new.content.clear(); // free some memory.
 
   // Now we have figured out everything we want to do. Now we need to finish the
-  // Transaction List and then write it to disk. First add a resize Transaction
+  // Transaction List and then write it to disk.
+  // First add a resize Transaction
   // for words, reversed and additional at the start of the List.
+  Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size, ""};
+  transactions.insert(transactions.begin(), resize_words);
+  Transaction resize_reversed{0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""};
+  transactions.insert(transactions.begin(), resize_reversed);
+  Transaction resize_additional{0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""};
+  transactions.insert(transactions.begin(), resize_additional);
+
+
+
 
   return 0;
 }
