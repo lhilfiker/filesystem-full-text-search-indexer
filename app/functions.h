@@ -123,19 +123,19 @@ union TransactionHeader {
   struct {
     uint8_t status;          // 0 = no status, 1 = started, 2 = completed
     uint8_t index_type;      // paths = 0, words = 1, words_f = 2, reversed = 3,
-                             // additional = 4
+                             // additional = 4, paths_count = 5
     uint64_t location;       // byte count in file, resize = 0.
-    uint64_t backup_id;      // 0 = none
-    uint8_t operation_type;  // 0 = Move, 1 = write, 2 = resize
+    uint64_t backup_id;      // 0 = none. starting from 1 for  each transaction. each transaction has its own unique folder. same id for move and create a backup operation.
+    uint8_t operation_type;  // 0 = Move, 1 = write, 2 = resize, 3 = create a backup
     uint64_t content_length; // length of content. for resize this indicates the
-                             // new size
+                             // new size. for move how much from the starting point and the same for create a backup.
   };
   unsigned char bytes[27];
 };
 
 struct Transaction {
   TransactionHeader header;
-  std::string content;
+  std::string content; // For move operations this will be 8 bytes always and it is a uint64_t and signals the byte shift.
 };
 
 union InsertionHeader {
@@ -193,7 +193,7 @@ private:
   static void add_reversed_to_word(index_combine_data &index_to_add,
                                    uint64_t &on_disk_count,
                                    std::vector<Transaction> &transactions,
-                                   uint64_t &additional_new_needed_size,
+                                   size_t &additional_new_needed_size,
                                    uint32_t &on_disk_id,
                                    const size_t &local_word_count,
                                    PathsMapping &paths_mapping);
@@ -202,7 +202,9 @@ private:
                            std::vector<Transaction> &transactions,
                            std::vector<Insertion> words_insertions,
                            std::vector<Insertion> reversed_insertions,
-                           uint64_t &additional_new_needed_size,
+                           size_t &additional_new_needed_size,
+                           size_t &words_new_needed_size,
+                           size_t &reversed_new_needed_size,
                            uint32_t &on_disk_id, const size_t &local_word_count,
                            PathsMapping &paths_mapping);
   static int merge(index_combine_data &index_to_add);

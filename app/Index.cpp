@@ -32,6 +32,11 @@ union PathsCountItem {
   unsigned char bytes[4];
 };
 
+union MoveOperationContent {
+  uint64_t num;
+  unsigned char bytes[8];
+};
+
 bool Index::is_config_loaded = false;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
@@ -1195,6 +1200,66 @@ int Index::merge(index_combine_data &index_to_add) {
   transactions.insert(transactions.begin(), resize_additional);
 
 
+  // Now we need to convert the Insertion to Transactions.
+  // First we need to make Transactions to make place for the insertion. We have already resized so there is enough space for it. We need to create the Transaction so data only gets moved once.
+  struct movements_temp_item {
+    size_t start_pos;
+    size_t end_pos;
+    uint64_t byte_shift;
+  };
+  std::vector<movements_temp_item> movements_temp;
+
+  // words first.
+  size_t last_start_location = 0;
+  size_t byte_shift = 0;
+  // we make a list of moves so everything fits. then we make transactions from last to first to move them.
+  for (int i = 0; i < words_insertions.size(); ++i) {
+    if (i == 0) {
+      last_start_location = words_insertions[i].header.location;
+    }
+    if (last_start_location != words_insertions[i].header.location) {
+      // if it's not the same it means it's a new block. WE add the current block first.
+      movements_temp.push_back({last_start_location, words_insertions[i].header.location, byte_shift});
+      last_start_location = words_insertions[i].header.location;
+      words_insertions[i].header.location += byte_shift;
+      byte_shift += words_insertions[i].header.content_length;
+    } else {
+      // It is the same. Update Byteshift only and apply byteshift.
+      words_insertions[i].header.location += byte_shift;
+      byte_shift += words_insertions[i].header.content_length;
+    }
+  }
+  if (words_insertions.size() != 0) { // if its non zero it means there are insertions and the last one didnt get added yet.
+    movements_temp.push_back({last_start_location, static_cast<size_t>(words_size - 1), byte_shift}); 
+  }
+
+  // now we create move transaction from last to first of the movements_temp.
+  uint64_t backup_ids = 1;
+  for (size_t i = movements_temp.size(); i-- > 0;) {
+    size_t range = movements_temp[i].start_pos - movements_temp[i].end_pos;
+    if (range > byte_shift) {
+      // this means we copy over the data itself we are trying to move. Thats why we create a backup of this before and then move it.
+      Transaction create_backup{0, 1, movements_temp[i].start_pos, backup_ids, 3, range};
+      transactions.push_back(create_backup);
+      Transaction move_operation{0, 1, movements_temp[i].start_pos, backup_ids, 0, range, ""};
+      MoveOperationContent mov_content;
+      mov_content.num = movements_temp[i].byte_shift;
+      for (int i = 0; i < 8; ++i) {
+        move_operation.content[i] = mov_content.bytes[i];
+      }
+      transactions.push_back(move_operation);
+      ++backup_ids;
+    }
+    // with no backup
+    Transaction move_operation{0, 1, movements_temp[i].start_pos, 0, 0, range, ""};
+    MoveOperationContent mov_content;
+    mov_content.num = movements_temp[i].byte_shift;
+    for (int i = 0; i < 8; ++i) {
+      move_operation.content[i] = mov_content.bytes[i];
+    }
+    transactions.push_back(move_operation);
+  }
+  movements_temp.clear();
 
 
   return 0;
