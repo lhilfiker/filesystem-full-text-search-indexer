@@ -511,7 +511,7 @@ int Index::add_new(index_combine_data &index_to_add) {
 void Index::add_reversed_to_word(index_combine_data &index_to_add,
                                  uint64_t &on_disk_count,
                                  std::vector<Transaction> &transactions,
-                                 uint64_t &additional_new_needed_size,
+                                 size_t &additional_new_needed_size,
                                  uint32_t &on_disk_id,
                                  const size_t &local_word_count,
                                  PathsMapping &paths_mapping) {
@@ -745,8 +745,10 @@ void Index::add_new_word(index_combine_data &index_to_add,
                          std::vector<Transaction> &transactions,
                          std::vector<Insertion> words_insertions,
                          std::vector<Insertion> reversed_insertions,
-                         uint64_t &additional_new_needed_size,
-                         uint32_t &on_disk_id, const size_t &local_word_count,
+                         size_t &additional_new_needed_size,
+                         size_t &words_new_needed_size,
+                         size_t &reversed_new_needed_size, uint32_t &on_disk_id,
+                         const size_t &local_word_count,
                          PathsMapping &paths_mapping) {
 
   // We create a insertion for the new word + word seperator at the start
@@ -766,6 +768,9 @@ void Index::add_new_word(index_combine_data &index_to_add,
   for (const char c : index_to_add.words_and_reversed[local_word_count].word) {
     new_word.content += c - 'a';
   }
+  // update new needed size
+  words_new_needed_size += new_word.content.length();
+  reversed_new_needed_size += 10; // always 10
   words_insertions.push_back(new_word);
 
   // We create a reversed insertion and remove the first 4 already and check if
@@ -853,7 +858,9 @@ int Index::merge(index_combine_data &index_to_add) {
   // need + 50 on additional new needed size when added.
   std::vector<Insertion> words_insertions;
   std::vector<Insertion> reversed_insertions;
-  uint64_t additional_new_needed_size = 0;
+  size_t additional_new_needed_size = 0;
+  size_t words_new_needed_size = 0;
+  size_t reversed_new_needed_size = 0;
 
   size_t paths_l_size = index_to_add.paths.size();
 
@@ -1097,7 +1104,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // insert a new word and reversed and additional.
         add_new_word(index_to_add, on_disk_count, transactions,
                      words_insertions, reversed_insertions,
-                     additional_new_needed_size, on_disk_id, local_word_count,
+                     additional_new_needed_size, words_new_needed_size, reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
         words_F_change[current_first_char] += local_word_length + 1;
 
@@ -1111,7 +1118,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // needed.
         add_new_word(index_to_add, on_disk_count, transactions,
                      words_insertions, reversed_insertions,
-                     additional_new_needed_size, on_disk_id, local_word_count,
+                     additional_new_needed_size, words_new_needed_size, reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
         words_F_change[current_first_char] += local_word_length + 1;
         // TODO: words_F
@@ -1152,7 +1159,7 @@ int Index::merge(index_combine_data &index_to_add) {
     // doesnt matter because when insertions are processed it will add all the
     // newly added word count to the insertion location.
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
-                 reversed_insertions, additional_new_needed_size, on_disk_id,
+                 reversed_insertions, additional_new_needed_size, words_new_needed_size, reversed_new_needed_size, on_disk_id,
                  local_word_count, paths_mapping);
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
@@ -1172,6 +1179,10 @@ int Index::merge(index_combine_data &index_to_add) {
   }
   transactions.push_back(words_f_new);
   words_f_new.content.clear(); // free some memory.
+
+  // Now we have figured out everything we want to do. Now we need to finish the
+  // Transaction List and then write it to disk. First add a resize Transaction
+  // for words, reversed and additional at the start of the List.
 
   return 0;
 }
