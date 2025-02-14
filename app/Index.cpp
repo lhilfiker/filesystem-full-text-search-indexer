@@ -853,6 +853,90 @@ void Index::add_new_word(index_combine_data &index_to_add,
   reversed_insertions.push_back(new_reversed);
 }
 
+void Index::insertion_to_transactions(std::vector<Transaction> &transactions,
+                                      std::vector<Insertion> &to_insertions) {
+  struct movements_temp_item {
+    size_t start_pos;
+    size_t end_pos;
+    uint64_t byte_shift;
+  };
+  std::vector<movements_temp_item> movements_temp;
+
+  size_t last_start_location = 0;
+  size_t byte_shift = 0;
+  // we make a list of moves so everything fits. then we make transactions from
+  // last to first to move them.
+  for (int i = 0; i < to_insertions.size(); ++i) {
+    if (i == 0) {
+      last_start_location = to_insertions[i].header.location;
+    }
+    if (last_start_location != to_insertions[i].header.location) {
+      // if it's not the same it means it's a new block. WE add the current
+      // block first.
+      movements_temp.push_back(
+          {last_start_location, to_insertions[i].header.location, byte_shift});
+      last_start_location = to_insertions[i].header.location;
+      to_insertions[i].header.location += byte_shift;
+      byte_shift += to_insertions[i].header.content_length;
+    } else {
+      // It is the same. Update Byteshift only and apply byteshift.
+      to_insertions[i].header.location += byte_shift;
+      byte_shift += to_insertions[i].header.content_length;
+    }
+  }
+  if (to_insertions.size() !=
+      0) { // if its non zero it means there are insertions and the last one
+           // didnt get added yet.
+    movements_temp.push_back(
+        {last_start_location, static_cast<size_t>(words_size - 1), byte_shift});
+  }
+
+  // now we create move transaction from last to first of the movements_temp.
+  uint64_t backup_ids = 1;
+  for (size_t i = movements_temp.size(); i-- > 0;) {
+    size_t range = movements_temp[i].start_pos - movements_temp[i].end_pos;
+    if (range > byte_shift) {
+      // this means we copy over the data itself we are trying to move. Thats
+      // why we create a backup of this before and then move it.
+      Transaction create_backup{0,          1, movements_temp[i].start_pos,
+                                backup_ids, 3, range};
+      transactions.push_back(create_backup);
+      Transaction move_operation{
+          0, 1, movements_temp[i].start_pos, backup_ids, 0, range, ""};
+      MoveOperationContent mov_content;
+      mov_content.num = movements_temp[i].byte_shift;
+      for (int i = 0; i < 8; ++i) {
+        move_operation.content[i] = mov_content.bytes[i];
+      }
+      transactions.push_back(move_operation);
+      ++backup_ids;
+    }
+    // with no backup
+    Transaction move_operation{0,     1, movements_temp[i].start_pos, 0, 0,
+                               range, ""};
+    MoveOperationContent mov_content;
+    mov_content.num = movements_temp[i].byte_shift;
+    for (int i = 0; i < 8; ++i) {
+      move_operation.content[i] = mov_content.bytes[i];
+    }
+    transactions.push_back(move_operation);
+  }
+  movements_temp.clear();
+
+  // now that there is place we write the insertions as normal at their place.
+  // Their location already got updated so it's correct.
+  for (int i = 0; i < to_insertions.size(); ++i) {
+    Transaction insert_item{0,
+                            1,
+                            to_insertions[i].header.location,
+                            0,
+                            1,
+                            to_insertions[i].header.content_length,
+                            to_insertions[i].content};
+    transactions.push_back(insert_item);
+  }
+  to_insertions.clear();
+}
 int Index::merge(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: adding to existing index.");
   map();
@@ -1192,81 +1276,21 @@ int Index::merge(index_combine_data &index_to_add) {
   // Transaction List and then write it to disk.
   // First add a resize Transaction
   // for words, reversed and additional at the start of the List.
-  Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size, ""};
+  Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
+                           ""};
   transactions.insert(transactions.begin(), resize_words);
-  Transaction resize_reversed{0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""};
+  Transaction resize_reversed{
+      0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""};
   transactions.insert(transactions.begin(), resize_reversed);
-  Transaction resize_additional{0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""};
+  Transaction resize_additional{
+      0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""};
   transactions.insert(transactions.begin(), resize_additional);
 
-
   // Now we need to convert the Insertion to Transactions.
-  // First we need to make Transactions to make place for the insertion. We have already resized so there is enough space for it. We need to create the Transaction so data only gets moved once.
-  struct movements_temp_item {
-    size_t start_pos;
-    size_t end_pos;
-    uint64_t byte_shift;
-  };
-  std::vector<movements_temp_item> movements_temp;
-
-  // words first.
-  size_t last_start_location = 0;
-  size_t byte_shift = 0;
-  // we make a list of moves so everything fits. then we make transactions from last to first to move them.
-  for (int i = 0; i < words_insertions.size(); ++i) {
-    if (i == 0) {
-      last_start_location = words_insertions[i].header.location;
-    }
-    if (last_start_location != words_insertions[i].header.location) {
-      // if it's not the same it means it's a new block. WE add the current block first.
-      movements_temp.push_back({last_start_location, words_insertions[i].header.location, byte_shift});
-      last_start_location = words_insertions[i].header.location;
-      words_insertions[i].header.location += byte_shift;
-      byte_shift += words_insertions[i].header.content_length;
-    } else {
-      // It is the same. Update Byteshift only and apply byteshift.
-      words_insertions[i].header.location += byte_shift;
-      byte_shift += words_insertions[i].header.content_length;
-    }
-  }
-  if (words_insertions.size() != 0) { // if its non zero it means there are insertions and the last one didnt get added yet.
-    movements_temp.push_back({last_start_location, static_cast<size_t>(words_size - 1), byte_shift}); 
-  }
-
-  // now we create move transaction from last to first of the movements_temp.
-  uint64_t backup_ids = 1;
-  for (size_t i = movements_temp.size(); i-- > 0;) {
-    size_t range = movements_temp[i].start_pos - movements_temp[i].end_pos;
-    if (range > byte_shift) {
-      // this means we copy over the data itself we are trying to move. Thats why we create a backup of this before and then move it.
-      Transaction create_backup{0, 1, movements_temp[i].start_pos, backup_ids, 3, range};
-      transactions.push_back(create_backup);
-      Transaction move_operation{0, 1, movements_temp[i].start_pos, backup_ids, 0, range, ""};
-      MoveOperationContent mov_content;
-      mov_content.num = movements_temp[i].byte_shift;
-      for (int i = 0; i < 8; ++i) {
-        move_operation.content[i] = mov_content.bytes[i];
-      }
-      transactions.push_back(move_operation);
-      ++backup_ids;
-    }
-    // with no backup
-    Transaction move_operation{0, 1, movements_temp[i].start_pos, 0, 0, range, ""};
-    MoveOperationContent mov_content;
-    mov_content.num = movements_temp[i].byte_shift;
-    for (int i = 0; i < 8; ++i) {
-      move_operation.content[i] = mov_content.bytes[i];
-    }
-    transactions.push_back(move_operation);
-  }
-  movements_temp.clear();
-
-  // now that there is place we write the insertions as normal at their place. Their location already got updated so it's correct.
-  for (int i = 0; i < words_insertions.size(); ++i) {
-    Transaction word_insert{0, 1, words_insertions[i].header.location, 0, 1, words_insertions[i].header.content_length, words_insertions[i].content};
-    transactions.push_back(word_insert);
-  }
-  words_insertions.clear();
+  // First we need to make Transactions to make place for the insertion. We have
+  // already resized so there is enough space for it. We need to create the
+  // Transaction so data only gets moved once.
+  insertion_to_transactions(transactions, words_insertions);
 
   return 0;
 }

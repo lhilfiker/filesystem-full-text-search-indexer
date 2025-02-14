@@ -121,21 +121,26 @@ public:
 
 union TransactionHeader {
   struct {
-    uint8_t status;          // 0 = no status, 1 = started, 2 = completed
-    uint8_t index_type;      // paths = 0, words = 1, words_f = 2, reversed = 3,
-                             // additional = 4, paths_count = 5
-    uint64_t location;       // byte count in file, resize = 0.
-    uint64_t backup_id;      // 0 = none. starting from 1 for  each transaction. each transaction has its own unique folder. same id for move and create a backup operation.
-    uint8_t operation_type;  // 0 = Move, 1 = write, 2 = resize, 3 = create a backup
+    uint8_t status;     // 0 = no status, 1 = started, 2 = completed
+    uint8_t index_type; // paths = 0, words = 1, words_f = 2, reversed = 3,
+                        // additional = 4, paths_count = 5
+    uint64_t location;  // byte count in file, resize = 0.
+    uint64_t backup_id; // 0 = none. starting from 1 for  each transaction. each
+                        // transaction has its own unique folder. same id for
+                        // move and create a backup operation.
+    uint8_t
+        operation_type; // 0 = Move, 1 = write, 2 = resize, 3 = create a backup
     uint64_t content_length; // length of content. for resize this indicates the
-                             // new size. for move how much from the starting point and the same for create a backup.
+                             // new size. for move how much from the starting
+                             // point and the same for create a backup.
   };
   unsigned char bytes[27];
 };
 
 struct Transaction {
   TransactionHeader header;
-  std::string content; // For move operations this will be 8 bytes always and it is a uint64_t and signals the byte shift.
+  std::string content; // For move operations this will be 8 bytes always and it
+                       // is a uint64_t and signals the byte shift.
 };
 
 union InsertionHeader {
@@ -207,6 +212,8 @@ private:
                            size_t &reversed_new_needed_size,
                            uint32_t &on_disk_id, const size_t &local_word_count,
                            PathsMapping &paths_mapping);
+  static void insertion_to_transactions(std::vector<Transaction> &transactions,
+                                        std::vector<Insertion> &to_insertions);
   static int merge(index_combine_data &index_to_add);
 
 public:
