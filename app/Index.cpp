@@ -27,6 +27,11 @@ union PathOffset {
   unsigned char bytes[2];
 };
 
+union PathsCountItem {
+  uint32_t num;
+  unsigned char bytes[4];
+};
+
 bool Index::is_config_loaded = false;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
@@ -924,12 +929,13 @@ int Index::merge(index_combine_data &index_to_add) {
   }
 
   // go through all remaining paths_search elements, add a transaction and add
-  // a new id to paths_mapping and create a resize transaction.
+  // a new id to paths_mapping and create a resize transaction. also for paths
+  // count.
   size_t paths_needed_space = 0;
+  size_t count_needed_space = 0;
   std::string paths_add_content = "";
+  std::string count_add_content = "";
   for (const auto &[key, value] : paths_search) {
-    // TODO: add all new paths count and add it as a transaction too + resize
-    // transaction.
     paths_mapping.by_local[value] = on_disk_id;
     paths_mapping.by_disk[on_disk_id] = value;
     // add all 2 byte offset + path to a string because all missing paths will
@@ -940,24 +946,47 @@ int Index::merge(index_combine_data &index_to_add) {
     paths_add_content += path_offset.bytes[1];
     paths_add_content += key;
     paths_needed_space += key.length() + 2;
+
+    // add to paths count
+    PathsCountItem paths_count_current{};
+    paths_count_current.num = index_to_add.paths_count[value];
+    for (int i = 0; i < 4; ++i) {
+      count_add_content += paths_count_current.bytes[i];
+    }
+    count_needed_space += 4;
     ++on_disk_id;
   }
   // write it at the end at once if needed.
   if (paths_needed_space != 0) {
     // resize so all paths + offset fit.
-    Transaction resize_transaction{0, 0, 0, 0, 2, paths_size + needed_space};
+    Transaction resize_transaction{0, 0, 0,
+                                   0, 2, paths_size + paths_needed_space};
     transactions.push_back(resize_transaction);
     // write it to the now free space at the end of the file.
     Transaction to_add_path_transaction{0,
                                         0,
-                                        static_cast<uint64_t>(paths_size - 1),
+                                        static_cast<uint64_t>(paths_size),
                                         0,
                                         1,
-                                        paths_add_content.length(),
+                                        paths_needed_space,
                                         paths_add_content};
     transactions.push_back(to_add_path_transaction);
+    // resize so all paths counts fit.
+    Transaction count_resize_transaction{0, 5, 0,
+                                   0, 2, paths_count_size + count_needed_space};
+    transactions.push_back(count_resize_transaction);
+    // write it to the now free space at the end of the file.
+    Transaction count_to_add_path_transaction{0,
+                                        5,
+                                        static_cast<uint64_t>(paths_count_size),
+                                        0,
+                                        1,
+                                        count_needed_space,
+                                        count_add_content};
+    transactions.push_back(count_to_add_path_transaction);
   }
   paths_add_content = "";
+  count_add_content = "";
   paths_search.clear();
 
   // copy words_f into memory
