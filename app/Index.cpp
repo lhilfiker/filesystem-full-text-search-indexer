@@ -853,8 +853,10 @@ void Index::add_new_word(index_combine_data &index_to_add,
   reversed_insertions.push_back(new_reversed);
 }
 
-void Index::insertion_to_transactions(std::vector<Transaction> &transactions,
-                                      std::vector<Insertion> &to_insertions, int index_type) { // index_type: 1 = words, 3 = reversed
+void Index::insertion_to_transactions(
+    std::vector<Transaction> &transactions,
+    std::vector<Insertion> &to_insertions,
+    int index_type) { // index_type: 1 = words, 3 = reversed
   struct movements_temp_item {
     size_t start_pos;
     size_t end_pos;
@@ -888,7 +890,9 @@ void Index::insertion_to_transactions(std::vector<Transaction> &transactions,
       0) { // if its non zero it means there are insertions and the last one
            // didnt get added yet.
     movements_temp.push_back(
-        {last_start_location, static_cast<size_t>(index_type == 1 ? words_size : reversed_size - 1), byte_shift});
+        {last_start_location,
+         static_cast<size_t>(index_type == 1 ? words_size : reversed_size - 1),
+         byte_shift});
   }
 
   // now we create move transaction from last to first of the movements_temp.
@@ -898,11 +902,20 @@ void Index::insertion_to_transactions(std::vector<Transaction> &transactions,
     if (range > byte_shift) {
       // this means we copy over the data itself we are trying to move. Thats
       // why we create a backup of this before and then move it.
-      Transaction create_backup{0,          static_cast<uint8_t>(index_type), movements_temp[i].start_pos,
-                                backup_ids, 3, range};
+      Transaction create_backup{0,
+                                static_cast<uint8_t>(index_type),
+                                movements_temp[i].start_pos,
+                                backup_ids,
+                                3,
+                                range};
       transactions.push_back(create_backup);
-      Transaction move_operation{
-          0, static_cast<uint8_t>(index_type), movements_temp[i].start_pos, backup_ids, 0, range, ""};
+      Transaction move_operation{0,
+                                 static_cast<uint8_t>(index_type),
+                                 movements_temp[i].start_pos,
+                                 backup_ids,
+                                 0,
+                                 range,
+                                 ""};
       MoveOperationContent mov_content;
       mov_content.num = movements_temp[i].byte_shift;
       for (int i = 0; i < 8; ++i) {
@@ -912,8 +925,13 @@ void Index::insertion_to_transactions(std::vector<Transaction> &transactions,
       ++backup_ids;
     }
     // with no backup
-    Transaction move_operation{0,     static_cast<uint8_t>(index_type), movements_temp[i].start_pos, 0, 0,
-                               range, ""};
+    Transaction move_operation{0,
+                               static_cast<uint8_t>(index_type),
+                               movements_temp[i].start_pos,
+                               0,
+                               0,
+                               range,
+                               ""};
     MoveOperationContent mov_content;
     mov_content.num = movements_temp[i].byte_shift;
     for (int i = 0; i < 8; ++i) {
@@ -1292,7 +1310,6 @@ int Index::merge(index_combine_data &index_to_add) {
   // Transaction so data only gets moved once.
   insertion_to_transactions(transactions, words_insertions, 1);
   insertion_to_transactions(transactions, reversed_insertions, 3);
-
 
   return 0;
 }
