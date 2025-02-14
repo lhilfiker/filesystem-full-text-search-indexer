@@ -213,7 +213,7 @@ private:
                            uint32_t &on_disk_id, const size_t &local_word_count,
                            PathsMapping &paths_mapping);
   static void insertion_to_transactions(std::vector<Transaction> &transactions,
-                                        std::vector<Insertion> &to_insertions);
+                                        std::vector<Insertion> &to_insertions, int index_type); // index_type: 1 = words, 3 = reversed.
   static int merge(index_combine_data &index_to_add);
 
 public:
