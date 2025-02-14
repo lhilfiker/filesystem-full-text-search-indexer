@@ -1261,6 +1261,12 @@ int Index::merge(index_combine_data &index_to_add) {
   }
   movements_temp.clear();
 
+  // now that there is place we write the insertions as normal at their place. Their location already got updated so it's correct.
+  for (int i = 0; i < words_insertions.size(); ++i) {
+    Transaction word_insert{0, 1, words_insertions[i].header.location, 0, 1, words_insertions[i].header.content_length, words_insertions[i].content};
+    transactions.push_back(word_insert);
+  }
+  words_insertions.clear();
 
   return 0;
 }
