@@ -925,7 +925,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
   // go through all remaining paths_search elements, add a transaction and add
   // a new id to paths_mapping and create a resize transaction.
-  size_t needed_space = 0;
+  size_t paths_needed_space = 0;
   std::string paths_add_content = "";
   for (const auto &[key, value] : paths_search) {
     // TODO: add all new paths count and add it as a transaction too + resize
@@ -939,11 +939,12 @@ int Index::merge(index_combine_data &index_to_add) {
     paths_add_content += path_offset.bytes[0];
     paths_add_content += path_offset.bytes[1];
     paths_add_content += key;
+    paths_needed_space += key.length() + 2;
     ++on_disk_id;
   }
   // write it at the end at once if needed.
-  if (needed_space != 0) {
-    // resize all paths + offset fit.
+  if (paths_needed_space != 0) {
+    // resize so all paths + offset fit.
     Transaction resize_transaction{0, 0, 0, 0, 2, paths_size + needed_space};
     transactions.push_back(resize_transaction);
     // write it to the now free space at the end of the file.
