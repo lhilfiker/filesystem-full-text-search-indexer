@@ -912,6 +912,31 @@ int Index::merge(index_combine_data &index_to_add) {
           paths_search.erase(
               path_to_compare); // remove already found items so we know later
                                 // which ones are not on disk.
+          // check paths count and if it is different from the new one we create
+          // a transaction and add it.
+          PathsCountItem current_paths_count{};
+          current_paths_count.bytes[0] = mmap_paths_count[on_disk_id * 4];
+          current_paths_count.bytes[1] = mmap_paths_count[(on_disk_id * 4) + 1];
+          current_paths_count.bytes[2] = mmap_paths_count[(on_disk_id * 4) + 2];
+          current_paths_count.bytes[3] = mmap_paths_count[(on_disk_id * 4) + 3];
+          if (current_paths_count.num !=
+              index_to_add.paths_count[paths_mapping.by_disk[on_disk_id]]) {
+            // if it is different we create a transaction to correct it.
+            std::string count_overwrite_content = "";
+            count_overwrite_content.reserve(4);
+            for (int i = 0; i < 4; ++i) {
+              count_overwrite_content += current_paths_count.bytes[i];
+            }
+            Transaction count_to_overwrite_path_transaction{
+                0,
+                5,
+                static_cast<uint64_t>(on_disk_id * 4),
+                0,
+                1,
+                4,
+                count_overwrite_content};
+            transactions.push_back(count_to_overwrite_path_transaction);
+          }
         }
         on_disk_count += next_path_end;
       } else {
@@ -972,17 +997,18 @@ int Index::merge(index_combine_data &index_to_add) {
                                         paths_add_content};
     transactions.push_back(to_add_path_transaction);
     // resize so all paths counts fit.
-    Transaction count_resize_transaction{0, 5, 0,
-                                   0, 2, paths_count_size + count_needed_space};
+    Transaction count_resize_transaction{
+        0, 5, 0, 0, 2, paths_count_size + count_needed_space};
     transactions.push_back(count_resize_transaction);
     // write it to the now free space at the end of the file.
-    Transaction count_to_add_path_transaction{0,
-                                        5,
-                                        static_cast<uint64_t>(paths_count_size),
-                                        0,
-                                        1,
-                                        count_needed_space,
-                                        count_add_content};
+    Transaction count_to_add_path_transaction{
+        0,
+        5,
+        static_cast<uint64_t>(paths_count_size),
+        0,
+        1,
+        count_needed_space,
+        count_add_content};
     transactions.push_back(count_to_add_path_transaction);
   }
   paths_add_content = "";
