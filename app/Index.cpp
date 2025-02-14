@@ -1291,6 +1291,8 @@ int Index::merge(index_combine_data &index_to_add) {
   // already resized so there is enough space for it. We need to create the
   // Transaction so data only gets moved once.
   insertion_to_transactions(transactions, words_insertions, 1);
+  insertion_to_transactions(transactions, reversed_insertions, 3);
+
 
   return 0;
 }
