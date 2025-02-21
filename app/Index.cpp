@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <random>
 
 union WordsFValue {
   uint64_t location;
@@ -190,6 +191,11 @@ void Index::check_files() {
     log::write(1, "Index: check_files: creating index directory.");
     std::filesystem::create_directories(index_path);
   }
+  if (!std::filesystem::is_directory(index_path / "transactions")) {
+    log::write(1, "Index: check_files: creating transactions directory.");
+    std::filesystem::create_directories(index_path / "transactions");
+  }
+
   if (!std::filesystem::exists(index_path / "paths.index") ||
       helper::file_size(index_path / "paths.index") == 0 ||
       !std::filesystem::exists(index_path / "paths_count.index") ||
@@ -1310,6 +1316,21 @@ int Index::merge(index_combine_data &index_to_add) {
   // Transaction so data only gets moved once.
   insertion_to_transactions(transactions, words_insertions, 1);
   insertion_to_transactions(transactions, reversed_insertions, 3);
+
+  // Now we need to write the Transaction List to disk.
+  // The Transactions are saved in indexpath / transactions / transaction_randomid.list
+  // Backups are saved in indexpath / transactions / randomid / backupid.backup
+
+  // generate random number for transactionid
+  std::random_device random;
+  std::mt19937 rng(random());
+  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,6);
+  int transaction_id = dist6(rng);
+
+  std::filesystem::path transaction_path = index_path / ("transaction_" + std::to_string(transaction_id) + ".list");
+  std::filesystem::create_directories(index_path / "transactions" / std::to_string(transaction_id));
+
+
 
   return 0;
 }
