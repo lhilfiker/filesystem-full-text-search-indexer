@@ -1354,6 +1354,11 @@ int Index::merge(index_combine_data &index_to_add) {
   std::filesystem::path transaction_path = index_path / ("transaction_" + std::to_string(transaction_id) + ".list");
   std::filesystem::create_directories(index_path / "transactions" / std::to_string(transaction_id));
 
+  // just create an empty file which we then resize to the required size and fill with mmap to keep consistency with the other file operations on disks.
+  std::ofstream{index_path / ("transaction_" + std::to_string(transaction_id) + ".index")};
+  resize(index_path / ("transaction_" + std::to_string(transaction_id) + ".index"), transaction_needed_size);
+  
+
 
 
   return 0;
