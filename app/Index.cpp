@@ -525,7 +525,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
                                  size_t &additional_new_needed_size,
                                  uint32_t &on_disk_id,
                                  const size_t &local_word_count,
-                                 PathsMapping &paths_mapping) {
+                                 PathsMapping &paths_mapping, size_t &transaction_needed_size) {
 
   // TODO: Overwrite path word count with inputet value. We need to pass the
   // path word count data from LocalIndex to here too first.
@@ -625,6 +625,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       reversed_add_transaction.content = content.bytes[0] + content.bytes[1];
       index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
       transactions.push_back(reversed_add_transaction);
+      transaction_needed_size += 27 + 2;
+
 
       if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
           0)
@@ -649,6 +651,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
             content.bytes[0] + content.bytes[1];
         index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
         transactions.push_back(additional_add_transaction);
+        transaction_needed_size += 27 + 2;
+
 
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0)
@@ -688,6 +692,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
     // add it to the transaction
     additional_add_transaction.content = content.bytes[0] + content.bytes[1];
     transactions.push_back(additional_add_transaction);
+    transaction_needed_size += 27 + 2;
+
 
     // go through all missing local Ids and add them to additionals
     Transaction additional_new_transaction;
@@ -745,6 +751,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         1,
         additional_add_transaction.content.length()};
     transactions.push_back(additional_new_transaction);
+    transaction_needed_size += 27 + additional_new_transaction.content.length();
   }
 
   // everything got checked, free slots filled and new additional if needed
@@ -760,7 +767,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
                          size_t &words_new_needed_size,
                          size_t &reversed_new_needed_size, uint32_t &on_disk_id,
                          const size_t &local_word_count,
-                         PathsMapping &paths_mapping) {
+                         PathsMapping &paths_mapping, size_t &transaction_needed_size) {
 
   // We create a insertion for the new word + word seperator at the start
   size_t word_length =
@@ -849,6 +856,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
                        1,
                        new_additionals.content.length()};
     transactions.push_back(new_additionals);
+    transaction_needed_size += 27 + new_additionals.content.length();
     additional_new_needed_size += new_additionals.content.length();
   }
 
@@ -862,7 +870,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
 void Index::insertion_to_transactions(
     std::vector<Transaction> &transactions,
     std::vector<Insertion> &to_insertions,
-    int index_type) { // index_type: 1 = words, 3 = reversed
+    int index_type, size_t &transaction_needed_size) { // index_type: 1 = words, 3 = reversed
   struct movements_temp_item {
     size_t start_pos;
     size_t end_pos;
@@ -915,6 +923,7 @@ void Index::insertion_to_transactions(
                                 3,
                                 range};
       transactions.push_back(create_backup);
+      transaction_needed_size += 27;
       Transaction move_operation{0,
                                  static_cast<uint8_t>(index_type),
                                  movements_temp[i].start_pos,
@@ -928,7 +937,9 @@ void Index::insertion_to_transactions(
         move_operation.content[i] = mov_content.bytes[i];
       }
       transactions.push_back(move_operation);
+      transaction_needed_size += 27 + 8;
       ++backup_ids;
+      continue;
     }
     // with no backup
     Transaction move_operation{0,
@@ -944,6 +955,7 @@ void Index::insertion_to_transactions(
       move_operation.content[i] = mov_content.bytes[i];
     }
     transactions.push_back(move_operation);
+    transaction_needed_size += 27 + 8;
   }
   movements_temp.clear();
 
@@ -958,6 +970,7 @@ void Index::insertion_to_transactions(
                             to_insertions[i].header.content_length,
                             to_insertions[i].content};
     transactions.push_back(insert_item);
+    transaction_needed_size += 27 + to_insertions[i].content.length();
   }
   to_insertions.clear();
 }
@@ -974,6 +987,7 @@ int Index::merge(index_combine_data &index_to_add) {
   size_t additional_new_needed_size = 0;
   size_t words_new_needed_size = 0;
   size_t reversed_new_needed_size = 0;
+  size_t transaction_needed_size = 0;
 
   size_t paths_l_size = index_to_add.paths.size();
 
@@ -1056,6 +1070,7 @@ int Index::merge(index_combine_data &index_to_add) {
                 4,
                 count_overwrite_content};
             transactions.push_back(count_to_overwrite_path_transaction);
+            transaction_needed_size += 27 + count_overwrite_content.length();
           }
         }
         on_disk_count += next_path_end;
@@ -1116,6 +1131,8 @@ int Index::merge(index_combine_data &index_to_add) {
                                         paths_needed_space,
                                         paths_add_content};
     transactions.push_back(to_add_path_transaction);
+    transaction_needed_size += 27 + paths_add_content.length();
+
     // resize so all paths counts fit.
     Transaction count_resize_transaction{
         0, 5, 0, 0, 2, paths_count_size + count_needed_space};
@@ -1130,6 +1147,8 @@ int Index::merge(index_combine_data &index_to_add) {
         count_needed_space,
         count_add_content};
     transactions.push_back(count_to_add_path_transaction);
+    transaction_needed_size += 27 + count_add_content.length();
+
   }
   paths_add_content = "";
   count_add_content = "";
@@ -1219,7 +1238,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
-                     paths_mapping);
+                     paths_mapping, transaction_needed_size);
         words_F_change[current_first_char] += local_word_length + 1;
 
         break;
@@ -1234,7 +1253,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
-                     paths_mapping);
+                     paths_mapping, transaction_needed_size);
         words_F_change[current_first_char] += local_word_length + 1;
         // TODO: words_F
         break;
@@ -1252,7 +1271,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // update reversed and additionals if needed.
         add_reversed_to_word(index_to_add, on_disk_count, transactions,
                              additional_new_needed_size, on_disk_id,
-                             local_word_count, paths_mapping);
+                             local_word_count, paths_mapping, transaction_needed_size);
         break;
       }
     }
@@ -1276,7 +1295,7 @@ int Index::merge(index_combine_data &index_to_add) {
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
                  reversed_insertions, additional_new_needed_size,
                  words_new_needed_size, reversed_new_needed_size, on_disk_id,
-                 local_word_count, paths_mapping);
+                 local_word_count, paths_mapping, transaction_needed_size);
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
                    1] += local_word_length + 1;
@@ -1294,6 +1313,8 @@ int Index::merge(index_combine_data &index_to_add) {
     std::memcpy(&words_f_new.content[i * 12], &words_f[i].bytes[0], 12);
   }
   transactions.push_back(words_f_new);
+  transaction_needed_size += 27 + 312;
+
   words_f_new.content.clear(); // free some memory.
 
   // Now we have figured out everything we want to do. Now we need to finish the
@@ -1303,19 +1324,22 @@ int Index::merge(index_combine_data &index_to_add) {
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
                            ""};
   transactions.insert(transactions.begin(), resize_words);
+  transaction_needed_size += 27;
   Transaction resize_reversed{
       0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""};
   transactions.insert(transactions.begin(), resize_reversed);
+  transaction_needed_size += 27;
   Transaction resize_additional{
       0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""};
   transactions.insert(transactions.begin(), resize_additional);
+  transaction_needed_size += 27;
 
   // Now we need to convert the Insertion to Transactions.
   // First we need to make Transactions to make place for the insertion. We have
   // already resized so there is enough space for it. We need to create the
   // Transaction so data only gets moved once.
-  insertion_to_transactions(transactions, words_insertions, 1);
-  insertion_to_transactions(transactions, reversed_insertions, 3);
+  insertion_to_transactions(transactions, words_insertions, 1, transaction_needed_size);
+  insertion_to_transactions(transactions, reversed_insertions, 3, transaction_needed_size);
 
   // Now we need to write the Transaction List to disk.
   // The Transactions are saved in indexpath / transactions / transaction_randomid.list
