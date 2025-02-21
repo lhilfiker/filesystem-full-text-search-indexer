@@ -1342,22 +1342,28 @@ int Index::merge(index_combine_data &index_to_add) {
   insertion_to_transactions(transactions, reversed_insertions, 3, transaction_needed_size);
 
   // Now we need to write the Transaction List to disk.
-  // The Transactions are saved in indexpath / transactions / transaction_randomid.list
+  // The Transactions are saved in indexpath / transactions / transaction_randomid.transaction
   // Backups are saved in indexpath / transactions / randomid / backupid.backup
 
   // generate random number for transactionid
   std::random_device random;
   std::mt19937 rng(random());
-  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,6);
+  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,10);
   int transaction_id = dist6(rng);
+  while (std::filesystem::exists(index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")) || std::filesystem::exists(index_path / "transactions" / std::to_string(transaction_id))) {
+    // IF it already exists which it shouldn't generate a new random ID.
+    transaction_id = dist6(rng);
+  }
+  
 
-  std::filesystem::path transaction_path = index_path / ("transaction_" + std::to_string(transaction_id) + ".list");
+
+  std::filesystem::path transaction_path = index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction");
   std::filesystem::create_directories(index_path / "transactions" / std::to_string(transaction_id));
 
   // just create an empty file which we then resize to the required size and fill with mmap to keep consistency with the other file operations on disks.
-  std::ofstream{index_path / ("transaction_" + std::to_string(transaction_id) + ".index")};
-  resize(index_path / ("transaction_" + std::to_string(transaction_id) + ".index"), transaction_needed_size);
-  
+  std::ofstream{index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")};
+  resize(index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction"), transaction_needed_size);
+
 
 
 
