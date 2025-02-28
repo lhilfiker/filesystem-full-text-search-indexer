@@ -160,27 +160,6 @@ int Index::map() {
   return 0;
 }
 
-int Index::get_actual_size(const mio::mmap_sink &mmap) {
-  std::error_code ec;
-  if (!mmap.is_mapped()) {
-    log::write(3, "Index: get_actual_size: not mapped. can not count.");
-    return -1;
-  }
-  int size = 0;
-  for (const char &c : mmap) {
-    if (c == '\0')
-      break;
-    ++size;
-  }
-  if (ec) {
-    log::write(3, "Index: get_actual_size: error when couting actual size");
-    return -1;
-  }
-  log::write(1, "Index: get_actual_size: successfully counted size: " +
-                    std::to_string(size));
-  return size;
-}
-
 void Index::check_files() {
   if (!is_config_loaded) {
     log::error("Index: check_files: config not loaded. can not continue.");
@@ -236,57 +215,18 @@ int Index::initialize() {
   unmap();       // unmap anyway incase they are already mapped.
   check_files(); // check if index files exist and create them.
   map();         // ignore error here as it might fail if file size is 0.
-  // get actual sizes of the files to reset buffer.
-  if (int paths_size = get_actual_size(mmap_paths);
-      paths_size == -1 && helper::file_size(index_path / "paths.index") > 0)
-    paths_size = 0;
-  if (int paths_count_size = get_actual_size(mmap_paths);
-      paths_count_size == -1 &&
-      helper::file_size(index_path / "paths_count.index") > 0)
-    paths_count_size = 0;
-  if (int words_size = get_actual_size(mmap_words);
-      words_size == -1 && helper::file_size(index_path / "words.index") > 0)
-    words_size = 0;
-  if (int words_f_size = get_actual_size(mmap_words_f);
-      words_f_size == -1 && helper::file_size(index_path / "words_f.index") > 0)
-    words_f_size = 0;
-  if (int reversed_size = get_actual_size(mmap_reversed);
-      reversed_size == -1 &&
-      helper::file_size(index_path / "reversed.index") > 0)
-    reversed_size = 0;
-  if (int additional_size = get_actual_size(mmap_additional);
-      additional_size == -1 &&
-      helper::file_size(index_path / "additional.index") > 0)
-    additional_size = 0;
+  // get actual sizes of the files.
+  paths_size = helper::file_size(index_path / "paths.index");
+  paths_count_size = helper::file_size(index_path / "paths_count.index");
+  words_size = helper::file_size(index_path / "words.index");
+  words_f_size = helper::file_size(index_path / "words_f.index");
+  reversed_size = helper::file_size(index_path / "reversed.index");
+  additional_size = helper::file_size(index_path / "additional.index");
+  // If an error occured exit.
   if (paths_size == -1 || words_size == -1 || words_f_size == -1 ||
       reversed_size == -1 || additional_size == -1) {
-    log::write(4, "Index: initialize: could not get actual size of index "
+    log::error("Index: initialize: could not get actual size of index "
                   "files, exiting.");
-    return 1;
-  }
-  paths_size_buffer = paths_size + buffer_size;
-  paths_count_size_buffer = paths_count_size + buffer_size;
-  words_size_buffer = words_size + buffer_size;
-  words_f_size_buffer = words_f_size + buffer_size;
-  reversed_size_buffer = reversed_size + buffer_size;
-  additional_size_buffer = additional_size + buffer_size;
-  if (unmap() == 1) { // unmap to resize
-    log::write(
-        4,
-        "Index: initialize: could not unmap, see above log message, exiting.");
-    return 1;
-  }
-  // resize actual size + buffer size
-  resize(index_path / "paths.index", paths_size_buffer);
-  resize(index_path / "paths_count.index", paths_count_size_buffer);
-  resize(index_path / "words.index", words_size_buffer);
-  resize(index_path / "words_f.index", words_f_size_buffer);
-  resize(index_path / "reversed.index", reversed_size_buffer);
-  resize(index_path / "additional.index", additional_size_buffer);
-  // map after resizing
-  if (map() == 1) { // map files
-    log::write(
-        4, "Index: initialize: could not map, see above log message, exiting.");
     return 1;
   }
   is_mapped = true;
@@ -1399,6 +1339,7 @@ int Index::execute_transactions() {
 int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
   if (first_time) {
+    first_time = false;
     return add_new(index_to_add);
   } else {
     if(merge(index_to_add) == 1) return 1;

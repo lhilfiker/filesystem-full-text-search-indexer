@@ -189,7 +189,6 @@ private:
 
 private:
   static void check_files();
-  static int get_actual_size(const mio::mmap_sink &mmap);
   static int map();
   static int unmap();
   static void resize(const std::filesystem::path &path_to_resize,
@@ -217,6 +216,7 @@ private:
       std::vector<Insertion> &to_insertions,
       int index_type, size_t &transaction_needed_size); // index_type: 1 = words, 3 = reversed.
   static int merge(index_combine_data &index_to_add);
+  static int execute_transactions();
 
 public:
   static void save_config(const std::filesystem::path &config_index_path,
