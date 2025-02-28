@@ -175,6 +175,18 @@ void Index::check_files() {
     std::filesystem::create_directories(index_path / "transactions");
   }
 
+  if (std::filesystem::exists(index_path / "firsttimewrite.info")) {
+    // If this is still here it means that the first time write failed. delete all index files.
+    log::write(2, "Index: check_files: First time write didn't complete last time. Index possibly corrupt. Deleting to start fresh.");
+    std::filesystem::remove(index_path / "paths.index");
+    std::filesystem::remove(index_path / "paths_count.index");
+    std::filesystem::remove(index_path / "words.index");
+    std::filesystem::remove(index_path / "words_f.index");
+    std::filesystem::remove(index_path / "reversed.index");
+    std::filesystem::remove(index_path / "additional.index");
+    std::filesystem::remove(index_path / "firsttimewrite.info");
+  }
+  
   if (!std::filesystem::exists(index_path / "paths.index") ||
       helper::file_size(index_path / "paths.index") == 0 ||
       !std::filesystem::exists(index_path / "paths_count.index") ||
@@ -1340,7 +1352,14 @@ int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
   if (first_time) {
     first_time = false;
-    return add_new(index_to_add);
+    std::ofstream{index_path / "firsttimewrite.info"}; // add file to signal firsttimewrite is in progress. Delete after it is successfully done.
+    if (add_new(index_to_add) == 0) {
+      std::filesystem::remove(index_path / "firsttimewrite.info");
+      return 0;
+    } else {
+      // if an error occured exit.
+      log::error("Index: Frist time write failed. Exiting. Corupted index files will be deleted on startup.");
+    }
   } else {
     if(merge(index_to_add) == 1) return 1;
     return execute_transactions();
