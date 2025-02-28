@@ -976,6 +976,7 @@ void Index::insertion_to_transactions(
 }
 int Index::merge(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: adding to existing index.");
+  std::error_code ec;
   map();
 
   std::vector<Transaction> transactions;
@@ -1364,9 +1365,28 @@ int Index::merge(index_combine_data &index_to_add) {
   std::ofstream{index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")};
   resize(index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction"), transaction_needed_size);
 
+  mio::mmap_sink mmap_transactions;
+  mmap_paths = mio::make_mmap_sink((index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")).string(), 0,
+                                     mio::map_entire_file, ec);
 
+  size_t transaction_file_location = 0;
+  for(int i = 0; i < transactions.size(); ++i) {
+    // copy the header first. Then check the operation type and then copy the content if needed.
+    std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].header.bytes[0], 27);
+    transaction_file_location += 27;
+    if(transactions[i].header.operation_type == 2 || transactions[i].header.operation_type == 3) { // resize or backup
+      continue; // no content
+    }
+    std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], transactions[i].header.content_length);
+    transaction_file_location += transactions[i].header.content_length;
+  }
+  // Transaction List written. unmap and free memory.
 
-
+  mmap_transactions.unmap();
+  transactions.clear();
+  index_to_add.paths.clear();
+  index_to_add.paths_count.clear();
+  index_to_add.words_and_reversed.clear();
   return 0;
 }
 
