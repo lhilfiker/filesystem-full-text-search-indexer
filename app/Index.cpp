@@ -250,7 +250,6 @@ int Index::initialize() {
       log::error("Index: while checking transaction file an error occured. Exiting.");
     }
     log::write(2, "Index: transaction file successfully checked. Finishing startup.");
-    std::filesystem::remove(index_path / "transaction" / "transaction.list");
   }
   // removing all backups because they are not needed anymore.
   std::filesystem::remove_all(index_path / "transactions" / "backups");
@@ -1350,6 +1349,8 @@ int Index::merge(index_combine_data &index_to_add) {
 }
 
 int Index::execute_transactions() {
+
+  std::filesystem::remove(index_path / "transaction" / "transaction.list");
   return 0;
 }
 
