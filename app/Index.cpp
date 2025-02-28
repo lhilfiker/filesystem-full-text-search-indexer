@@ -250,6 +250,7 @@ int Index::initialize() {
       log::error("Index: while checking transaction file an error occured. Exiting.");
     }
     log::write(2, "Index: transaction file successfully checked. Finishing startup.");
+    std::filesystem::remove(index_path / "transaction" / "transaction.list");
   }
   // removing all backups because they are not needed anymore.
   std::filesystem::remove_all(index_path / "transactions" / "backups");
@@ -1315,7 +1316,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // Backups are saved in indexpath / transactions / backups / backupid.backup
 
 
-  std::filesystem::path transaction_path = index_path / "transaction.list";
+  std::filesystem::path transaction_path = index_path / "transaction" / "transaction.list";
 
   // just create an empty file which we then resize to the required size and fill with mmap to keep consistency with the other file operations on disks.
   std::ofstream{transaction_path};
