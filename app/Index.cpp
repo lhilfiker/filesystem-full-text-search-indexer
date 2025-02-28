@@ -1387,6 +1387,12 @@ int Index::merge(index_combine_data &index_to_add) {
   index_to_add.paths.clear();
   index_to_add.paths_count.clear();
   index_to_add.words_and_reversed.clear();
+
+  if(ec) return 1;
+  return 0;
+}
+
+int Index::execute_transactions() {
   return 0;
 }
 
@@ -1395,7 +1401,8 @@ int Index::add(index_combine_data &index_to_add) {
   if (first_time) {
     return add_new(index_to_add);
   } else {
-    return merge(index_to_add);
+    if(merge(index_to_add) == 1) return 1;
+    return execute_transactions();
   }
   return 0;
 }
