@@ -186,7 +186,7 @@ void Index::check_files() {
     std::filesystem::remove(index_path / "additional.index");
     std::filesystem::remove(index_path / "firsttimewrite.info");
   }
-  
+
   if (!std::filesystem::exists(index_path / "paths.index") ||
       helper::file_size(index_path / "paths.index") == 0 ||
       !std::filesystem::exists(index_path / "paths_count.index") ||
@@ -242,6 +242,22 @@ int Index::initialize() {
     return 1;
   }
   is_mapped = true;
+  
+  // check if transaction file exists
+  if (std::filesystem::exists(index_path / "transactions" / "transaction.list")) {
+    log::write(2, "Index: a transaction file still exists. Checking if Index needs to be repaired.");
+    if (execute_transactions() == 1) {
+      log::error("Index: while checking transaction file an error occured. Exiting.");
+    }
+    log::write(2, "Index: transaction file successfully checked. Finishing startup.");
+  }
+  // removing all backups because they are not needed anymore.
+  std::filesystem::remove_all(index_path / "transactions" / "backups");
+  if (!std::filesystem::is_directory(index_path / "transactions" / "backups")) {
+    log::write(1, "Index: intitialize: creating transactions backups directory.");
+    std::filesystem::create_directories(index_path / "transactions" / "backups");
+  }
+
   return 0;
 }
 
@@ -1295,30 +1311,18 @@ int Index::merge(index_combine_data &index_to_add) {
   insertion_to_transactions(transactions, reversed_insertions, 3, transaction_needed_size);
 
   // Now we need to write the Transaction List to disk.
-  // The Transactions are saved in indexpath / transactions / transaction_randomid.transaction
-  // Backups are saved in indexpath / transactions / randomid / backupid.backup
-
-  // generate random number for transactionid
-  std::random_device random;
-  std::mt19937 rng(random());
-  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,10);
-  int transaction_id = dist6(rng);
-  while (std::filesystem::exists(index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")) || std::filesystem::exists(index_path / "transactions" / std::to_string(transaction_id))) {
-    // IF it already exists which it shouldn't generate a new random ID.
-    transaction_id = dist6(rng);
-  }
-  
+  // The Transactions are saved in indexpath / transactions / transaction.list
+  // Backups are saved in indexpath / transactions / backups / backupid.backup
 
 
-  std::filesystem::path transaction_path = index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction");
-  std::filesystem::create_directories(index_path / "transactions" / std::to_string(transaction_id));
+  std::filesystem::path transaction_path = index_path / "transaction.list";
 
   // just create an empty file which we then resize to the required size and fill with mmap to keep consistency with the other file operations on disks.
-  std::ofstream{index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")};
-  resize(index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction"), transaction_needed_size);
+  std::ofstream{transaction_path};
+  resize(transaction_path, transaction_needed_size);
 
   mio::mmap_sink mmap_transactions;
-  mmap_paths = mio::make_mmap_sink((index_path / ("transaction_" + std::to_string(transaction_id) + ".transaction")).string(), 0,
+  mmap_paths = mio::make_mmap_sink((transaction_path).string(), 0,
                                      mio::map_entire_file, ec);
 
   size_t transaction_file_location = 0;
