@@ -1363,12 +1363,6 @@ int Index::merge(index_combine_data &index_to_add) {
   return 0;
 }
 
-int Index::execute_transactions() {
-
-  std::filesystem::remove(index_path / "transaction" / "transaction.list");
-  return 0;
-}
-
 int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
   if (first_time) {
