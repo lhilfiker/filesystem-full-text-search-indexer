@@ -82,15 +82,48 @@ int Index::execute_transactions() {
     // continue executing transaction.
 
     if (current_header->operation_type == 0) { // MOVE
-
+      std::memmove(
+          current_header->index_type == 0
+              ? &mmap_paths[current_header->location]
+              : (current_header->index_type == 1
+                     ? &mmap_words[current_header->location]
+                     : (current_header->index_type == 2
+                            ? &mmap_words_f[current_header->location]
+                            : (current_header->index_type == 3
+                                   ? &mmap_reversed[current_header->location]
+                                   : (current_header->index_type == 4
+                                          ? &mmap_additional[current_header
+                                                                 ->location]
+                                          : &mmap_paths_count
+                                                [current_header->location])))),
+          &mmap_transactions[transaction_current_location + 27],
+          current_header->content_length);
     } else if (current_header->operation_type == 1) { // WRITE
-
+        std::memcpy(
+            current_header->index_type == 0
+                ? &mmap_paths[current_header->location]
+                : (current_header->index_type == 1
+                       ? &mmap_words[current_header->location]
+                       : (current_header->index_type == 2
+                              ? &mmap_words_f[current_header->location]
+                              : (current_header->index_type == 3
+                                     ? &mmap_reversed[current_header->location]
+                                     : (current_header->index_type == 4
+                                            ? &mmap_additional[current_header
+                                                                   ->location]
+                                            : &mmap_paths_count
+                                                  [current_header->location])))),
+            &mmap_transactions[transaction_current_location + 27],
+            current_header->content_length);
     } else if (current_header->operation_type == 2) { // RESIZE
 
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
     }
 
-    // mark current transaction as in progress and sync to disk.
+    // snyc before we mark as done.
+    mmap_transactions.sync(ec);
+
+    // mark current transaction as in completed and sync to disk.
     current_header->status = 2;
     mmap_transactions.sync(ec);
 
