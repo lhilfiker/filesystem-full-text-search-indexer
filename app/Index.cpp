@@ -1321,7 +1321,7 @@ int Index::merge(index_combine_data &index_to_add) {
   resize(transaction_path, transaction_needed_size);
 
   mio::mmap_sink mmap_transactions;
-  mmap_paths = mio::make_mmap_sink((transaction_path).string(), 0,
+  mmap_transactions = mio::make_mmap_sink((transaction_path).string(), 0,
                                      mio::map_entire_file, ec);
 
   size_t transaction_file_location = 0;
