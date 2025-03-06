@@ -158,11 +158,14 @@ int Index::execute_transactions() {
                                                 [current_header->location])))),
           current_header->content_length);
       mmap_backup.sync(ec);
-      mmap_backup.unmap();                                    
-        
+      mmap_backup.unmap();
     }
 
     // snyc before we mark as done.
+    if (sync_all() == 1) {
+      log::error("Error when syncing indexes to disk. Exiting Program to save "
+                 "data. Please restart to see if the issue continues.");
+    }
     mmap_transactions.sync(ec);
 
     // mark current transaction as in completed and sync to disk.
