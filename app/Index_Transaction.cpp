@@ -35,15 +35,34 @@ int Index::execute_transactions() {
     if (current_header->status == 1) {
       // check if need to restore from backup
       if (current_header->backup_id != 0) {
+        std::string backup_file_name =
+            std::to_string(current_header->backup_id) + ".backup";
         if (current_header->operation_type ==
             3) { // If it is a backup creation we just delete the current backup
                  // file if it exists and then continue.
-          std::string backup_file_name =
-              std::to_string(current_header->backup_id) + ".backup";
           std::filesystem::remove(index_path / "transaction" / "backups" /
                                   backup_file_name);
         } else {
-          // TODO: restore the backup
+          if (current_header->content_length !=
+              std::filesystem::file_size(index_path / "transaction" /
+                                         "backups" / backup_file_name)) {
+            log::error("Transaction: backup file corrupt. Can not restore from "
+                       "backup. Index potentially corrupt. Exiting. This "
+                       "should never happen.");
+          }
+          mio::mmap_sink mmap_backup;
+          mmap_backup = mio::make_mmap_sink(
+              (index_path / "transaction" / "backups" / backup_file_name).string(), 0,
+              mio::map_entire_file, ec);
+          // restore from backup. overwrite then continue.
+          if (current_header->index_type == 1) {
+            // words index
+            std::memcpy(&mmap_words[current_header->location], &mmap_backup[0], current_header->content_length);
+          }
+          if (current_header->index_type == 3) {
+            // reversed index.
+            std::memcpy(&mmap_reversed[current_header->location], &mmap_backup[0], current_header->content_length);
+          }
         }
       }
     }
@@ -57,7 +76,18 @@ int Index::execute_transactions() {
     // mark current transaction as in progress and sync to disk.
     current_header->status = 1;
     mmap_transactions.sync(ec);
-    // continue executing transaction. mark status as complete.
+    // continue executing transaction.
+
+    if (current_header->operation_type == 0) { // MOVE
+
+    } else if (current_header->operation_type == 1) { // WRITE
+
+    } else if (current_header->operation_type == 2) { // RESIZE
+
+    } else if (current_header->operation_type == 3) { // CREATE A BACKUP
+
+    }
+
 
     // mark current transaction as in progress and sync to disk.
     current_header->status = 2;
@@ -71,5 +101,6 @@ int Index::execute_transactions() {
   }
 
   std::filesystem::remove(index_path / "transaction" / "transaction.list");
+  // TODO: delete backup dir and recreate it.
   return 0;
 }
