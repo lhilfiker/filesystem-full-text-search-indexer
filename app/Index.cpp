@@ -999,7 +999,6 @@ int Index::merge(index_combine_data &index_to_add) {
 
   // paths_size is the count of bytes of the index on disk.
   while (on_disk_count < paths_size) {
-    // TODO: paths count update transaction if changed.
     if (on_disk_count + 1 <
         paths_size) { // we read 1 byte ahead for the offset to prevent
                       // accessing invalid data. The index format would allow it
@@ -1014,7 +1013,7 @@ int Index::merge(index_combine_data &index_to_add) {
       ++on_disk_count;
 
       if (on_disk_count + next_path_end <
-          paths_size) { // check if we can read the whole path based on the
+          paths_size + 1) { // check if we can read the whole path based on the
                         // offset.
         // refrence the path to a string and then search in the unordered map we
         // created earlier.
@@ -1191,7 +1190,7 @@ int Index::merge(index_combine_data &index_to_add) {
     uint8_t word_seperator = mmap_words[on_disk_count];
     if (word_seperator < 31 ||
         word_seperator + on_disk_count >
-            words_size) { // 0-30 is reserved. if it is higher it is for
+            words_size + 1) { // 0-30 is reserved. if it is higher it is for
                           // seperator. If the seperator here is 0-30 the index
                           // is corrupted.
       log::error(
