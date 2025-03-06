@@ -169,9 +169,13 @@ void Index::check_files() {
     log::write(1, "Index: check_files: creating index directory.");
     std::filesystem::create_directories(index_path);
   }
-  if (!std::filesystem::is_directory(index_path / "transactions")) {
-    log::write(1, "Index: check_files: creating transactions directory.");
-    std::filesystem::create_directories(index_path / "transactions");
+  if (!std::filesystem::is_directory(index_path / "transaction")) {
+    log::write(1, "Index: check_files: creating transaction directory.");
+    std::filesystem::create_directories(index_path / "transaction");
+  }
+  if (!std::filesystem::is_directory(index_path / "transaction" / "backups")) {
+    log::write(1, "Index: check_files: creating transaction backups directory.");
+    std::filesystem::create_directories(index_path / "transaction" / "backups");
   }
 
   if (std::filesystem::exists(index_path / "firsttimewrite.info")) {
@@ -251,10 +255,10 @@ int Index::initialize() {
     log::write(2, "Index: transaction file successfully checked. Finishing startup.");
   }
   // removing all backups because they are not needed anymore.
-  std::filesystem::remove_all(index_path / "transactions" / "backups");
-  if (!std::filesystem::is_directory(index_path / "transactions" / "backups")) {
+  std::filesystem::remove_all(index_path / "transaction" / "backups");
+  if (!std::filesystem::is_directory(index_path / "transaction" / "backups")) {
     log::write(1, "Index: intitialize: creating transactions backups directory.");
-    std::filesystem::create_directories(index_path / "transactions" / "backups");
+    std::filesystem::create_directories(index_path / "transaction" / "backups");
   }
 
   return 0;
@@ -1310,8 +1314,8 @@ int Index::merge(index_combine_data &index_to_add) {
   insertion_to_transactions(transactions, reversed_insertions, 3, transaction_needed_size);
 
   // Now we need to write the Transaction List to disk.
-  // The Transactions are saved in indexpath / transactions / transaction.list
-  // Backups are saved in indexpath / transactions / backups / backupid.backup
+  // The Transactions are saved in indexpath / transaction / transaction.list
+  // Backups are saved in indexpath / transaction / backups / backupid.backup
 
 
   std::filesystem::path transaction_path = index_path / "transaction" / "transaction.list";
