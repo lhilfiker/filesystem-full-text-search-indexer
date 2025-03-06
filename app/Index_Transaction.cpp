@@ -130,8 +130,35 @@ int Index::execute_transactions() {
                                              : index_path /
                                                    "paths_count.index")))),
              current_header->content_length);
-        map();
+      map();
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
+      std::string backup_file_name =
+          std::to_string(current_header->backup_id) + ".backup";
+      std::ofstream{index_path / "transaction" / "backups" / backup_file_name};
+      resize(index_path / "transaction" / "backups" / backup_file_name,
+             current_header->content_length);
+      mio::mmap_sink mmap_backup;
+      mmap_backup = mio::make_mmap_sink(
+          (index_path / "transaction" / "backups" / backup_file_name).string(),
+          0, mio::map_entire_file, ec);
+      std::memcpy(
+          &mmap_backup[0],
+          current_header->index_type == 0
+              ? &mmap_paths[current_header->location]
+              : (current_header->index_type == 1
+                     ? &mmap_words[current_header->location]
+                     : (current_header->index_type == 2
+                            ? &mmap_words_f[current_header->location]
+                            : (current_header->index_type == 3
+                                   ? &mmap_reversed[current_header->location]
+                                   : (current_header->index_type == 4
+                                          ? &mmap_additional[current_header
+                                                                 ->location]
+                                          : &mmap_paths_count
+                                                [current_header->location])))),
+          current_header->content_length);
+      mmap_backup.sync(ec);
+      mmap_backup.unmap();                                    
         
     }
 
