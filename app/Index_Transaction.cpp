@@ -99,25 +99,40 @@ int Index::execute_transactions() {
           &mmap_transactions[transaction_current_location + 27],
           current_header->content_length);
     } else if (current_header->operation_type == 1) { // WRITE
-        std::memcpy(
-            current_header->index_type == 0
-                ? &mmap_paths[current_header->location]
-                : (current_header->index_type == 1
-                       ? &mmap_words[current_header->location]
-                       : (current_header->index_type == 2
-                              ? &mmap_words_f[current_header->location]
-                              : (current_header->index_type == 3
-                                     ? &mmap_reversed[current_header->location]
-                                     : (current_header->index_type == 4
-                                            ? &mmap_additional[current_header
-                                                                   ->location]
-                                            : &mmap_paths_count
-                                                  [current_header->location])))),
-            &mmap_transactions[transaction_current_location + 27],
-            current_header->content_length);
+      std::memcpy(
+          current_header->index_type == 0
+              ? &mmap_paths[current_header->location]
+              : (current_header->index_type == 1
+                     ? &mmap_words[current_header->location]
+                     : (current_header->index_type == 2
+                            ? &mmap_words_f[current_header->location]
+                            : (current_header->index_type == 3
+                                   ? &mmap_reversed[current_header->location]
+                                   : (current_header->index_type == 4
+                                          ? &mmap_additional[current_header
+                                                                 ->location]
+                                          : &mmap_paths_count
+                                                [current_header->location])))),
+          &mmap_transactions[transaction_current_location + 27],
+          current_header->content_length);
     } else if (current_header->operation_type == 2) { // RESIZE
-
+      unmap();
+      resize(current_header->index_type == 0
+                 ? index_path / "paths.index"
+                 : (current_header->index_type == 1
+                        ? index_path / "words.index"
+                        : (current_header->index_type == 2
+                               ? index_path / "wordsf.index"
+                               : (current_header->index_type == 3
+                                      ? index_path / "reversed.index"
+                                      : (current_header->index_type == 4
+                                             ? index_path / "additional.index"
+                                             : index_path /
+                                                   "paths_count.index")))),
+             current_header->content_length);
+        map();
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
+        
     }
 
     // snyc before we mark as done.
