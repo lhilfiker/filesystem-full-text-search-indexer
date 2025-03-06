@@ -123,6 +123,18 @@ int Index::unmap() {
   return 0;
 }
 
+int Index::sync_all() {
+  std::error_code ec;
+  mmap_paths.sync(ec);
+  mmap_words.sync(ec);
+  mmap_words_f.sync(ec);
+  mmap_reversed.sync(ec);
+  mmap_additional.sync(ec);
+  mmap_paths_count.sync(ec);
+  if (ec) return 1;
+  return 0;
+}
+
 int Index::map() {
   std::error_code ec;
   if (!mmap_paths.is_mapped()) {

@@ -190,6 +190,7 @@ private:
 private:
   static void check_files();
   static int map();
+  static int sync_all();
   static int unmap();
   static void resize(const std::filesystem::path &path_to_resize,
                      const int size);
