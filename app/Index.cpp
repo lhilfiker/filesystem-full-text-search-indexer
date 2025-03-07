@@ -1178,6 +1178,7 @@ int Index::merge(index_combine_data &index_to_add) {
       if (words_f[current_first_char - 'a'].location < words_size) {
         on_disk_count = words_f[current_first_char - 'a'].location;
         on_disk_id = words_f[current_first_char - 'a'].id;
+        current_first_char = local_first_char;
       } else {
         // This should not happen. Index is corrupted.
         log::error("Index: Combine: Words_f char value is higher than words "
@@ -1188,8 +1189,9 @@ int Index::merge(index_combine_data &index_to_add) {
 
     // read the one byte word sperator.
     uint8_t word_seperator = mmap_words[on_disk_count];
+
     if (word_seperator < 31 ||
-        word_seperator + on_disk_count >
+        (word_seperator - 30) + on_disk_count >
             words_size + 1) { // 0-30 is reserved. if it is higher it is for
                           // seperator. If the seperator here is 0-30 the index
                           // is corrupted.
@@ -1199,7 +1201,7 @@ int Index::merge(index_combine_data &index_to_add) {
     }
     if (local_first_char !=
         mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
-      current_first_char = mmap_words[on_disk_count + 1];
+      local_first_char = mmap_words[on_disk_count + 1];
       continue; // at the start we will then go to the correct first char of
                 // that word and repeat the whole block.
     }
@@ -1258,7 +1260,7 @@ int Index::merge(index_combine_data &index_to_add) {
         break;
       }
     }
-    on_disk_count += word_seperator;
+    on_disk_count += word_seperator - 29; //29 because its length of word + then the next seperator
     ++on_disk_id;
     ++local_word_count;
     local_word_length =
