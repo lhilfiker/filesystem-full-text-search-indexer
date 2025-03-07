@@ -913,11 +913,11 @@ void Index::insertion_to_transactions(
                                  backup_ids,
                                  0,
                                  range,
-                                 ""};
+                                 "        "};
       MoveOperationContent mov_content;
       mov_content.num = movements_temp[i].byte_shift;
-      for (int i = 0; i < 8; ++i) {
-        move_operation.content[i] = mov_content.bytes[i];
+      for (int j = 0; j < 8; ++j) {
+        move_operation.content[j] = mov_content.bytes[j];
       }
       transactions.push_back(move_operation);
       transaction_needed_size += 27 + 8;
@@ -931,11 +931,11 @@ void Index::insertion_to_transactions(
                                0,
                                0,
                                range,
-                               ""};
+                               "        "};
     MoveOperationContent mov_content;
     mov_content.num = movements_temp[i].byte_shift;
-    for (int i = 0; i < 8; ++i) {
-      move_operation.content[i] = mov_content.bytes[i];
+    for (int j = 0; j < 8; ++j) {
+      move_operation.content[j] = mov_content.bytes[j];
     }
     transactions.push_back(move_operation);
     transaction_needed_size += 27 + 8;
@@ -1349,8 +1349,14 @@ int Index::merge(index_combine_data &index_to_add) {
     if(transactions[i].header.operation_type == 2 || transactions[i].header.operation_type == 3) { // resize or backup
       continue; // no content
     }
-    std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], transactions[i].header.content_length);
-    transaction_file_location += transactions[i].header.content_length;
+    if (transactions[i].header.operation_type == 0) {
+      // For move operations content is 8 bytes long as a uint64_t to represent the byte shift. content length is used for end pos.
+      std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], 8);
+      transaction_file_location += 8;
+    } else {
+      std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], transactions[i].header.content_length);
+      transaction_file_location += transactions[i].header.content_length;
+    }
   }
   // Transaction List written. unmap and free memory.
 
