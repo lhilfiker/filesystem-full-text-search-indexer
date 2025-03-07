@@ -52,6 +52,7 @@ void LocalIndex::add_words(std::unordered_set<std::wstring>& words_to_insert, ui
 		}
 	}
 	for (const std::wstring& word : words_to_insert) {
+		if(word.length() == 0) continue;
 		words_and_reversed.push_back({word, {path_id}});
 		words_size += word.length();
 		reversed_size += sizeof(path_id);
