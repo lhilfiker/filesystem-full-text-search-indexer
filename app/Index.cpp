@@ -744,8 +744,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
 void Index::add_new_word(index_combine_data &index_to_add,
                          uint64_t &on_disk_count,
                          std::vector<Transaction> &transactions,
-                         std::vector<Insertion> words_insertions,
-                         std::vector<Insertion> reversed_insertions,
+                         std::vector<Insertion> &words_insertions,
+                         std::vector<Insertion> &reversed_insertions,
                          size_t &additional_new_needed_size,
                          size_t &words_new_needed_size,
                          size_t &reversed_new_needed_size, uint32_t &on_disk_id,
@@ -801,6 +801,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
     // needed size.
 
     Transaction new_additionals{};
+    new_additionals.content.reserve(50);
     while (true) {
       AdditionalBlock additional{};
       for (int i = 0; i < 24; ++i) {
@@ -1346,16 +1347,15 @@ int Index::merge(index_combine_data &index_to_add) {
     // copy the header first. Then check the operation type and then copy the content if needed.
     std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].header.bytes[0], 27);
     transaction_file_location += 27;
-    if(transactions[i].header.operation_type == 2 || transactions[i].header.operation_type == 3) { // resize or backup
-      continue; // no content
-    }
-    if (transactions[i].header.operation_type == 0) {
-      // For move operations content is 8 bytes long as a uint64_t to represent the byte shift. content length is used for end pos.
-      std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], 8);
-      transaction_file_location += 8;
-    } else {
-      std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], transactions[i].header.content_length);
-      transaction_file_location += transactions[i].header.content_length;
+    if(transactions[i].header.operation_type != 2 && transactions[i].header.operation_type != 3) { // resize or backup
+      if (transactions[i].header.operation_type == 0) {
+        // For move operations content is 8 bytes long as a uint64_t to represent the byte shift. content length is used for end pos.
+        std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], 8);
+        transaction_file_location += 8;
+      } else {
+        std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], transactions[i].header.content_length);
+        transaction_file_location += transactions[i].header.content_length;
+      }
     }
   }
   // Transaction List written. unmap and free memory.
