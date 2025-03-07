@@ -91,7 +91,7 @@ void Index::resize(const std::filesystem::path &path_to_resize,
                (path_to_resize).string() +
                " with size: " + std::to_string(size) + ".");
   }
-  log::write(1, "indexer: resize: resized file successfully.");
+  log::write(1, "Index: resize: resized file successfully.");
   return;
 }
 
@@ -259,7 +259,7 @@ int Index::initialize() {
   is_mapped = true;
   
   // check if transaction file exists
-  if (std::filesystem::exists(index_path / "transactions" / "transaction.list")) {
+  if (std::filesystem::exists(index_path / "transaction" / "transaction.list")) {
     log::write(2, "Index: a transaction file still exists. Checking if Index needs to be repaired.");
     if (execute_transactions() == 1) {
       log::error("Index: while checking transaction file an error occured. Exiting.");
