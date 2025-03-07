@@ -193,7 +193,7 @@ private:
   static int sync_all();
   static int unmap();
   static void resize(const std::filesystem::path &path_to_resize,
-                     const int size);
+                     const size_t size);
   static int add_new(index_combine_data &index_to_add);
   static void add_reversed_to_word(index_combine_data &index_to_add,
                                    uint64_t &on_disk_count,

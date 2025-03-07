@@ -83,7 +83,7 @@ void Index::save_config(const std::filesystem::path &config_index_path,
 bool Index::is_index_mapped() { return is_mapped; }
 
 void Index::resize(const std::filesystem::path &path_to_resize,
-                   const int size) {
+                   const size_t size) {
   std::error_code ec;
   std::filesystem::resize_file(path_to_resize, size);
   if (ec) {
@@ -1106,6 +1106,7 @@ int Index::merge(index_combine_data &index_to_add) {
     Transaction resize_transaction{0, 0, 0,
                                    0, 2, paths_size + paths_needed_space};
     transactions.push_back(resize_transaction);
+    transaction_needed_size += 27;
     // write it to the now free space at the end of the file.
     Transaction to_add_path_transaction{0,
                                         0,
@@ -1121,6 +1122,7 @@ int Index::merge(index_combine_data &index_to_add) {
     Transaction count_resize_transaction{
         0, 5, 0, 0, 2, paths_count_size + count_needed_space};
     transactions.push_back(count_resize_transaction);
+    transaction_needed_size += 27;
     // write it to the now free space at the end of the file.
     Transaction count_to_add_path_transaction{
         0,
@@ -1361,6 +1363,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // Transaction List written. unmap and free memory.
 
   mmap_transactions.unmap();
+
   transactions.clear();
   index_to_add.paths.clear();
   index_to_add.paths_count.clear();
