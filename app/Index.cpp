@@ -511,11 +511,13 @@ int Index::add_new(index_combine_data &index_to_add) {
   return 0;
 }
 
-void Index::add_reversed_to_word(
-    index_combine_data &index_to_add, uint64_t &on_disk_count,
-    std::vector<Transaction> &transactions, size_t &additional_new_needed_size,
-    uint32_t &on_disk_id, const size_t &local_word_count,
-    PathsMapping &paths_mapping) {
+void Index::add_reversed_to_word(index_combine_data &index_to_add,
+                                 uint64_t &on_disk_count,
+                                 std::vector<Transaction> &transactions,
+                                 size_t &additional_new_needed_size,
+                                 uint32_t &on_disk_id,
+                                 const size_t &local_word_count,
+                                 PathsMapping &paths_mapping) {
 
   // TODO: Overwrite path word count with inputet value. We need to pass the
   // path word count data from LocalIndex to here too first.
@@ -852,7 +854,8 @@ void Index::add_new_word(index_combine_data &index_to_add,
 
 void Index::insertion_to_transactions(
     std::vector<Transaction> &transactions,
-    std::vector<Insertion> &to_insertions, int index_type) { // index_type: 1 = words, 3 = reversed
+    std::vector<Insertion> &to_insertions,
+    int index_type) { // index_type: 1 = words, 3 = reversed
   struct movements_temp_item {
     size_t start_pos;
     size_t end_pos;
@@ -1255,7 +1258,8 @@ int Index::merge(index_combine_data &index_to_add) {
         29; // 29 because its length of word + then the next seperator
     ++on_disk_id;
     ++local_word_count;
-    if (local_word_count >= index_to_add.words_and_reversed.size()) { // if not more words to compare quit.
+    if (local_word_count >= index_to_add.words_and_reversed
+                                .size()) { // if not more words to compare quit.
       break;
     }
     local_word_length =
@@ -1301,6 +1305,13 @@ int Index::merge(index_combine_data &index_to_add) {
   // Transaction List and then write it to disk.
   // First add a resize Transaction
   // for words, reversed and additional at the start of the List.
+  log::write(2, "Index: Creating resize transaction for words with size: " +
+                    std::to_string(words_size + words_new_needed_size));
+  log::write(2, "Index: Creating resize transaction for reversed with size: " +
+                    std::to_string(reversed_size + reversed_new_needed_size));
+  log::write(2,
+             "Index: Creating resize transaction for additional with size: " +
+                 std::to_string(additional_size + additional_new_needed_size));
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
                            ""};
   transactions.insert(transactions.begin(), resize_words);

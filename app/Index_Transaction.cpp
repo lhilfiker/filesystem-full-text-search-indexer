@@ -27,8 +27,21 @@ int Index::execute_transactions() {
              "transaction.list")) { // if we can read current position + a whole
                                     // trasactionheader
     TransactionHeader *current_header = reinterpret_cast<TransactionHeader *>(
-        &mmap_transactions[transaction_current_location]); // get the first
-                                                           // transaction.
+        &mmap_transactions
+            [transaction_current_location]); // get the first
+                                             // transaction.
+                                             // In execute_transactions, right
+                                             // after loading the header
+    log::write(
+        1, "Transaction header dump - status: " +
+               std::to_string(current_header->status) +
+               ", index_type: " + std::to_string(current_header->index_type) +
+               ", location: " + std::to_string(current_header->location) +
+               ", backup_id: " + std::to_string(current_header->backup_id) +
+               ", operation_type: " +
+               std::to_string(current_header->operation_type) +
+               ", content_length: " +
+               std::to_string(current_header->content_length));
     if (current_header->status == 2) {
       log::write(
           1, "Index: Transaction: Skipping already completed transaction #" +
@@ -37,6 +50,9 @@ int Index::execute_transactions() {
       ++transaction_current_id;
       if (current_header->operation_type == 1) {
         transaction_current_location += current_header->content_length;
+      }
+      if (current_header->operation_type == 0) {
+        transaction_current_location += 8;
       }
       transaction_current_location += 27;
       continue;
@@ -156,9 +172,10 @@ int Index::execute_transactions() {
                                                    "paths_count.index")))),
              current_header->content_length);
       map();
-      log::write(1,
-                 "Index: Transaction: Resize operation completed for index " +
-                     std::to_string(current_header->index_type) + " and size: " + std::to_string(current_header->content_length));
+      log::write(
+          1, "Index: Transaction: Resize operation completed for index " +
+                 std::to_string(current_header->index_type) + " and size: " +
+                 std::to_string(current_header->content_length));
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
       std::string backup_file_name =
           std::to_string(current_header->backup_id) + ".backup";
@@ -210,6 +227,9 @@ int Index::execute_transactions() {
     ++transaction_current_id;
     if (current_header->operation_type == 1) {
       transaction_current_location += current_header->content_length;
+    }
+    if (current_header->operation_type == 0) {
+      transaction_current_location += 8;
     }
     transaction_current_location += 27;
     log::write(1, "Index: Transaction: Completed transaction #" +
