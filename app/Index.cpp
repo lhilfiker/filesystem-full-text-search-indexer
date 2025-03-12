@@ -945,7 +945,7 @@ void Index::insertion_to_transactions(
   // Their location already got updated so it's correct.
   for (int i = 0; i < to_insertions.size(); ++i) {
     Transaction insert_item{0,
-                            1,
+      static_cast<uint8_t>(index_type),
                             to_insertions[i].header.location,
                             0,
                             1,
