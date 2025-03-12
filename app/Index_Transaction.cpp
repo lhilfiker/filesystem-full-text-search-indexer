@@ -10,6 +10,7 @@ int Index::execute_transactions() {
   log::write(2, "Index: Transaction: Beginning execution of transaction list");
   std::error_code ec;
   size_t transaction_current_id = 0;
+  size_t transaction_current_write_sync_batch = 0;
   size_t transaction_current_location = 0;
   mio::mmap_sink mmap_transactions;
   mmap_transactions = mio::make_mmap_sink(
@@ -105,9 +106,6 @@ int Index::execute_transactions() {
              "finished creating. Deleting only incomplete Transaction List.");
       break;
     }
-    // mark current transaction as in progress and sync to disk.
-    current_header->status = 1;
-    mmap_transactions.sync(ec);
     // continue executing transaction.
     log::write(1, "Index: Transaction: Executing transaction #" +
                       std::to_string(transaction_current_id) + " type=" +
@@ -115,6 +113,9 @@ int Index::execute_transactions() {
                       " index=" + std::to_string(current_header->index_type));
 
     if (current_header->operation_type == 0) { // MOVE
+      current_header->status = 1;
+      mmap_transactions.sync(ec);
+      transaction_current_write_sync_batch = 0;
       std::memmove(
           current_header->index_type == 0
               ? &mmap_paths[current_header->location]
@@ -136,6 +137,12 @@ int Index::execute_transactions() {
                         " at location " +
                         std::to_string(current_header->location));
     } else if (current_header->operation_type == 1) { // WRITE
+      if (transaction_current_write_sync_batch == 0 ||
+          transaction_current_write_sync_batch > 5000) {
+        current_header->status = 1;
+        mmap_transactions.sync(ec);
+        transaction_current_write_sync_batch = 0;
+      }
       std::memcpy(
           current_header->index_type == 0
               ? &mmap_paths[current_header->location]
@@ -156,7 +163,11 @@ int Index::execute_transactions() {
                         std::to_string(current_header->index_type) +
                         " at location " +
                         std::to_string(current_header->location));
+      ++transaction_current_write_sync_batch;
     } else if (current_header->operation_type == 2) { // RESIZE
+      current_header->status = 1;
+      mmap_transactions.sync(ec);
+      transaction_current_write_sync_batch = 0;
       unmap();
       resize(current_header->index_type == 0
                  ? index_path / "paths.index"
@@ -177,6 +188,9 @@ int Index::execute_transactions() {
                  std::to_string(current_header->index_type) + " and size: " +
                  std::to_string(current_header->content_length));
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
+      current_header->status = 1;
+      mmap_transactions.sync(ec);
+      transaction_current_write_sync_batch = 0;
       std::string backup_file_name =
           std::to_string(current_header->backup_id) + ".backup";
       std::ofstream{index_path / "transaction" / "backups" / backup_file_name};
@@ -211,19 +225,25 @@ int Index::execute_transactions() {
     }
 
     // snyc before we mark as done.
-    if (sync_all() == 1) {
-      log::error("Error when syncing indexes to disk. Exiting Program to save "
-                 "data. Please restart to see if the issue continues.");
-    } else {
-      log::write(
-          1, "Index: Transaction: Successfully synced index changes to disk");
+    if (current_header->operation_type != 1 ||
+        transaction_current_write_sync_batch > 5000) { // sync only if it was not a move operation or 5000 move operations happend
+      if (sync_all() == 1) {
+        log::error(
+            "Error when syncing indexes to disk. Exiting Program to save "
+            "data. Please restart to see if the issue continues.");
+      } else {
+        log::write(
+            1, "Index: Transaction: Successfully synced index changes to disk");
+      }
+      mmap_transactions.sync(ec);
+      transaction_current_write_sync_batch = 0;
     }
-    mmap_transactions.sync(ec);
 
     // mark current transaction as in completed and sync to disk.
-    current_header->status = 2;
-    mmap_transactions.sync(ec);
-
+    if (current_header->operation_type != 1) { // only sync if it is not a move
+      current_header->status = 2;
+      mmap_transactions.sync(ec);
+    }
     ++transaction_current_id;
     if (current_header->operation_type == 1) {
       transaction_current_location += current_header->content_length;
