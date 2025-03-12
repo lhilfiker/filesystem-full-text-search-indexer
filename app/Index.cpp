@@ -756,7 +756,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
 
   // We create a insertion for the new word + word seperator at the start
   size_t word_length =
-      index_to_add.words_and_reversed[local_word_count].word.size();
+      index_to_add.words_and_reversed[local_word_count].word.length();
   Insertion new_word{
       on_disk_count,
       word_length +
@@ -772,7 +772,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
     new_word.content += c - 'a';
   }
   // update new needed size
-  words_new_needed_size += new_word.content.length();
+  words_new_needed_size += word_length + 1;
   reversed_new_needed_size += 10; // always 10
   words_insertions.push_back(new_word);
 
