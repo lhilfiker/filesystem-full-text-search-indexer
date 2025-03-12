@@ -1,7 +1,7 @@
 # Transaction and Merging System Documentation
 
 ## Overview
-The Transaction System provides a structured approach to safely modify index files when adding new content. This document explains how the merging process works and how transactions protect data integrity during updates while enabling recovery after crashes.
+The Transaction System provides a structured approach to safely modify index files when adding new content. This document explains how the merging process works and how transactions protect data integrity during updates while enabling recovery after crashes. The Index can never become corrupted and is always fixable as long as the backup/transaction/index files were not modified externally.
 
 ## Transaction Structure
 
@@ -132,6 +132,7 @@ graph TD
   - `2`: Completed
 - **Backups**: Created before potentially destructive operations
 - **Progressive execution**: System can restart from last completed transaction
+- **Syncing to disk**: The Transaction file and all index files are synced to disk after critical operations(resize, move, backup). For writing it is only synced after 5000 continues writes to speed up the execution.
 
 ### Performance Optimization
 - **Batch syncing**: Write operations sync in batches (every 5000 operations)
