@@ -158,7 +158,7 @@ int Index::execute_transactions() {
       map();
       log::write(1,
                  "Index: Transaction: Resize operation completed for index " +
-                     std::to_string(current_header->index_type));
+                     std::to_string(current_header->index_type) + " and size: " + std::to_string(current_header->content_length));
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
       std::string backup_file_name =
           std::to_string(current_header->backup_id) + ".backup";
@@ -213,7 +213,7 @@ int Index::execute_transactions() {
     }
     transaction_current_location += 27;
     log::write(1, "Index: Transaction: Completed transaction #" +
-                      std::to_string(transaction_current_id));
+                      std::to_string(transaction_current_id - 1));
   }
   log::write(2, "Index: Transaction: Successfully completed " +
                     std::to_string(transaction_current_id) + " transactions");
