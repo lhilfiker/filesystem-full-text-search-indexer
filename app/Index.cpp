@@ -1255,6 +1255,9 @@ int Index::merge(index_combine_data &index_to_add) {
         29; // 29 because its length of word + then the next seperator
     ++on_disk_id;
     ++local_word_count;
+    if (local_word_count >= index_to_add.words_and_reversed.size()) { // if not more words to compare quit.
+      break;
+    }
     local_word_length =
         index_to_add.words_and_reversed[local_word_count].word.length();
   }
@@ -1367,7 +1370,10 @@ int Index::merge(index_combine_data &index_to_add) {
     }
   }
   // Transaction List written. unmap and free memory.
-
+  mmap_transactions.sync(ec);
+  // mark first as started to signal that writing was successful.
+  mmap_transactions[0] = 1; // first item status to 1
+  mmap_transactions.sync(ec);
   mmap_transactions.unmap();
 
   transactions.clear();
