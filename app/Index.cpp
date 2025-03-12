@@ -1346,7 +1346,7 @@ int Index::merge(index_combine_data &index_to_add) {
                                      mio::map_entire_file, ec);
 
   size_t transaction_file_location = 0;
-  for(int i = 0; i < transactions.size(); ++i) {
+  for(size_t i = 0; i < transactions.size(); ++i) {
     // copy the header first. Then check the operation type and then copy the content if needed.
     std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].header.bytes[0], 27);
     transaction_file_location += 27;
