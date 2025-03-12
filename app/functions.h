@@ -118,7 +118,7 @@ public:
 };
 
 // Index.cpp
-
+#pragma pack(push, 1)
 union TransactionHeader {
   struct {
     uint8_t status;     // 0 = no status, 1 = started, 2 = completed
@@ -136,6 +136,7 @@ union TransactionHeader {
   };
   unsigned char bytes[27];
 };
+#pragma pack(pop)
 
 struct Transaction {
   TransactionHeader header;
