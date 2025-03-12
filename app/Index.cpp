@@ -954,7 +954,7 @@ void Index::insertion_to_transactions(
                             to_insertions[i].header.content_length,
                             to_insertions[i].content};
     transactions.push_back(insert_item);
-    transaction_needed_size += 27 + to_insertions[i].content.length();
+    transaction_needed_size += 27 + to_insertions[i].header.content_length;
   }
   to_insertions.clear();
 }
@@ -1155,7 +1155,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // has 2, b has 5, c has 9. wordsf for b adds 5+2. c = 9+5+2. We have 27
   // because when adding new words we add to + 1 and when its z + 1 its invalid.
   // we will just ignore it
-  std::vector<uint64_t> words_F_change(27);
+  std::vector<uint64_t> words_F_change(27, 0);
 
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
   // add_to_disk.
@@ -1227,7 +1227,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping, transaction_needed_size);
-        words_F_change[current_first_char] += local_word_length + 1;
+        words_F_change[current_first_char - 'a'] += local_word_length + 1;
 
         break;
       }
@@ -1242,7 +1242,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping, transaction_needed_size);
-        words_F_change[current_first_char] += local_word_length + 1;
+        words_F_change[current_first_char - 'a'] += local_word_length + 1;
         // TODO: words_F
         break;
       }
@@ -1294,6 +1294,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // we add custom words_f length then we can make a better implementation that
   // is faster and saves memory and space.
   Transaction words_f_new{0, 2, 0, 0, 1, 312};
+  words_f_new.content.resize(312);
   uint64_t all_size = 0;
   for (int i = 0; i < 26; ++i) {
     all_size += words_F_change[i];
