@@ -131,7 +131,8 @@ int Index::sync_all() {
   mmap_reversed.sync(ec);
   mmap_additional.sync(ec);
   mmap_paths_count.sync(ec);
-  if (ec) return 1;
+  if (ec)
+    return 1;
   return 0;
 }
 
@@ -186,13 +187,16 @@ void Index::check_files() {
     std::filesystem::create_directories(index_path / "transaction");
   }
   if (!std::filesystem::is_directory(index_path / "transaction" / "backups")) {
-    log::write(1, "Index: check_files: creating transaction backups directory.");
+    log::write(1,
+               "Index: check_files: creating transaction backups directory.");
     std::filesystem::create_directories(index_path / "transaction" / "backups");
   }
 
   if (std::filesystem::exists(index_path / "firsttimewrite.info")) {
-    // If this is still here it means that the first time write failed. delete all index files.
-    log::write(2, "Index: check_files: First time write didn't complete last time. Index possibly corrupt. Deleting to start fresh.");
+    // If this is still here it means that the first time write failed. delete
+    // all index files.
+    log::write(2, "Index: check_files: First time write didn't complete last "
+                  "time. Index possibly corrupt. Deleting to start fresh.");
     std::filesystem::remove(index_path / "paths.index");
     std::filesystem::remove(index_path / "paths_count.index");
     std::filesystem::remove(index_path / "words.index");
@@ -253,23 +257,28 @@ int Index::initialize() {
   if (paths_size == -1 || words_size == -1 || words_f_size == -1 ||
       reversed_size == -1 || additional_size == -1) {
     log::error("Index: initialize: could not get actual size of index "
-                  "files, exiting.");
+               "files, exiting.");
     return 1;
   }
   is_mapped = true;
-  
+
   // check if transaction file exists
-  if (std::filesystem::exists(index_path / "transaction" / "transaction.list")) {
-    log::write(2, "Index: a transaction file still exists. Checking if Index needs to be repaired.");
+  if (std::filesystem::exists(index_path / "transaction" /
+                              "transaction.list")) {
+    log::write(2, "Index: a transaction file still exists. Checking if Index "
+                  "needs to be repaired.");
     if (execute_transactions() == 1) {
-      log::error("Index: while checking transaction file an error occured. Exiting.");
+      log::error(
+          "Index: while checking transaction file an error occured. Exiting.");
     }
-    log::write(2, "Index: transaction file successfully checked. Finishing startup.");
+    log::write(
+        2, "Index: transaction file successfully checked. Finishing startup.");
   }
   // removing all backups because they are not needed anymore.
   std::filesystem::remove_all(index_path / "transaction" / "backups");
   if (!std::filesystem::is_directory(index_path / "transaction" / "backups")) {
-    log::write(1, "Index: intitialize: creating transactions backups directory.");
+    log::write(1,
+               "Index: intitialize: creating transactions backups directory.");
     std::filesystem::create_directories(index_path / "transaction" / "backups");
   }
 
@@ -502,13 +511,11 @@ int Index::add_new(index_combine_data &index_to_add) {
   return 0;
 }
 
-void Index::add_reversed_to_word(index_combine_data &index_to_add,
-                                 uint64_t &on_disk_count,
-                                 std::vector<Transaction> &transactions,
-                                 size_t &additional_new_needed_size,
-                                 uint32_t &on_disk_id,
-                                 const size_t &local_word_count,
-                                 PathsMapping &paths_mapping, size_t &transaction_needed_size) {
+void Index::add_reversed_to_word(
+    index_combine_data &index_to_add, uint64_t &on_disk_count,
+    std::vector<Transaction> &transactions, size_t &additional_new_needed_size,
+    uint32_t &on_disk_id, const size_t &local_word_count,
+    PathsMapping &paths_mapping) {
 
   // TODO: Overwrite path word count with inputet value. We need to pass the
   // path word count data from LocalIndex to here too first.
@@ -608,8 +615,6 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       reversed_add_transaction.content = content.bytes[0] + content.bytes[1];
       index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
       transactions.push_back(reversed_add_transaction);
-      transaction_needed_size += 27 + 2;
-
 
       if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
           0)
@@ -634,8 +639,6 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
             content.bytes[0] + content.bytes[1];
         index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
         transactions.push_back(additional_add_transaction);
-        transaction_needed_size += 27 + 2;
-
 
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0)
@@ -675,8 +678,6 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
     // add it to the transaction
     additional_add_transaction.content = content.bytes[0] + content.bytes[1];
     transactions.push_back(additional_add_transaction);
-    transaction_needed_size += 27 + 2;
-
 
     // go through all missing local Ids and add them to additionals
     Transaction additional_new_transaction;
@@ -734,7 +735,6 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         1,
         additional_add_transaction.content.length()};
     transactions.push_back(additional_new_transaction);
-    transaction_needed_size += 27 + additional_new_transaction.content.length();
   }
 
   // everything got checked, free slots filled and new additional if needed
@@ -750,7 +750,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
                          size_t &words_new_needed_size,
                          size_t &reversed_new_needed_size, uint32_t &on_disk_id,
                          const size_t &local_word_count,
-                         PathsMapping &paths_mapping, size_t &transaction_needed_size) {
+                         PathsMapping &paths_mapping) {
 
   // We create a insertion for the new word + word seperator at the start
   size_t word_length =
@@ -840,7 +840,6 @@ void Index::add_new_word(index_combine_data &index_to_add,
                        1,
                        new_additionals.content.length()};
     transactions.push_back(new_additionals);
-    transaction_needed_size += 27 + new_additionals.content.length();
     additional_new_needed_size += new_additionals.content.length();
   }
 
@@ -853,8 +852,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
 
 void Index::insertion_to_transactions(
     std::vector<Transaction> &transactions,
-    std::vector<Insertion> &to_insertions,
-    int index_type, size_t &transaction_needed_size) { // index_type: 1 = words, 3 = reversed
+    std::vector<Insertion> &to_insertions, int index_type) { // index_type: 1 = words, 3 = reversed
   struct movements_temp_item {
     size_t start_pos;
     size_t end_pos;
@@ -907,7 +905,6 @@ void Index::insertion_to_transactions(
                                 3,
                                 range};
       transactions.push_back(create_backup);
-      transaction_needed_size += 27;
       Transaction move_operation{0,
                                  static_cast<uint8_t>(index_type),
                                  movements_temp[i].start_pos,
@@ -921,7 +918,6 @@ void Index::insertion_to_transactions(
         move_operation.content[j] = mov_content.bytes[j];
       }
       transactions.push_back(move_operation);
-      transaction_needed_size += 27 + 8;
       ++backup_ids;
       continue;
     }
@@ -939,7 +935,6 @@ void Index::insertion_to_transactions(
       move_operation.content[j] = mov_content.bytes[j];
     }
     transactions.push_back(move_operation);
-    transaction_needed_size += 27 + 8;
   }
   movements_temp.clear();
 
@@ -954,7 +949,6 @@ void Index::insertion_to_transactions(
                             to_insertions[i].header.content_length,
                             to_insertions[i].content};
     transactions.push_back(insert_item);
-    transaction_needed_size += 27 + to_insertions[i].header.content_length;
   }
   to_insertions.clear();
 }
@@ -972,7 +966,6 @@ int Index::merge(index_combine_data &index_to_add) {
   size_t additional_new_needed_size = 0;
   size_t words_new_needed_size = 0;
   size_t reversed_new_needed_size = 0;
-  size_t transaction_needed_size = 0;
 
   size_t paths_l_size = index_to_add.paths.size();
 
@@ -1015,7 +1008,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
       if (on_disk_count + next_path_end <
           paths_size + 1) { // check if we can read the whole path based on the
-                        // offset.
+                            // offset.
         // refrence the path to a string and then search in the unordered map we
         // created earlier.
         std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
@@ -1054,7 +1047,6 @@ int Index::merge(index_combine_data &index_to_add) {
                 4,
                 count_overwrite_content};
             transactions.push_back(count_to_overwrite_path_transaction);
-            transaction_needed_size += 27 + count_overwrite_content.length();
           }
         }
         on_disk_count += next_path_end;
@@ -1106,7 +1098,6 @@ int Index::merge(index_combine_data &index_to_add) {
     Transaction resize_transaction{0, 0, 0,
                                    0, 2, paths_size + paths_needed_space};
     transactions.push_back(resize_transaction);
-    transaction_needed_size += 27;
     // write it to the now free space at the end of the file.
     Transaction to_add_path_transaction{0,
                                         0,
@@ -1116,13 +1107,11 @@ int Index::merge(index_combine_data &index_to_add) {
                                         paths_needed_space,
                                         paths_add_content};
     transactions.push_back(to_add_path_transaction);
-    transaction_needed_size += 27 + paths_add_content.length();
 
     // resize so all paths counts fit.
     Transaction count_resize_transaction{
         0, 5, 0, 0, 2, paths_count_size + count_needed_space};
     transactions.push_back(count_resize_transaction);
-    transaction_needed_size += 27;
     // write it to the now free space at the end of the file.
     Transaction count_to_add_path_transaction{
         0,
@@ -1133,8 +1122,6 @@ int Index::merge(index_combine_data &index_to_add) {
         count_needed_space,
         count_add_content};
     transactions.push_back(count_to_add_path_transaction);
-    transaction_needed_size += 27 + count_add_content.length();
-
   }
   paths_add_content = "";
   count_add_content = "";
@@ -1196,8 +1183,8 @@ int Index::merge(index_combine_data &index_to_add) {
     if (word_seperator < 31 ||
         (word_seperator - 30) + on_disk_count >
             words_size + 1) { // 0-30 is reserved. if it is higher it is for
-                          // seperator. If the seperator here is 0-30 the index
-                          // is corrupted.
+      // seperator. If the seperator here is 0-30 the index
+      // is corrupted.
       log::error(
           "Index: Combine: word seperator is invalid. This means the index is "
           "most likely corrupted. Stopping to protect the index.");
@@ -1226,7 +1213,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
-                     paths_mapping, transaction_needed_size);
+                     paths_mapping);
         words_F_change[current_first_char - 'a'] += local_word_length + 1;
 
         break;
@@ -1241,7 +1228,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
-                     paths_mapping, transaction_needed_size);
+                     paths_mapping);
         words_F_change[current_first_char - 'a'] += local_word_length + 1;
         // TODO: words_F
         break;
@@ -1259,11 +1246,13 @@ int Index::merge(index_combine_data &index_to_add) {
         // update reversed and additionals if needed.
         add_reversed_to_word(index_to_add, on_disk_count, transactions,
                              additional_new_needed_size, on_disk_id,
-                             local_word_count, paths_mapping, transaction_needed_size);
+                             local_word_count, paths_mapping);
         break;
       }
     }
-    on_disk_count += word_seperator - 29; //29 because its length of word + then the next seperator
+    on_disk_count +=
+        word_seperator -
+        29; // 29 because its length of word + then the next seperator
     ++on_disk_id;
     ++local_word_count;
     local_word_length =
@@ -1283,7 +1272,7 @@ int Index::merge(index_combine_data &index_to_add) {
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
                  reversed_insertions, additional_new_needed_size,
                  words_new_needed_size, reversed_new_needed_size, on_disk_id,
-                 local_word_count, paths_mapping, transaction_needed_size);
+                 local_word_count, paths_mapping);
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
                    1] += local_word_length + 1;
@@ -1302,7 +1291,6 @@ int Index::merge(index_combine_data &index_to_add) {
     std::memcpy(&words_f_new.content[i * 12], &words_f[i].bytes[0], 12);
   }
   transactions.push_back(words_f_new);
-  transaction_needed_size += 27 + 312;
 
   words_f_new.content.clear(); // free some memory.
 
@@ -1313,50 +1301,67 @@ int Index::merge(index_combine_data &index_to_add) {
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
                            ""};
   transactions.insert(transactions.begin(), resize_words);
-  transaction_needed_size += 27;
   Transaction resize_reversed{
       0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""};
   transactions.insert(transactions.begin(), resize_reversed);
-  transaction_needed_size += 27;
   Transaction resize_additional{
       0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""};
   transactions.insert(transactions.begin(), resize_additional);
-  transaction_needed_size += 27;
 
   // Now we need to convert the Insertion to Transactions.
   // First we need to make Transactions to make place for the insertion. We have
   // already resized so there is enough space for it. We need to create the
   // Transaction so data only gets moved once.
-  insertion_to_transactions(transactions, words_insertions, 1, transaction_needed_size);
-  insertion_to_transactions(transactions, reversed_insertions, 3, transaction_needed_size);
+  insertion_to_transactions(transactions, words_insertions, 1);
+  insertion_to_transactions(transactions, reversed_insertions, 3);
 
   // Now we need to write the Transaction List to disk.
   // The Transactions are saved in indexpath / transaction / transaction.list
   // Backups are saved in indexpath / transaction / backups / backupid.backup
 
+  std::filesystem::path transaction_path =
+      index_path / "transaction" / "transaction.list";
 
-  std::filesystem::path transaction_path = index_path / "transaction" / "transaction.list";
+  size_t recalculated_size = 0;
+  for (const auto &tx : transactions) {
+    recalculated_size += 27; // Header size
+    if (tx.header.operation_type != 2 && tx.header.operation_type != 3) {
+      if (tx.header.operation_type == 0) {
+        recalculated_size += 8; // Move operations need 8 bytes
+      } else {
+        recalculated_size += tx.header.content_length;
+      }
+    }
+  }
 
-  // just create an empty file which we then resize to the required size and fill with mmap to keep consistency with the other file operations on disks.
+  // just create an empty file which we then resize to the required size and
+  // fill with mmap to keep consistency with the other file operations on disks.
   std::ofstream{transaction_path};
-  resize(transaction_path, transaction_needed_size);
+  resize(transaction_path, recalculated_size);
 
   mio::mmap_sink mmap_transactions;
   mmap_transactions = mio::make_mmap_sink((transaction_path).string(), 0,
-                                     mio::map_entire_file, ec);
+                                          mio::map_entire_file, ec);
 
   size_t transaction_file_location = 0;
-  for(size_t i = 0; i < transactions.size(); ++i) {
-    // copy the header first. Then check the operation type and then copy the content if needed.
-    std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].header.bytes[0], 27);
+  for (size_t i = 0; i < transactions.size(); ++i) {
+    // copy the header first. Then check the operation type and then copy the
+    // content if needed.
+    std::memcpy(&mmap_transactions[transaction_file_location],
+                &transactions[i].header.bytes[0], 27);
     transaction_file_location += 27;
-    if(transactions[i].header.operation_type != 2 && transactions[i].header.operation_type != 3) { // resize or backup
+    if (transactions[i].header.operation_type != 2 &&
+        transactions[i].header.operation_type != 3) { // resize or backup
       if (transactions[i].header.operation_type == 0) {
-        // For move operations content is 8 bytes long as a uint64_t to represent the byte shift. content length is used for end pos.
-        std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], 8);
+        // For move operations content is 8 bytes long as a uint64_t to
+        // represent the byte shift. content length is used for end pos.
+        std::memcpy(&mmap_transactions[transaction_file_location],
+                    &transactions[i].content[0], 8);
         transaction_file_location += 8;
       } else {
-        std::memcpy(&mmap_transactions[transaction_file_location], &transactions[i].content[0], transactions[i].header.content_length);
+        std::memcpy(&mmap_transactions[transaction_file_location],
+                    &transactions[i].content[0],
+                    transactions[i].header.content_length);
         transaction_file_location += transactions[i].header.content_length;
       }
     }
@@ -1370,7 +1375,8 @@ int Index::merge(index_combine_data &index_to_add) {
   index_to_add.paths_count.clear();
   index_to_add.words_and_reversed.clear();
 
-  if(ec) return 1;
+  if (ec)
+    return 1;
   return 0;
 }
 
@@ -1378,16 +1384,21 @@ int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
   if (first_time) {
     first_time = false;
-    std::ofstream{index_path / "firsttimewrite.info"}; // add file to signal firsttimewrite is in progress. Delete after it is successfully done.
+    std::ofstream{index_path /
+                  "firsttimewrite.info"}; // add file to signal firsttimewrite
+                                          // is in progress. Delete after it is
+                                          // successfully done.
     if (add_new(index_to_add) == 0) {
       std::filesystem::remove(index_path / "firsttimewrite.info");
       return 0;
     } else {
       // if an error occured exit.
-      log::error("Index: Frist time write failed. Exiting. Corupted index files will be deleted on startup.");
+      log::error("Index: Frist time write failed. Exiting. Corupted index "
+                 "files will be deleted on startup.");
     }
   } else {
-    if(merge(index_to_add) == 1) return 1;
+    if (merge(index_to_add) == 1)
+      return 1;
     return execute_transactions();
   }
   return 0;

@@ -201,7 +201,7 @@ private:
                                    size_t &additional_new_needed_size,
                                    uint32_t &on_disk_id,
                                    const size_t &local_word_count,
-                                   PathsMapping &paths_mapping, size_t &transaction_needed_size);
+                                   PathsMapping &paths_mapping);
   static void add_new_word(index_combine_data &index_to_add,
                            uint64_t &on_disk_count,
                            std::vector<Transaction> &transactions,
@@ -211,11 +211,11 @@ private:
                            size_t &words_new_needed_size,
                            size_t &reversed_new_needed_size,
                            uint32_t &on_disk_id, const size_t &local_word_count,
-                           PathsMapping &paths_mapping, size_t &transaction_needed_size);
+                           PathsMapping &paths_mapping);
   static void insertion_to_transactions(
       std::vector<Transaction> &transactions,
       std::vector<Insertion> &to_insertions,
-      int index_type, size_t &transaction_needed_size); // index_type: 1 = words, 3 = reversed.
+      int index_type); // index_type: 1 = words, 3 = reversed.
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
 
