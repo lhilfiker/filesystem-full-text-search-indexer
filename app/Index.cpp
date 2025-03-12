@@ -651,7 +651,6 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
 
   // if there are still some left we need to create new additionals.
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
-    additional_new_needed_size += 50;
     Transaction additional_add_transaction;
 
     // If we need to append to a additional block or reversed
@@ -729,14 +728,15 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       }
     }
     // add the transaction
-    additional_new_transaction = {
+    additional_new_transaction.header = {
         0,
         4,
         additional_size + additional_new_needed_size, // add to the end
         0,
         1,
-        additional_add_transaction.content.length()};
+        additional_new_transaction.content.length()};
     transactions.push_back(additional_new_transaction);
+    additional_new_needed_size += additional_new_transaction.content.length();
   }
 
   // everything got checked, free slots filled and new additional if needed
@@ -834,7 +834,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
         break; // if no more additional need to be added we break.
       ++current_additional;
     }
-    new_additionals = {0,
+    new_additionals.header = {0,
                        4,
                        additional_size +
                            additional_new_needed_size, // add to the end
