@@ -7,6 +7,7 @@
 #include <string>
 
 int Index::execute_transactions() {
+  log::write(2, "Index: Transaction: Beginning execution of transaction list");
   std::error_code ec;
   size_t transaction_current_id = 0;
   size_t transaction_current_location = 0;
@@ -14,7 +15,12 @@ int Index::execute_transactions() {
   mmap_transactions = mio::make_mmap_sink(
       (index_path / "transaction" / "transaction.list").string(), 0,
       mio::map_entire_file, ec);
-
+  log::write(1, "Index: Transaction: Detected " +
+                    std::to_string(
+                        std::filesystem::file_size(index_path / "transaction" /
+                                                   "transaction.list") /
+                        27) +
+                    " potential transactions");
   while (transaction_current_location + 27 <
          std::filesystem::file_size(
              index_path / "transaction" /
@@ -24,6 +30,9 @@ int Index::execute_transactions() {
         &mmap_transactions[transaction_current_location]); // get the first
                                                            // transaction.
     if (current_header->status == 2) {
+      log::write(
+          1, "Index: Transaction: Skipping already completed transaction #" +
+                 std::to_string(transaction_current_id));
       // skip as already complete
       ++transaction_current_id;
       if (current_header->operation_type == 1) {
@@ -35,6 +44,10 @@ int Index::execute_transactions() {
     if (current_header->status == 1) {
       // check if need to restore from backup
       if (current_header->backup_id != 0) {
+        log::write(1, "Index: Transaction: Processing backup ID " +
+                          std::to_string(current_header->backup_id) +
+                          " for transaction #" +
+                          std::to_string(transaction_current_id));
         std::string backup_file_name =
             std::to_string(current_header->backup_id) + ".backup";
         if (current_header->operation_type ==
@@ -80,6 +93,10 @@ int Index::execute_transactions() {
     current_header->status = 1;
     mmap_transactions.sync(ec);
     // continue executing transaction.
+    log::write(1, "Index: Transaction: Executing transaction #" +
+                      std::to_string(transaction_current_id) + " type=" +
+                      std::to_string(current_header->operation_type) +
+                      " index=" + std::to_string(current_header->index_type));
 
     if (current_header->operation_type == 0) { // MOVE
       std::memmove(
@@ -98,6 +115,10 @@ int Index::execute_transactions() {
                                                 [current_header->location])))),
           &mmap_transactions[transaction_current_location + 27],
           current_header->content_length);
+      log::write(1, "Index: Transaction: Move operation completed for index " +
+                        std::to_string(current_header->index_type) +
+                        " at location " +
+                        std::to_string(current_header->location));
     } else if (current_header->operation_type == 1) { // WRITE
       std::memcpy(
           current_header->index_type == 0
@@ -115,6 +136,10 @@ int Index::execute_transactions() {
                                                 [current_header->location])))),
           &mmap_transactions[transaction_current_location + 27],
           current_header->content_length);
+      log::write(1, "Index: Transaction: Write operation completed for index " +
+                        std::to_string(current_header->index_type) +
+                        " at location " +
+                        std::to_string(current_header->location));
     } else if (current_header->operation_type == 2) { // RESIZE
       unmap();
       resize(current_header->index_type == 0
@@ -131,6 +156,9 @@ int Index::execute_transactions() {
                                                    "paths_count.index")))),
              current_header->content_length);
       map();
+      log::write(1,
+                 "Index: Transaction: Resize operation completed for index " +
+                     std::to_string(current_header->index_type));
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
       std::string backup_file_name =
           std::to_string(current_header->backup_id) + ".backup";
@@ -159,12 +187,19 @@ int Index::execute_transactions() {
           current_header->content_length);
       mmap_backup.sync(ec);
       mmap_backup.unmap();
+      log::write(
+          1, "Index: Transaction: Backup operation completed for index " +
+                 std::to_string(current_header->index_type) + " at location " +
+                 std::to_string(current_header->location));
     }
 
     // snyc before we mark as done.
     if (sync_all() == 1) {
       log::error("Error when syncing indexes to disk. Exiting Program to save "
                  "data. Please restart to see if the issue continues.");
+    } else {
+      log::write(
+          1, "Index: Transaction: Successfully synced index changes to disk");
     }
     mmap_transactions.sync(ec);
 
@@ -177,12 +212,19 @@ int Index::execute_transactions() {
       transaction_current_location += current_header->content_length;
     }
     transaction_current_location += 27;
+    log::write(1, "Index: Transaction: Completed transaction #" +
+                      std::to_string(transaction_current_id));
   }
+  log::write(2, "Index: Transaction: Successfully completed " +
+                    std::to_string(transaction_current_id) + " transactions");
+
+  log::write(2,
+             "Index: Transaction: Cleaning up transaction files and backups");
 
   std::filesystem::remove(index_path / "transaction" / "transaction.list");
   // removing all backups because they are not needed anymore.
   std::filesystem::remove_all(index_path / "transaction" / "backups");
   std::filesystem::create_directories(index_path / "transaction" / "backups");
-
+  log::write(2, "Index: Transaction: Execution finished.");
   return 0;
 }
