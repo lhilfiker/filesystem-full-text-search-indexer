@@ -162,6 +162,37 @@ struct PathsMapping {
   std::unordered_map<uint16_t, uint16_t> by_disk;
 };
 
+union WordsFValue {
+  uint64_t location;
+  uint32_t id;
+  unsigned char bytes[12];
+};
+
+union ReversedBlock {
+  uint16_t ids[5];
+  unsigned char bytes[10];
+};
+
+union AdditionalBlock {
+  uint16_t ids[25];
+  unsigned char bytes[50];
+};
+
+union PathOffset {
+  uint16_t offset;
+  unsigned char bytes[2];
+};
+
+union PathsCountItem {
+  uint32_t num;
+  unsigned char bytes[4];
+};
+
+union MoveOperationContent {
+  uint64_t num;
+  unsigned char bytes[8];
+};
+
 class Index {
 private:
   static bool is_config_loaded;

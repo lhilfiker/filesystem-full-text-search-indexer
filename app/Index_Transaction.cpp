@@ -1,6 +1,5 @@
 #include "functions.h"
 #include "lib/mio.hpp"
-#include <array>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -226,7 +225,9 @@ int Index::execute_transactions() {
 
     // snyc before we mark as done.
     if (current_header->operation_type != 1 ||
-        transaction_current_write_sync_batch > 5000) { // sync only if it was not a move operation or 5000 move operations happend
+        transaction_current_write_sync_batch >
+            5000) { // sync only if it was not a move operation or 5000 move
+                    // operations happend
       if (sync_all() == 1) {
         log::error(
             "Error when syncing indexes to disk. Exiting Program to save "
