@@ -224,7 +224,7 @@ private:
   static int map();
   static int sync_all();
   static int unmap();
-  static void resize(const std::filesystem::path &path_to_resize,
+  static void resize(const std::filesystem::path path_to_resize,
                      const size_t size);
   static int add_new(index_combine_data &index_to_add);
   static void add_reversed_to_word(index_combine_data &index_to_add,

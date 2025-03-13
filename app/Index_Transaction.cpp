@@ -15,12 +15,13 @@ int Index::execute_transactions() {
   mmap_transactions = mio::make_mmap_sink(
       (index_path / "transaction" / "transaction.list").string(), 0,
       mio::map_entire_file, ec);
-  log::write(1, "Index: Transaction: Detected " +
+  /*log::write(1, "Index: Transaction: Detected " +
                     std::to_string(
                         std::filesystem::file_size(index_path / "transaction" /
                                                    "transaction.list") /
                         27) +
                     " potential transactions");
+  */
   while (transaction_current_location + 27 <
          std::filesystem::file_size(
              index_path / "transaction" /

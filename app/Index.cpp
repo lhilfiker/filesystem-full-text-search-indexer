@@ -50,7 +50,7 @@ void Index::save_config(const std::filesystem::path &config_index_path,
 
 bool Index::is_index_mapped() { return is_mapped; }
 
-void Index::resize(const std::filesystem::path &path_to_resize,
+void Index::resize(const std::filesystem::path path_to_resize,
                    const size_t size) {
   std::error_code ec;
   std::filesystem::resize_file(path_to_resize, size);
