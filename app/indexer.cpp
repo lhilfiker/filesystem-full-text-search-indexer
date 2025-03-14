@@ -48,14 +48,14 @@ bool indexer::extension_allowed(const std::filesystem::path &path) {
   return false;
 }
 
-std::unordered_set<std::wstring>
+std::unordered_set<std::string>
 indexer::get_words_text(const std::filesystem::path &path) {
   // This will need to be redone.
   // It needs to consider Character encoding and proper error handling.
 
   std::error_code ec;
   mio::mmap_source file;
-  std::unordered_set<std::wstring> words_return{};
+  std::unordered_set<std::string> words_return{};
   file.map(path.string(), ec);
   std::string current_word = "";
   if (!ec) {
@@ -63,11 +63,11 @@ indexer::get_words_text(const std::filesystem::path &path) {
       helper::convert_char(c);
       if (c == '!') {
         if (current_word.length() > 4 && current_word.length() < 15) {
-          std::wstring wide_word =
-              std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-                  current_word);
+          //std::string wide_word =
+            //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
+              //    current_word);
           //StemEnglish(wide_word);
-          words_return.insert(wide_word);
+          words_return.insert(current_word);
         }
         current_word.clear();
       } else {
@@ -76,11 +76,11 @@ indexer::get_words_text(const std::filesystem::path &path) {
     }
   }
   if (current_word.length() > 3 && current_word.length() < 20) {
-    std::wstring wide_word =
-        std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-            current_word);
+    //std::string wide_word =
+      //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
+        //    current_word);
     //StemEnglish(wide_word);
-    words_return.insert(wide_word);
+    words_return.insert(current_word);
   }
   file.unmap();
   // file name
@@ -90,10 +90,10 @@ indexer::get_words_text(const std::filesystem::path &path) {
     if (c == '!') {
       if (current_word.length() > 4 && current_word.length() < 15) {
 
-        std::wstring wide_word =
-            std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-                current_word);
-        words_return.insert(wide_word);
+        //std::string wide_word =
+          //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
+            //    current_word);
+        words_return.insert(current_word);
       }
       current_word.clear();
     } else {
@@ -102,11 +102,11 @@ indexer::get_words_text(const std::filesystem::path &path) {
   }
   if (current_word.length() > 3 && current_word.length() < 20) {
 
-    std::wstring wide_word =
-        std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-            current_word);
+    //std::string wide_word =
+      //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
+        //    current_word);
     //StemEnglish(wide_word);
-    words_return.insert(wide_word);
+    words_return.insert(current_word);
   }
 
   if (ec) {
@@ -115,14 +115,14 @@ indexer::get_words_text(const std::filesystem::path &path) {
   return words_return;
 }
 
-std::unordered_set<std::wstring>
+std::unordered_set<std::string>
 indexer::get_words(const std::filesystem::path &path) {
   std::string extension = helper::file_extension(path);
 
   if (extension == ".txt")
     return get_words_text(path);
 
-  return std::unordered_set<std::wstring>{};
+  return std::unordered_set<std::string>{};
 }
 
 LocalIndex
@@ -133,7 +133,7 @@ indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
   for (const std::filesystem::path &path : paths_to_index) {
     log::write(1, "indexer: indexing path: " + path.string());
     uint32_t path_id = task_index.add_path(path);
-    std::unordered_set<std::wstring> words_to_add = get_words(path);
+    std::unordered_set<std::string> words_to_add = get_words(path);
     task_index.add_words(words_to_add, path_id);
     if (ec) {
     }
@@ -208,7 +208,7 @@ int indexer::start_from() {
         log::write(1, "indexer(single threaded): indexing path: " +
                           dir_entry.path().string());
         uint32_t path_id = index.add_path(dir_entry.path());
-        std::unordered_set<std::wstring> words_to_add =
+        std::unordered_set<std::string> words_to_add =
             get_words(dir_entry.path());
         index.add_words(words_to_add, path_id);
         if (ec) {

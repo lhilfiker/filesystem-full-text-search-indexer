@@ -13,7 +13,7 @@
 #include <vector>
 
 struct words_reversed {
-  std::wstring word;
+  std::string word;
   std::unordered_set<uint32_t> reversed;
 
   bool operator<(const words_reversed &other) const {
@@ -47,7 +47,7 @@ public:
   int size();
   void clear();
   uint32_t add_path(const std::string &path_to_insert);
-  void add_words(std::unordered_set<std::wstring> &words_to_insert,
+  void add_words(std::unordered_set<std::string> &words_to_insert,
                  uint32_t path_id);
   void sort();
   void add_to_disk();
@@ -73,9 +73,9 @@ private:
 
 private:
   static bool extension_allowed(const std::filesystem::path &path);
-  static std::unordered_set<std::wstring>
+  static std::unordered_set<std::string>
   get_words_text(const std::filesystem::path &path);
-  static std::unordered_set<std::wstring>
+  static std::unordered_set<std::string>
   get_words(const std::filesystem::path &path);
   static LocalIndex
   thread_task(const std::vector<std::filesystem::path> paths_to_index);

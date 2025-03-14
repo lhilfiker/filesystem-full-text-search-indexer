@@ -42,7 +42,7 @@ uint32_t LocalIndex::add_path(const std::string& path_to_insert) {
 	return id;
 }
 
-void LocalIndex::add_words(std::unordered_set<std::wstring>& words_to_insert, uint32_t path_id) {
+void LocalIndex::add_words(std::unordered_set<std::string>& words_to_insert, uint32_t path_id) {
 	uint32_t word_count = 0;
 	for (words_reversed& word_r : words_and_reversed) {
 		if (words_to_insert.erase(word_r.word) == 1) {
@@ -51,7 +51,7 @@ void LocalIndex::add_words(std::unordered_set<std::wstring>& words_to_insert, ui
 			++word_count;
 		}
 	}
-	for (const std::wstring& word : words_to_insert) {
+	for (const std::string& word : words_to_insert) {
 		if(word.length() == 0) continue;
 		words_and_reversed.push_back({word, {path_id}});
 		words_size += word.length();
