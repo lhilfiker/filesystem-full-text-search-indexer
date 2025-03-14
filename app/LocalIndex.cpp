@@ -129,6 +129,11 @@ void LocalIndex::combine(LocalIndex& to_combine_index) {
 						words_and_reversed[local_counter].reversed.insert(paths_id[remote_id]);
 						reversed_size += sizeof(paths_id[remote_id]);
 				}	
+				++to_combine_counter;
+				if (to_combine_counter >= to_combine_count) {
+					to_combine_index.clear();
+					return; // finished if no more to_combine_elements.
+				}
 			}
 			// if it wasn't found and we went passed it, add a new word.
 			if (words_and_reversed[local_counter].word > to_combine_index.words_and_reversed[to_combine_counter].word) {	
