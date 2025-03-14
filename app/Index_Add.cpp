@@ -64,12 +64,12 @@ int Index::add_new(index_combine_data &index_to_add) {
   // paths_count
   // write the word count as 4 bytes values each to disk.
   file_location = 0;
-  for (const uint32_t &path_count : index_to_add.paths_count) {
-    mmap_paths_count[file_location] = (path_count >> 24) & 0xFF;
-    mmap_paths_count[file_location + 1] = (path_count >> 16) & 0xFF;
-    mmap_paths_count[file_location + 2] = (path_count >> 8) & 0xFF;
-    mmap_paths_count[file_location + 3] = path_count & 0xFF;
-    file_location += 4;
+  for (int i = 0; i < index_to_add.paths_count.size(); ++i) {
+    PathsCountItem new_paths_count{index_to_add.paths_count[i]};
+    for (int j = 0; j < 4; ++j) {
+      mmap_paths_count[file_location] = new_paths_count.bytes[j];
+      ++file_location;
+    }
   }
   paths_count_size = file_location;
   index_to_add.paths_count.clear(); // free memory
