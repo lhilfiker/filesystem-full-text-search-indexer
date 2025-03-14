@@ -172,6 +172,8 @@ void Index::check_files() {
     std::filesystem::remove(index_path / "reversed.index");
     std::filesystem::remove(index_path / "additional.index");
     std::filesystem::remove(index_path / "firsttimewrite.info");
+    std::filesystem::remove(index_path / "transaction" / "transaction.list");
+
   }
 
   if (!std::filesystem::exists(index_path / "paths.index") ||
@@ -196,6 +198,9 @@ void Index::check_files() {
     std::ofstream{index_path / "words_f.index"};
     std::ofstream{index_path / "reversed.index"};
     std::ofstream{index_path / "additional.index"};
+    // Remove Transacition file if exist
+    std::filesystem::remove(index_path / "transaction" / "transaction.list");
+
   }
   if (ec) {
     log::error("Index: check_files: error accessing/creating index files in " +
