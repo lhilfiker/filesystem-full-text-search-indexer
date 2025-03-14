@@ -143,6 +143,7 @@ struct Transaction {
   std::string content; // For move operations this will be 8 bytes always and it
                        // is a uint64_t and signals the byte shift.
 };
+#pragma pack(push, 1)
 
 union InsertionHeader {
   struct {
@@ -151,6 +152,7 @@ union InsertionHeader {
   };
   unsigned char bytes[16];
 };
+#pragma pack(pop)
 
 struct Insertion {
   InsertionHeader header;
@@ -162,36 +164,54 @@ struct PathsMapping {
   std::unordered_map<uint16_t, uint16_t> by_disk;
 };
 
+#pragma pack(push, 1)
+
 union WordsFValue {
   uint64_t location;
   uint32_t id;
   unsigned char bytes[12];
 };
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 
 union ReversedBlock {
   uint16_t ids[5];
   unsigned char bytes[10];
 };
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 
 union AdditionalBlock {
   uint16_t ids[25];
   unsigned char bytes[50];
 };
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 
 union PathOffset {
   uint16_t offset;
   unsigned char bytes[2];
 };
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 
 union PathsCountItem {
   uint32_t num;
   unsigned char bytes[4];
 };
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 
 union MoveOperationContent {
   uint64_t num;
   unsigned char bytes[8];
 };
+#pragma pack(pop)
 
 class Index {
 private:
