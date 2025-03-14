@@ -385,7 +385,7 @@ void Index::insertion_to_transactions(
            // didnt get added yet.
     movements_temp.push_back(
         {last_start_location,
-         static_cast<size_t>(index_type == 1 ? words_size : reversed_size - 1),
+         static_cast<size_t>(index_type == 1 ? words_size : reversed_size),
          byte_shift});
   }
 
