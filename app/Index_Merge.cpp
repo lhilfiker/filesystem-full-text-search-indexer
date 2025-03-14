@@ -487,7 +487,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
   // go through index on disk and map disk Id to local Id.
   uint64_t on_disk_count = 0;
-  uint32_t on_disk_id = 0;
+  uint32_t on_disk_id = 1;
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
   // paths_size is the count of bytes of the index on disk.
