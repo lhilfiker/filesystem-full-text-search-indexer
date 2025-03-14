@@ -11,7 +11,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   uint64_t file_location = 0;
   // resize files to make enough space to write all the data
   paths_size_buffer = (index_to_add.paths.size() * 2) + index_to_add.paths_size;
-  paths_count_size_buffer = index_to_add.paths_count_size;
+  paths_count_size_buffer = index_to_add.paths.size() * 4;
   words_size_buffer =
       index_to_add.words_size + index_to_add.words_and_reversed.size();
   // words_f_size maybe needs to be extended to allow larger numbers if 8
