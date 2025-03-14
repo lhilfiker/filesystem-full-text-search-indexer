@@ -167,8 +167,10 @@ struct PathsMapping {
 #pragma pack(push, 1)
 
 union WordsFValue {
-  uint64_t location;
-  uint32_t id;
+  struct {
+    uint64_t location;
+    uint32_t id;
+  };
   unsigned char bytes[12];
 };
 #pragma pack(pop)
