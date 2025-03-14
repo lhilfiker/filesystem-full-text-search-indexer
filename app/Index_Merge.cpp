@@ -770,7 +770,7 @@ int Index::merge(index_combine_data &index_to_add) {
         word_seperator -
         29; // 29 because its length of word + then the next seperator
     ++on_disk_id;
-    if (local_word_count >= index_to_add.words_and_reversed
+    if (local_word_count == index_to_add.words_and_reversed
                                 .size()) { // if not more words to compare quit.
       break;
     }
