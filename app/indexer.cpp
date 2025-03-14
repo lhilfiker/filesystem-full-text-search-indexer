@@ -66,7 +66,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
           std::wstring wide_word =
               std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
                   current_word);
-          StemEnglish(wide_word);
+          //StemEnglish(wide_word);
           words_return.insert(wide_word);
         }
         current_word.clear();
@@ -79,7 +79,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
     std::wstring wide_word =
         std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
             current_word);
-    StemEnglish(wide_word);
+    //StemEnglish(wide_word);
     words_return.insert(wide_word);
   }
   file.unmap();
@@ -105,7 +105,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
     std::wstring wide_word =
         std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
             current_word);
-    StemEnglish(wide_word);
+    //StemEnglish(wide_word);
     words_return.insert(wide_word);
   }
 
