@@ -17,7 +17,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
   // TODO: Overwrite path word count with inputet value. We need to pass the
   // path word count data from LocalIndex to here too first.
 
-  if (on_disk_id * 10 + 10 >= reversed_size) {
+  if (on_disk_id * 10 + 10 > reversed_size) {
     log::error("Index: Reversed out of range. Index corrupted."); // index most
                                                                   // likely
                                                                   // corrupted.
@@ -704,42 +704,46 @@ int Index::merge(index_combine_data &index_to_add) {
     }
 
     for (int i = 0; i < word_seperator - 30; ++i) {
+      // If current chars are the same + word on disk length same as on local
+      // length and last char add to existing word
       if ((int)mmap_words[on_disk_count + 1 + i] ==
-      (int)(index_to_add.words_and_reversed[local_word_count].word[i] - 'a') &&
-          i == local_word_length - 1 && word_seperator - 31 != i) { 
-        // If the local word is at the end and last char is same and it's not the same length as on disk word we add it before the current one.
-        log::write(2, "Index: Merge: Add new Word");
-        add_new_word(index_to_add, on_disk_count, transactions,
-                     words_insertions, reversed_insertions,
-                     additional_new_needed_size, words_new_needed_size,
-                     reversed_new_needed_size, on_disk_id, local_word_count,
-                     paths_mapping);
-        words_F_change[current_first_char - 'a' + 1] += local_word_length + 1;
-        ++local_word_count;
-
-        break;
+          (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
+                'a')) {
+        // If its last char and words are the same length we found it.
+        if (i == local_word_length - 1 &&
+            word_seperator - 30 == local_word_length) {
+          // add to existing
+          log::write(2, "Index: Merge: Found existing word");
+          add_reversed_to_word(index_to_add, on_disk_count, transactions,
+                               additional_new_needed_size, on_disk_id,
+                               local_word_count, paths_mapping);
+          ++local_word_count;
+  
+          break;
+        }
+        // If its last char and local word is at the end and not same length
+        // means we need to insert before
+        if (i == local_word_length - 1) {
+          // insert new
+          log::write(1, "Index: Merge: Add new Word");
+          add_new_word(index_to_add, on_disk_count, transactions,
+                       words_insertions, reversed_insertions,
+                       additional_new_needed_size, words_new_needed_size,
+                       reversed_new_needed_size, on_disk_id, local_word_count,
+                       paths_mapping);
+          words_F_change[current_first_char - 'a' + 1] += local_word_length + 1;
+          ++local_word_count;
+  
+          break;
+        }
       }
-      if (word_seperator - 31 == i && i == local_word_length - 1 &&
-        (int)mmap_words[on_disk_count + 1 + i] ==
-        (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
-                  'a')) { // if we reach this point and they are the
-                         // same word we found the word.
-        // update reversed and additionals if needed.
-        log::write(2, "Index: Merge: Found existing word");
-        add_reversed_to_word(index_to_add, on_disk_count, transactions,
-                             additional_new_needed_size, on_disk_id,
-                             local_word_count, paths_mapping);
-        ++local_word_count;
 
-        break;
-      }
+      // If disk char > local char
       if ((int)mmap_words[on_disk_count + 1 + i] >
           (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
-              'a')) { // if the on disk char is bigger it means we went
-                     // already past the word.
-        // insert a new word and reversed and additional before. Update words_f
-        // if needed.
-        log::write(2, "Index: Merge: Add new Word");
+                'a')) {
+        // insert new
+        log::write(1, "Index: Merge: Add new Word");
         add_new_word(index_to_add, on_disk_count, transactions,
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, words_new_needed_size,
@@ -750,20 +754,15 @@ int Index::merge(index_combine_data &index_to_add) {
 
         break;
       }
+
+      // If disk char < local char
       if ((int)mmap_words[on_disk_count + 1 + i] <
-      (int)(index_to_add.words_and_reversed[local_word_count].word[i] - 'a')) {
-        log::write(2, "Index: Merge: Skip Word");
+          (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
+                'a')) {
+                  // skip
+                  log::write(1, "Index: Merge: Skip Word on Disk");
 
-        // this means the on disk is smaller than the local. Skip to the next
-        // word.
-        break;
-      }
-      if (i == local_word_length - 1) {
-        log::write(2, "Index: Merge: Skip Word");
-
-        // local word is already done and doesn't have seem last char so we skip
-        // it.
-        break;
+                  break;
       }
     }
     on_disk_count +=
