@@ -259,9 +259,9 @@ void Index::add_new_word(index_combine_data &index_to_add,
   // compared and determined we went passed out target.
   new_word.content.reserve(word_length + 1);
   if (word_length + 30 > 254) {
-    new_word.content += 255;
+    new_word.content += (char)255;
   } else {
-    new_word.content += word_length + 30;
+    new_word.content += (char)(word_length + 30);
   }
   for (const char c : index_to_add.words_and_reversed[local_word_count].word) {
     new_word.content += c - 'a';
@@ -358,6 +358,8 @@ void Index::insertion_to_transactions(
   };
   std::vector<movements_temp_item> movements_temp;
 
+  size_t append_byte_shift = 0;
+
   size_t last_start_location = 0;
   size_t byte_shift = 0;
   // we make a list of moves so everything fits. then we make transactions from
@@ -366,14 +368,26 @@ void Index::insertion_to_transactions(
     if (i == 0) {
       last_start_location = to_insertions[i].header.location;
     }
+    if (to_insertions[i].header.location >= (index_type == 1 ? words_size - 1
+                                                            : reversed_size - 1)) {
+      // appendings. We will update their locations with the byte shift but not
+      // move them around. The last check will also just move from the last non
+      // append insertion till words/reversed_size
+      to_insertions[i].header.location += byte_shift + append_byte_shift;
+      append_byte_shift += to_insertions[i].header.content_length;
+
+      continue;
+    }
     if (last_start_location != to_insertions[i].header.location) {
       // if it's not the same it means it's a new block. WE add the current
       // block first.
-      movements_temp.push_back(
-          {last_start_location, to_insertions[i].header.location, byte_shift});
+      movements_temp.push_back({last_start_location,
+                                to_insertions[i].header.location,
+                                byte_shift});
       last_start_location = to_insertions[i].header.location;
       to_insertions[i].header.location += byte_shift;
       byte_shift += to_insertions[i].header.content_length;
+
     } else {
       // It is the same. Update Byteshift only and apply byteshift.
       to_insertions[i].header.location += byte_shift;
@@ -385,7 +399,8 @@ void Index::insertion_to_transactions(
            // didnt get added yet.
     movements_temp.push_back(
         {last_start_location,
-         static_cast<size_t>(index_type == 1 ? words_size : reversed_size),
+         static_cast<size_t>(index_type == 1 ? words_size - 1
+                                             : reversed_size - 1),
          byte_shift});
   }
 
@@ -409,11 +424,11 @@ void Index::insertion_to_transactions(
                                  backup_ids,
                                  0,
                                  range,
-                                 "        "};
+                                 ""};
       MoveOperationContent mov_content;
       mov_content.num = movements_temp[i].byte_shift;
       for (int j = 0; j < 8; ++j) {
-        move_operation.content[j] = mov_content.bytes[j];
+        move_operation.content += mov_content.bytes[j];
       }
       transactions.push_back(move_operation);
       ++backup_ids;
@@ -426,11 +441,11 @@ void Index::insertion_to_transactions(
                                0,
                                0,
                                range,
-                               "        "};
+                               ""};
     MoveOperationContent mov_content;
     mov_content.num = movements_temp[i].byte_shift;
     for (int j = 0; j < 8; ++j) {
-      move_operation.content[j] = mov_content.bytes[j];
+      move_operation.content += mov_content.bytes[j];
     }
     transactions.push_back(move_operation);
   }
@@ -721,6 +736,11 @@ int Index::merge(index_combine_data &index_to_add) {
                                additional_new_needed_size, on_disk_id,
                                local_word_count, paths_mapping);
           ++local_word_count;
+          if (local_word_count ==
+              index_to_add.words_and_reversed
+                  .size()) { // if not more words to compare quit.
+            break;
+          }
           local_word_length =
               index_to_add.words_and_reversed[local_word_count].word.length();
           on_disk_count +=
@@ -744,6 +764,11 @@ int Index::merge(index_combine_data &index_to_add) {
                        paths_mapping);
           words_F_change[disk_first_char - 'a' + 1] += local_word_length + 1;
           ++local_word_count;
+          if (local_word_count ==
+              index_to_add.words_and_reversed
+                  .size()) { // if not more words to compare quit.
+            break;
+          }
           local_word_length =
               index_to_add.words_and_reversed[local_word_count].word.length();
           local_first_char =
@@ -751,8 +776,8 @@ int Index::merge(index_combine_data &index_to_add) {
           break;
         }
 
-        // If its the last on disk char and at the end and not the same length.
-        // means we need to skip this word.
+        // If its the last on disk char and at the end and not the same
+        // length. means we need to skip this word.
         if (i == word_seperator - 31) {
           // skip
           log::write(1, "Index: Merge: Skip Word on Disk");
@@ -777,6 +802,11 @@ int Index::merge(index_combine_data &index_to_add) {
                      paths_mapping);
         words_F_change[disk_first_char - 'a' + 1] += local_word_length + 1;
         ++local_word_count;
+        if (local_word_count ==
+            index_to_add.words_and_reversed
+                .size()) { // if not more words to compare quit.
+          break;
+        }
         local_word_length =
             index_to_add.words_and_reversed[local_word_count].word.length();
         local_first_char =
@@ -803,16 +833,17 @@ int Index::merge(index_combine_data &index_to_add) {
     }
   }
 
-  // we need to insert all words that came after the last word on disk. Update
-  // words_f_change too.
+  // we need to insert all words that came after the last word on disk.
+  // Update words_f_change too.
 
   for (; local_word_count < index_to_add.words_and_reversed.size();
        ++local_word_count) {
     local_word_length =
         index_to_add.words_and_reversed[local_word_count].word.length();
-    // Even tho we add multiple words at the same on_disk_id or on_disk_count it
-    // doesnt matter because when insertions are processed it will add all the
-    // newly added word count to the insertion location.
+    // Even tho we add multiple words at the same on_disk_id or
+    // on_disk_count it doesnt matter because when insertions are
+    // processed it will add all the newly added word count to the
+    // insertion location.
     log::write(2, "Index: Merge: Adding a new word at the end");
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
                  reversed_insertions, additional_new_needed_size,
@@ -823,10 +854,10 @@ int Index::merge(index_combine_data &index_to_add) {
                    1] += local_word_length + 1;
   }
 
-  // calculate the new words f values and create a transaction to update all.
-  // This is not an ideal implementation because we copy the whole thing. When
-  // we add custom words_f length then we can make a better implementation that
-  // is faster and saves memory and space.
+  // calculate the new words f values and create a transaction to update
+  // all. This is not an ideal implementation because we copy the whole
+  // thing. When we add custom words_f length then we can make a better
+  // implementation that is faster and saves memory and space.
   Transaction words_f_new{0, 2, 0, 0, 1, 312};
   words_f_new.content.resize(312);
   uint64_t all_size = 0;
@@ -839,10 +870,10 @@ int Index::merge(index_combine_data &index_to_add) {
 
   words_f_new.content.clear(); // free some memory.
 
-  // Now we have figured out everything we want to do. Now we need to finish the
-  // Transaction List and then write it to disk.
-  // First add a resize Transaction
-  // for words, reversed and additional at the start of the List.
+  // Now we have figured out everything we want to do. Now we need to
+  // finish the Transaction List and then write it to disk. First add a
+  // resize Transaction for words, reversed and additional at the start of
+  // the List.
   log::write(2, "Index: Creating resize transaction for words with size: " +
                     std::to_string(words_size + words_new_needed_size));
   log::write(2, "Index: Creating resize transaction for reversed with size: " +
@@ -861,15 +892,16 @@ int Index::merge(index_combine_data &index_to_add) {
   transactions.insert(transactions.begin(), resize_additional);
 
   // Now we need to convert the Insertion to Transactions.
-  // First we need to make Transactions to make place for the insertion. We have
-  // already resized so there is enough space for it. We need to create the
-  // Transaction so data only gets moved once.
+  // First we need to make Transactions to make place for the insertion.
+  // We have already resized so there is enough space for it. We need to
+  // create the Transaction so data only gets moved once.
   insertion_to_transactions(transactions, words_insertions, 1);
   insertion_to_transactions(transactions, reversed_insertions, 3);
 
   // Now we need to write the Transaction List to disk.
-  // The Transactions are saved in indexpath / transaction / transaction.list
-  // Backups are saved in indexpath / transaction / backups / backupid.backup
+  // The Transactions are saved in indexpath / transaction /
+  // transaction.list Backups are saved in indexpath / transaction /
+  // backups / backupid.backup
 
   std::filesystem::path transaction_path =
       index_path / "transaction" / "transaction.list";
@@ -886,8 +918,9 @@ int Index::merge(index_combine_data &index_to_add) {
     }
   }
 
-  // just create an empty file which we then resize to the required size and
-  // fill with mmap to keep consistency with the other file operations on disks.
+  // just create an empty file which we then resize to the required size
+  // and fill with mmap to keep consistency with the other file operations
+  // on disks.
   std::ofstream{transaction_path};
   resize(transaction_path, recalculated_size);
 
@@ -897,8 +930,8 @@ int Index::merge(index_combine_data &index_to_add) {
 
   size_t transaction_file_location = 0;
   for (size_t i = 0; i < transactions.size(); ++i) {
-    // copy the header first. Then check the operation type and then copy the
-    // content if needed.
+    // copy the header first. Then check the operation type and then copy
+    // the content if needed.
     std::memcpy(&mmap_transactions[transaction_file_location],
                 &transactions[i].header.bytes[0], 27);
     transaction_file_location += 27;

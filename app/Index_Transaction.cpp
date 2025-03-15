@@ -115,8 +115,24 @@ int Index::execute_transactions() {
     if (current_header->operation_type == 0) { // MOVE
       current_header->status = 1;
       mmap_transactions.sync(ec);
+      uint64_t shift_amount = 0;
+      memcpy(&shift_amount,
+             &mmap_transactions[transaction_current_location + 27], 8);
       transaction_current_write_sync_batch = 0;
       std::memmove(
+          current_header->index_type == 0
+              ? &mmap_paths[current_header->location + shift_amount]
+              : (current_header->index_type == 1
+                     ? &mmap_words[current_header->location + shift_amount]
+                     : (current_header->index_type == 2
+                            ? &mmap_words_f[current_header->location + shift_amount]
+                            : (current_header->index_type == 3
+                                   ? &mmap_reversed[current_header->location + shift_amount]
+                                   : (current_header->index_type == 4
+                                          ? &mmap_additional[current_header
+                                                                 ->location]
+                                          : &mmap_paths_count
+                                                [current_header->location])))),
           current_header->index_type == 0
               ? &mmap_paths[current_header->location]
               : (current_header->index_type == 1
@@ -130,7 +146,6 @@ int Index::execute_transactions() {
                                                                  ->location]
                                           : &mmap_paths_count
                                                 [current_header->location])))),
-          &mmap_transactions[transaction_current_location + 27],
           current_header->content_length);
       log::write(1, "Index: Transaction: Move operation completed for index " +
                         std::to_string(current_header->index_type) +
