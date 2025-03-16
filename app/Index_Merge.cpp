@@ -352,6 +352,7 @@ void Index::insertion_to_transactions(
     std::vector<Transaction> &move_transactions,
     std::vector<Insertion> &to_insertions,
     int index_type) { // index_type: 1 = words, 3 = reversed
+  if (to_insertions.size() == 0) return;
   struct movements_temp_item {
     size_t start_pos;
     size_t end_pos;
