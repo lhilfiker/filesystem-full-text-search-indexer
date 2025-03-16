@@ -14,9 +14,6 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
                                  const size_t &local_word_count,
                                  PathsMapping &paths_mapping) {
 
-  // TODO: Overwrite path word count with inputet value. We need to pass the
-  // path word count data from LocalIndex to here too first.
-
   if (on_disk_id * 10 + 10 > reversed_size) {
     log::error("Index: Reversed out of range. Index corrupted."); // index most
                                                                   // likely
@@ -352,7 +349,8 @@ void Index::insertion_to_transactions(
     std::vector<Transaction> &move_transactions,
     std::vector<Insertion> &to_insertions,
     int index_type) { // index_type: 1 = words, 3 = reversed
-  if (to_insertions.size() == 0) return;
+  if (to_insertions.size() == 0)
+    return;
   struct movements_temp_item {
     size_t start_pos;
     size_t end_pos;
@@ -400,15 +398,15 @@ void Index::insertion_to_transactions(
            // didnt get added yet.
     movements_temp.push_back(
         {last_start_location,
-         static_cast<size_t>(index_type == 1 ? words_size
-                                             : reversed_size),
+         static_cast<size_t>(index_type == 1 ? words_size : reversed_size),
          byte_shift});
   }
 
   // now we create move transaction from last to first of the movements_temp.
   uint64_t backup_ids = 1;
   for (size_t i = movements_temp.size(); i-- > 0;) {
-    if(movements_temp.size() == 0) break;
+    if (movements_temp.size() == 0)
+      break;
     size_t range = movements_temp[i].end_pos - movements_temp[i].start_pos;
     if (range > byte_shift) {
       // this means we copy over the data itself we are trying to move. Thats
@@ -732,6 +730,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
     // read the one byte word sperator.
     uint8_t word_seperator = mmap_words[on_disk_count];
+    uint32_t word_disk_seperator = 30;
 
     if (word_seperator < 31 ||
         (word_seperator - 29) + on_disk_count >
@@ -751,8 +750,19 @@ int Index::merge(index_combine_data &index_to_add) {
                // it manually until we reach another 30< byte.
       // go through start position until end position comparing each char until
       // either it is smaller or bigger. then just try to find the next
-      // seperator. update word_lentgh and count and first char.
-      continue;
+      // seperator.
+      for (int i = 1; mmap_words[on_disk_count + i] < 31; ++i) {
+        ++word_disk_seperator;
+        if (words_size <= on_disk_count + i) {
+          log::error("Index: Combine: Index ends before the next word "
+                     "seperator appeared.");
+        }
+        if (word_seperator < 255) {
+          log::error("Index: Combine: Word seperator is smaller then the expected 255+. Index most likely corrupt.");
+        }
+      }
+    } else {
+      word_disk_seperator = word_seperator;
     }
 
     for (int i = 0; i < word_seperator - 30; ++i) {
