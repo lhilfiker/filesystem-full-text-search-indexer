@@ -2,7 +2,6 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
-#include "lib/english_stem.h"
 #include "lib/mio.hpp"
 #include <array>
 #include <filesystem>
@@ -64,7 +63,6 @@ struct threads_jobs {
 // indexer.cpp
 class indexer {
 private:
-  static stemming::english_stem<> StemEnglish;
   static bool config_loaded;
   static bool scan_dot_paths;
   static std::filesystem::path path_to_scan;
