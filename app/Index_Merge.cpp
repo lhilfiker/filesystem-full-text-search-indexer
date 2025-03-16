@@ -229,9 +229,9 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         additional_size + additional_new_needed_size, // add to the end
         0,
         1,
-        additional_new_transaction.content.length()};
+        50};
     transactions.push_back(additional_new_transaction);
-    additional_new_needed_size += additional_new_transaction.content.length();
+    additional_new_needed_size += 50;
   }
 
   // everything got checked, free slots filled and new additional if needed
@@ -335,9 +335,9 @@ void Index::add_new_word(index_combine_data &index_to_add,
                                   additional_new_needed_size, // add to the end
                               0,
                               1,
-                              new_additionals.content.length()};
+                              50};
     transactions.push_back(new_additionals);
-    additional_new_needed_size += new_additionals.content.length();
+    additional_new_needed_size += 50;
   }
 
   // convert to bytes and add insertion
