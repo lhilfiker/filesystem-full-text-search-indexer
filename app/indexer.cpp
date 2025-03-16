@@ -1,5 +1,4 @@
 #include "functions.h"
-#include "lib/english_stem.h"
 #include "lib/mio.hpp"
 #include <chrono>
 #include <filesystem>
@@ -9,7 +8,6 @@
 #include <unordered_set>
 #include <vector>
 
-stemming::english_stem<> indexer::StemEnglish;
 bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
 std::filesystem::path indexer::path_to_scan;
@@ -63,10 +61,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
       helper::convert_char(c);
       if (c == '!') {
         if (current_word.length() > 4 && current_word.length() < 15) {
-          //std::string wide_word =
-            //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-              //    current_word);
-          //StemEnglish(wide_word);
+          // stem word
           words_return.insert(current_word);
         }
         current_word.clear();
@@ -76,10 +71,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
     }
   }
   if (current_word.length() > 3 && current_word.length() < 20) {
-    //std::string wide_word =
-      //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-        //    current_word);
-    //StemEnglish(wide_word);
+    // stem word
     words_return.insert(current_word);
   }
   file.unmap();
@@ -89,10 +81,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
     helper::convert_char(c);
     if (c == '!') {
       if (current_word.length() > 4 && current_word.length() < 15) {
-
-        //std::string wide_word =
-          //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-            //    current_word);
+        // stem word
         words_return.insert(current_word);
       }
       current_word.clear();
@@ -101,11 +90,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
     }
   }
   if (current_word.length() > 3 && current_word.length() < 20) {
-
-    //std::string wide_word =
-      //  std::string_convert<std::codecvt_utf8<wchar_t>>().from_bytes(
-        //    current_word);
-    //StemEnglish(wide_word);
+    // stem word
     words_return.insert(current_word);
   }
 
