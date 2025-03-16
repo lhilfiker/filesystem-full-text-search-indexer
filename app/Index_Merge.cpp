@@ -368,8 +368,8 @@ void Index::insertion_to_transactions(
     if (i == 0) {
       last_start_location = to_insertions[i].header.location;
     }
-    if (to_insertions[i].header.location >= (index_type == 1 ? words_size - 1
-                                                            : reversed_size - 1)) {
+    if (to_insertions[i].header.location >=
+        (index_type == 1 ? words_size - 1 : reversed_size - 1)) {
       // appendings. We will update their locations with the byte shift but not
       // move them around. The last check will also just move from the last non
       // append insertion till words/reversed_size
@@ -381,9 +381,8 @@ void Index::insertion_to_transactions(
     if (last_start_location != to_insertions[i].header.location) {
       // if it's not the same it means it's a new block. WE add the current
       // block first.
-      movements_temp.push_back({last_start_location,
-                                to_insertions[i].header.location,
-                                byte_shift});
+      movements_temp.push_back(
+          {last_start_location, to_insertions[i].header.location, byte_shift});
       last_start_location = to_insertions[i].header.location;
       to_insertions[i].header.location += byte_shift;
       byte_shift += to_insertions[i].header.content_length;
@@ -685,6 +684,7 @@ int Index::merge(index_combine_data &index_to_add) {
     // location to the start of that char.
     if (disk_first_char < local_first_char) {
       if (words_f[local_first_char - 'a'].location < words_size) {
+        log::write(1, "Index: Merge: Skipping using Words_f Table");
         on_disk_count = words_f[local_first_char - 'a'].location;
         on_disk_id = words_f[local_first_char - 'a'].id;
         disk_first_char = local_first_char;
@@ -708,7 +708,7 @@ int Index::merge(index_combine_data &index_to_add) {
           "Index: Combine: word seperator is invalid. This means the index is "
           "most likely corrupted. Stopping to protect the index.");
     }
-    if (disk_first_char - 'a' !=
+    if (disk_first_char - 'a' <
         mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
       disk_first_char = mmap_words[on_disk_count + 1] + 'a';
     }
