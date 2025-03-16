@@ -408,6 +408,7 @@ void Index::insertion_to_transactions(
   // now we create move transaction from last to first of the movements_temp.
   uint64_t backup_ids = 1;
   for (size_t i = movements_temp.size(); i-- > 0;) {
+    if(movements_temp.size() == 0) break;
     size_t range = movements_temp[i].end_pos - movements_temp[i].start_pos;
     if (range > byte_shift) {
       // this means we copy over the data itself we are trying to move. Thats
