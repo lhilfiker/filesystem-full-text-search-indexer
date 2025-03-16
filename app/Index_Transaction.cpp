@@ -118,7 +118,6 @@ int Index::execute_transactions() {
       uint64_t shift_amount = 0;
       memcpy(&shift_amount,
              &mmap_transactions[transaction_current_location + 27], 8);
-      transaction_current_write_sync_batch = 0;
       std::memmove(
           current_header->index_type == 0
               ? &mmap_paths[current_header->location + shift_amount]
@@ -156,7 +155,7 @@ int Index::execute_transactions() {
           transaction_current_write_sync_batch > 5000) {
         current_header->status = 1;
         mmap_transactions.sync(ec);
-        transaction_current_write_sync_batch = 0;
+        transaction_current_write_sync_batch = 1;
       }
       std::memcpy(
           current_header->index_type == 0
@@ -182,7 +181,6 @@ int Index::execute_transactions() {
     } else if (current_header->operation_type == 2) { // RESIZE
       current_header->status = 1;
       mmap_transactions.sync(ec);
-      transaction_current_write_sync_batch = 0;
       unmap();
       resize(current_header->index_type == 0
                  ? index_path / "paths.index"
@@ -205,7 +203,6 @@ int Index::execute_transactions() {
     } else if (current_header->operation_type == 3) { // CREATE A BACKUP
       current_header->status = 1;
       mmap_transactions.sync(ec);
-      transaction_current_write_sync_batch = 0;
       std::string backup_file_name =
           std::to_string(current_header->backup_id) + ".backup";
       std::ofstream{index_path / "transaction" / "backups" / backup_file_name};
@@ -242,7 +239,7 @@ int Index::execute_transactions() {
     // snyc before we mark as done.
     if (current_header->operation_type != 1 ||
         transaction_current_write_sync_batch >
-            5000) { // sync only if it was not a move operation or 5000 move
+            5000 || transaction_current_write_sync_batch == 0) { // sync only if it was not a move operation or 5000 move
                     // operations happend
       if (sync_all() == 1) {
         log::error(
@@ -252,7 +249,6 @@ int Index::execute_transactions() {
         log::write(
             1, "Index: Transaction: Successfully synced index changes to disk");
       }
-      mmap_transactions.sync(ec);
       transaction_current_write_sync_batch = 0;
     }
 
