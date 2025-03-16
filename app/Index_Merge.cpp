@@ -81,8 +81,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       if (disk_additional->ids[i] == 0) {
         // save the free place in the current additional free. An empty one for
         // each additional is always created first.
-        additional_free[additional_free.size() - 1].free.push_back(
-            i);
+        additional_free[additional_free.size() - 1].free.push_back(i);
       } else { // remove if it exists
         index_to_add.words_and_reversed[local_word_count].reversed.erase(
             paths_mapping.by_disk[disk_additional->ids[i]]);
@@ -106,7 +105,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       content.offset = paths_mapping.by_local[r_id];
       // add it to the transaction to overwrite the empty place with the new
       // disk id and then delete it from the local reversed list.
-      reversed_add_transaction.content = content.bytes[0] + content.bytes[1];
+      reversed_add_transaction.content += content.bytes[0];
+      reversed_add_transaction.content += content.bytes[1];
       index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
       transactions.push_back(reversed_add_transaction);
 
@@ -129,8 +129,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         content.offset = paths_mapping.by_local[a_id];
         // add it to the transaction to overwrite the empty place with the new
         // disk id and then delete it from the local reversed list.
-        additional_add_transaction.content =
-            content.bytes[0] + content.bytes[1];
+        additional_add_transaction.content += content.bytes[0];
+        additional_add_transaction.content += content.bytes[1];
         index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
         transactions.push_back(additional_add_transaction);
 
@@ -763,7 +763,8 @@ int Index::merge(index_combine_data &index_to_add) {
                      "seperator appeared.");
         }
         if (word_seperator < 255) {
-          log::error("Index: Combine: Word seperator is smaller then the expected 255+. Index most likely corrupt.");
+          log::error("Index: Combine: Word seperator is smaller then the "
+                     "expected 255+. Index most likely corrupt.");
         }
       }
     } else {
