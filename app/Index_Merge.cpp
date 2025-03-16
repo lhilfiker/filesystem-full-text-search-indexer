@@ -82,7 +82,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         // save the free place in the current additional free. An empty one for
         // each additional is always created first.
         additional_free[additional_free.size() - 1].free.push_back(
-            disk_additional->ids[i]);
+            i);
       } else { // remove if it exists
         index_to_add.words_and_reversed[local_word_count].reversed.erase(
             paths_mapping.by_disk[disk_additional->ids[i]]);
@@ -169,7 +169,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
                          1; // get the ID of the new additional ID at the end.
     content.offset = current_additional;
     // add it to the transaction
-    additional_add_transaction.content = content.bytes[0] + content.bytes[1];
+    additional_add_transaction.content += content.bytes[0];
+    additional_add_transaction.content += content.bytes[1];
     transactions.push_back(additional_add_transaction);
 
     // go through all missing local Ids and add them to additionals
@@ -189,7 +190,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       // add path id for local id and then erase it.
       PathOffset content;
       content.offset = paths_mapping.by_local[a_id];
-      additional_new_transaction.content += content.bytes[0] + content.bytes[1];
+      additional_new_transaction.content += content.bytes[0];
+      additional_new_transaction.content += content.bytes[1];
       index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
 
       ++in_additional_counter;
@@ -200,7 +202,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
             0) { // If this will be the last one we will add 0.
           PathOffset add;
           add.offset = 0;
-          additional_new_transaction.content += add.bytes[0] + add.bytes[1];
+          additional_new_transaction.content += add.bytes[0];
+          additional_new_transaction.content += add.bytes[1];
           in_additional_counter = 0;
           break;
         }
@@ -208,7 +211,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         ++current_additional;
         PathOffset add;
         add.offset = current_additional;
-        additional_new_transaction.content += add.bytes[0] + add.bytes[1];
+        additional_new_transaction.content += add.bytes[0];
+        additional_new_transaction.content += add.bytes[1];
       }
     }
     // If an additional is not full we fill it with 0.
@@ -216,7 +220,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
       for (; in_additional_counter < 25; ++in_additional_counter) {
         PathOffset add;
         add.offset = 0;
-        additional_new_transaction.content += add.bytes[0] + add.bytes[1];
+        additional_new_transaction.content += add.bytes[0];
+        additional_new_transaction.content += add.bytes[1];
       }
     }
     // add the transaction
@@ -226,9 +231,9 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
         additional_size + additional_new_needed_size, // add to the end
         0,
         1,
-        50};
+        additional_new_transaction.content.length()};
     transactions.push_back(additional_new_transaction);
-    additional_new_needed_size += 50;
+    additional_new_needed_size += additional_new_transaction.content.length();
   }
 
   // everything got checked, free slots filled and new additional if needed
@@ -332,9 +337,9 @@ void Index::add_new_word(index_combine_data &index_to_add,
                                   additional_new_needed_size, // add to the end
                               0,
                               1,
-                              50};
+                              new_additionals.content.length()};
     transactions.push_back(new_additionals);
-    additional_new_needed_size += 50;
+    additional_new_needed_size += new_additionals.content.length();
   }
 
   // convert to bytes and add insertion
