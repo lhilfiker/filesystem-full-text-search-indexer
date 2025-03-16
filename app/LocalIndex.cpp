@@ -152,7 +152,9 @@ void LocalIndex::combine(LocalIndex& to_combine_index) {
 					return; // finished if no more to_combine_elements.
 				}
 			}
-			++local_counter;
+			if (words_and_reversed[local_counter].word < to_combine_index.words_and_reversed[to_combine_counter].word) {
+				++local_counter;
+			}
 		}
 	
 		// add missing
