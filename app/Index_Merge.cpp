@@ -349,6 +349,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
 
 void Index::insertion_to_transactions(
     std::vector<Transaction> &transactions,
+    std::vector<Transaction> &move_transactions,
     std::vector<Insertion> &to_insertions,
     int index_type) { // index_type: 1 = words, 3 = reversed
   struct movements_temp_item {
@@ -416,7 +417,7 @@ void Index::insertion_to_transactions(
                                 backup_ids,
                                 3,
                                 range};
-      transactions.push_back(create_backup);
+      move_transactions.push_back(create_backup);
       Transaction move_operation{0,
                                  static_cast<uint8_t>(index_type),
                                  movements_temp[i].start_pos,
@@ -429,7 +430,7 @@ void Index::insertion_to_transactions(
       for (int j = 0; j < 8; ++j) {
         move_operation.content += mov_content.bytes[j];
       }
-      transactions.push_back(move_operation);
+      move_transactions.push_back(move_operation);
       ++backup_ids;
       continue;
     }
@@ -446,7 +447,7 @@ void Index::insertion_to_transactions(
     for (int j = 0; j < 8; ++j) {
       move_operation.content += mov_content.bytes[j];
     }
-    transactions.push_back(move_operation);
+    move_transactions.push_back(move_operation);
   }
   movements_temp.clear();
 
@@ -465,12 +466,43 @@ void Index::insertion_to_transactions(
   to_insertions.clear();
 }
 
+void Index::write_to_transaction(std::vector<Transaction> &transactions,
+                                 mio::mmap_sink &mmap_transactions,
+                                 size_t &transaction_file_location) {
+  std::error_code ec;
+  for (size_t i = 0; i < transactions.size(); ++i) {
+    // copy the header first. Then check the operation type and then copy
+    // the content if needed.
+    std::memcpy(&mmap_transactions[transaction_file_location],
+                &transactions[i].header.bytes[0], 27);
+    transaction_file_location += 27;
+    if (transactions[i].header.operation_type != 2 &&
+        transactions[i].header.operation_type != 3) { // resize or backup
+      if (transactions[i].header.operation_type == 0) {
+        // For move operations content is 8 bytes long as a uint64_t to
+        // represent the byte shift. content length is used for end pos.
+        std::memcpy(&mmap_transactions[transaction_file_location],
+                    &transactions[i].content[0], 8);
+        transaction_file_location += 8;
+      } else {
+        std::memcpy(&mmap_transactions[transaction_file_location],
+                    &transactions[i].content[0],
+                    transactions[i].header.content_length);
+        transaction_file_location += transactions[i].header.content_length;
+      }
+    }
+  }
+  if (ec)
+    log::error("Index: Write to Transaction Failed. Exiting");
+}
+
 int Index::merge(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: adding to existing index.");
   std::error_code ec;
   map();
 
   std::vector<Transaction> transactions;
+  std::vector<Transaction> move_transactions;
   // for insertions: we will add to the list the locations current on disk, not
   // including already added ones. That will be done later. Additionals just
   // need + 50 on additional new needed size when added.
@@ -883,20 +915,22 @@ int Index::merge(index_combine_data &index_to_add) {
                  std::to_string(additional_size + additional_new_needed_size));
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
                            ""};
-  transactions.insert(transactions.begin(), resize_words);
+  move_transactions.push_back(resize_words);
   Transaction resize_reversed{
       0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""};
-  transactions.insert(transactions.begin(), resize_reversed);
+  move_transactions.push_back(resize_reversed);
   Transaction resize_additional{
       0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""};
-  transactions.insert(transactions.begin(), resize_additional);
+  move_transactions.push_back(resize_additional);
 
   // Now we need to convert the Insertion to Transactions.
   // First we need to make Transactions to make place for the insertion.
   // We have already resized so there is enough space for it. We need to
   // create the Transaction so data only gets moved once.
-  insertion_to_transactions(transactions, words_insertions, 1);
-  insertion_to_transactions(transactions, reversed_insertions, 3);
+  insertion_to_transactions(transactions, move_transactions, words_insertions,
+                            1);
+  insertion_to_transactions(transactions, move_transactions,
+                            reversed_insertions, 3);
 
   // Now we need to write the Transaction List to disk.
   // The Transactions are saved in indexpath / transaction /
@@ -910,11 +944,14 @@ int Index::merge(index_combine_data &index_to_add) {
   for (const auto &tx : transactions) {
     recalculated_size += 27; // Header size
     if (tx.header.operation_type != 2 && tx.header.operation_type != 3) {
-      if (tx.header.operation_type == 0) {
-        recalculated_size += 8; // Move operations need 8 bytes
-      } else {
-        recalculated_size += tx.header.content_length;
-      }
+      recalculated_size += tx.header.content_length;
+    }
+  }
+  // only move and backup transactions
+  for (const auto &tx : move_transactions) {
+    recalculated_size += 27; // Header size
+    if (tx.header.operation_type != 3 && tx.header.operation_type != 3) {
+      recalculated_size += 8; // Move operations need 8 bytes
     }
   }
 
@@ -929,28 +966,13 @@ int Index::merge(index_combine_data &index_to_add) {
                                           mio::map_entire_file, ec);
 
   size_t transaction_file_location = 0;
-  for (size_t i = 0; i < transactions.size(); ++i) {
-    // copy the header first. Then check the operation type and then copy
-    // the content if needed.
-    std::memcpy(&mmap_transactions[transaction_file_location],
-                &transactions[i].header.bytes[0], 27);
-    transaction_file_location += 27;
-    if (transactions[i].header.operation_type != 2 &&
-        transactions[i].header.operation_type != 3) { // resize or backup
-      if (transactions[i].header.operation_type == 0) {
-        // For move operations content is 8 bytes long as a uint64_t to
-        // represent the byte shift. content length is used for end pos.
-        std::memcpy(&mmap_transactions[transaction_file_location],
-                    &transactions[i].content[0], 8);
-        transaction_file_location += 8;
-      } else {
-        std::memcpy(&mmap_transactions[transaction_file_location],
-                    &transactions[i].content[0],
-                    transactions[i].header.content_length);
-        transaction_file_location += transactions[i].header.content_length;
-      }
-    }
-  }
+  // First write the resize and move operations, then the writes so we can do
+  // writes without syncing to disk everytime speeding it up
+  write_to_transaction(move_transactions, mmap_transactions,
+                       transaction_file_location);
+  write_to_transaction(transactions, mmap_transactions,
+                       transaction_file_location);
+
   // Transaction List written. unmap and free memory.
   mmap_transactions.sync(ec);
   // mark first as started to signal that writing was successful.
