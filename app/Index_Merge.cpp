@@ -10,6 +10,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
                                  uint64_t &on_disk_count,
                                  std::vector<Transaction> &transactions,
                                  size_t &additional_new_needed_size,
+                                 size_t &reversed_new_needed_size,
                                  uint32_t &on_disk_id,
                                  const size_t &local_word_count,
                                  PathsMapping &paths_mapping) {
@@ -96,7 +97,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
     // reversed free slots
     for (const uint16_t &free_slot : reversed_free) {
       Transaction reversed_add_transaction{
-          0, 3, (on_disk_id * 10) + (free_slot * 2), 0, 1, 2};
+          0, 3, (on_disk_id * 10) + reversed_new_needed_size + (free_slot * 2), 0, 1, 2};
       const auto &r_id =
           *index_to_add.words_and_reversed[local_word_count].reversed.begin();
       // get the first local id. then convert it to disk id and save it to the
@@ -159,7 +160,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
     } else { // reversed
       additional_add_transaction = {
           0, 3,
-          (on_disk_id * 10) + 8, // we overwrite the reversed additional_id.
+          (on_disk_id * 10) + reversed_new_needed_size + 8, // we overwrite the reversed additional_id.
                                  // on_disk_id starts from 0.
           0, 1, 2};
     }
@@ -270,14 +271,14 @@ void Index::add_new_word(index_combine_data &index_to_add,
   }
   // update new needed size
   words_new_needed_size += word_length + 1;
-  reversed_new_needed_size += 10; // always 10
   words_insertions.push_back(new_word);
 
   // We create a reversed insertion and remove the first 4 already and check if
   // needed more, if so we add already the next additional id to the reversed
   // insertion
   Insertion new_reversed{on_disk_id * 10, 10};
-  new_reversed.content.reserve(10);
+  reversed_new_needed_size += 10; // always 10
+  //new_reversed.content.reserve(10);
   ReversedBlock current_ReversedBlock{};
   for (int i = 0; i < 4; ++i) {
     if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
@@ -783,7 +784,7 @@ int Index::merge(index_combine_data &index_to_add) {
           // add to existing
           log::write(2, "Index: Merge: Found existing word");
           add_reversed_to_word(index_to_add, on_disk_count, transactions,
-                               additional_new_needed_size, on_disk_id,
+                               additional_new_needed_size, reversed_new_needed_size, on_disk_id,
                                local_word_count, paths_mapping);
           ++local_word_count;
           if (local_word_count ==

@@ -251,6 +251,7 @@ private:
                                    uint64_t &on_disk_count,
                                    std::vector<Transaction> &transactions,
                                    size_t &additional_new_needed_size,
+                                   size_t &reversed_new_needed_size,
                                    uint32_t &on_disk_id,
                                    const size_t &local_word_count,
                                    PathsMapping &paths_mapping);
