@@ -6,14 +6,11 @@
 #include <fstream>
 #include <string>
 
-void Index::add_reversed_to_word(index_combine_data &index_to_add,
-                                 uint64_t &on_disk_count,
-                                 std::vector<Transaction> &transactions,
-                                 size_t &additional_new_needed_size,
-                                 size_t &reversed_new_needed_size,
-                                 uint32_t &on_disk_id,
-                                 const size_t &local_word_count,
-                                 PathsMapping &paths_mapping) {
+void Index::add_reversed_to_word(
+    index_combine_data &index_to_add, uint64_t &on_disk_count,
+    std::vector<Transaction> &transactions, size_t &additional_new_needed_size,
+    size_t &reversed_new_needed_size, uint32_t &on_disk_id,
+    const size_t &local_word_count, PathsMapping &paths_mapping) {
 
   if (on_disk_id * 10 + 10 > reversed_size) {
     log::error("Index: Reversed out of range. Index corrupted."); // index most
@@ -97,7 +94,8 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
     // reversed free slots
     for (const uint16_t &free_slot : reversed_free) {
       Transaction reversed_add_transaction{
-          0, 3, (on_disk_id * 10) + reversed_new_needed_size + (free_slot * 2), 0, 1, 2};
+          0, 3, (on_disk_id * 10) + reversed_new_needed_size + (free_slot * 2),
+          0, 1, 2};
       const auto &r_id =
           *index_to_add.words_and_reversed[local_word_count].reversed.begin();
       // get the first local id. then convert it to disk id and save it to the
@@ -115,26 +113,37 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
           0)
         break;
     }
-    reversed_free.clear();
-    for (const AdditionalFree &free_slot_block : additional_free) {
-      for (const uint16_t &free_slot : free_slot_block.free) {
-        Transaction additional_add_transaction{
-            0, 4, ((free_slot_block.additional_id - 1) * 50) + (free_slot * 2),
-            0, 1, 2};
-        const auto &a_id =
-            *index_to_add.words_and_reversed[local_word_count].reversed.begin();
-        // get the first local id. then convert it to disk id and save it to the
-        // offset. PathOffset is the same as The 2 Byte value of a reversed
-        // slot.
-        PathOffset content;
-        content.offset = paths_mapping.by_local[a_id];
-        // add it to the transaction to overwrite the empty place with the new
-        // disk id and then delete it from the local reversed list.
-        additional_add_transaction.content += content.bytes[0];
-        additional_add_transaction.content += content.bytes[1];
-        index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
-        transactions.push_back(additional_add_transaction);
+    if (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+        0) {
+      reversed_free.clear();
+      for (const AdditionalFree &free_slot_block : additional_free) {
+        for (const uint16_t &free_slot : free_slot_block.free) {
+          Transaction additional_add_transaction{
+              0,
+              4,
+              ((free_slot_block.additional_id - 1) * 50) + (free_slot * 2),
+              0,
+              1,
+              2};
+          const auto &a_id = *index_to_add.words_and_reversed[local_word_count]
+                                  .reversed.begin();
+          // get the first local id. then convert it to disk id and save it to
+          // the offset. PathOffset is the same as The 2 Byte value of a
+          // reversed slot.
+          PathOffset content;
+          content.offset = paths_mapping.by_local[a_id];
+          // add it to the transaction to overwrite the empty place with the new
+          // disk id and then delete it from the local reversed list.
+          additional_add_transaction.content += content.bytes[0];
+          additional_add_transaction.content += content.bytes[1];
+          index_to_add.words_and_reversed[local_word_count].reversed.erase(
+              a_id);
+          transactions.push_back(additional_add_transaction);
 
+          if (index_to_add.words_and_reversed[local_word_count]
+                  .reversed.size() == 0)
+            break;
+        }
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0)
           break;
@@ -160,8 +169,9 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
     } else { // reversed
       additional_add_transaction = {
           0, 3,
-          (on_disk_id * 10) + reversed_new_needed_size + 8, // we overwrite the reversed additional_id.
-                                 // on_disk_id starts from 0.
+          (on_disk_id * 10) + reversed_new_needed_size +
+              8, // we overwrite the reversed additional_id.
+                 // on_disk_id starts from 0.
           0, 1, 2};
     }
 
@@ -182,9 +192,7 @@ void Index::add_reversed_to_word(index_combine_data &index_to_add,
          24) *
         50); // so many additional we need.
     int in_additional_counter = 0;
-    for (int i = 0;
-         i < index_to_add.words_and_reversed[local_word_count].reversed.size();
-         ++i) {
+    while (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
 
       const auto &a_id =
           *index_to_add.words_and_reversed[local_word_count].reversed.begin();
@@ -278,7 +286,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
   // insertion
   Insertion new_reversed{on_disk_id * 10, 10};
   reversed_new_needed_size += 10; // always 10
-  //new_reversed.content.reserve(10);
+  new_reversed.content.reserve(10);
   ReversedBlock current_ReversedBlock{};
   for (int i = 0; i < 4; ++i) {
     if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
@@ -784,7 +792,8 @@ int Index::merge(index_combine_data &index_to_add) {
           // add to existing
           log::write(2, "Index: Merge: Found existing word");
           add_reversed_to_word(index_to_add, on_disk_count, transactions,
-                               additional_new_needed_size, reversed_new_needed_size, on_disk_id,
+                               additional_new_needed_size,
+                               reversed_new_needed_size, on_disk_id,
                                local_word_count, paths_mapping);
           ++local_word_count;
           if (local_word_count ==
