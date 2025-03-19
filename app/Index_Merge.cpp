@@ -192,7 +192,8 @@ void Index::add_reversed_to_word(
          24) *
         50); // so many additional we need.
     int in_additional_counter = 0;
-    while (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
+    while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+           0) {
 
       const auto &a_id =
           *index_to_add.words_and_reversed[local_word_count].reversed.begin();
@@ -707,6 +708,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // because when adding new words we add to + 1 and when its z + 1 its invalid.
   // we will just ignore it
   std::vector<uint64_t> words_F_change(27, 0);
+  std::vector<uint64_t> words_F_ID_change(27, 0);
 
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
   // add_to_disk.
@@ -823,6 +825,7 @@ int Index::merge(index_combine_data &index_to_add) {
                        reversed_new_needed_size, on_disk_id, local_word_count,
                        paths_mapping);
           words_F_change[disk_first_char - 'a' + 1] += local_word_length + 1;
+          ++words_F_ID_change[disk_first_char - 'a' + 1];
           ++local_word_count;
           if (local_word_count ==
               index_to_add.words_and_reversed
@@ -861,6 +864,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
         words_F_change[disk_first_char - 'a' + 1] += local_word_length + 1;
+        ++words_F_ID_change[disk_first_char - 'a' + 1];
         ++local_word_count;
         if (local_word_count ==
             index_to_add.words_and_reversed
@@ -912,6 +916,7 @@ int Index::merge(index_combine_data &index_to_add) {
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
                    1] += local_word_length + 1;
+    ++words_F_ID_change[disk_first_char - 'a' + 1];
   }
 
   // calculate the new words f values and create a transaction to update
@@ -921,9 +926,12 @@ int Index::merge(index_combine_data &index_to_add) {
   Transaction words_f_new{0, 2, 0, 0, 1, 312};
   words_f_new.content.resize(312);
   uint64_t all_size = 0;
+  uint64_t all_id_change = 0;
   for (int i = 0; i < 26; ++i) {
     all_size += words_F_change[i];
+    all_id_change += words_F_ID_change[i];
     words_f[i].location += all_size;
+    words_f[i].id += all_id_change;
     std::memcpy(&words_f_new.content[i * 12], &words_f[i].bytes[0], 12);
   }
   transactions.push_back(words_f_new);
