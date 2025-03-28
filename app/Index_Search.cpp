@@ -35,8 +35,6 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
   char disk_first_char = 'a';
   char local_first_char = search_words[0][0];
 
-  uint64_t disk_additional_ids = (additional_size / 50) + 1;
-
   // check each word on disk. if it is different first letter we will skip using
   // words_f. we will compare chars to chars until they differ. we then know if
   // it is coming first or we are passed it and need to insert the word or we
