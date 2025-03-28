@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 // Searches the word list for all words in search words and returns a list of
 // path ids and the count of how many appeared. exact_match: if enabled it not
@@ -12,6 +13,65 @@
 // ap and it encounters apple. If false it would count that as a match.
 // min_char_for_match will also count words if the first x chars are the same,
 // only if exact_match is false.
+std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
+  std::vector<uint64_t> path_ids;
+  if ((word_id * 10) + 10 > reversed_size) {
+    log::error("Index: path_ids_from_word_id: to search word id would be at "
+               "nonexisting location. Index most likely corrupt. Exiting");
+  }
+  // load the reversed block into memory.
+  ReversedBlock *disk_reversed =
+      reinterpret_cast<ReversedBlock *>(&mmap_reversed[word_id * 10]);
+  for (int i = 0; i < 4; ++i) {
+    if (disk_reversed->ids[i] != 0) {
+      path_ids.push_back(disk_reversed->ids[i]);
+    }
+  }
+
+  if (disk_reversed->ids[4] == 0) {
+    // if no additional is linked we return here.
+    return path_ids;
+  }
+  if ((disk_reversed->ids[4] * 50) > additional_size) {
+    log::error("Index: path_ids_from_word_id: to search word id would be at "
+               "nonexisting location. Index most likely corrupt. Exiting");
+  }
+  AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
+      &mmap_additional[(disk_reversed->ids[4] - 1) * 50]);
+
+  // load the current additional block. -1 because additional IDs start at 1.
+  int i = 0;
+  size_t current_additional = disk_reversed->ids[4];
+  while (true) { // it will break when no new additional is linked
+    if (i == 24) {
+      if (disk_additional->ids[24] == 0) {
+        // no additionals are left.
+        break;
+      } else {
+        // load the new additional block
+        current_additional = disk_additional->ids[24];
+        if ((current_additional * 50) > additional_size) {
+          log::error(
+              "Index: path_ids_from_word_id: to search word id would be at "
+              "nonexisting location. Index most likely corrupt. Exiting");
+        }
+        disk_additional = reinterpret_cast<AdditionalBlock *>(
+            &mmap_additional[(current_additional - 1) * 50]);
+        i = 0;
+      }
+    }
+    if (disk_additional->ids[i] != 0) {
+      // save path id
+      path_ids.push_back(disk_additional->ids[i]);
+    }
+
+    ++i;
+  }
+
+  // found all ids.
+  return path_ids;
+}
+
 std::vector<search_path_ids_return>
 Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
                         int min_char_for_match) {
@@ -178,6 +238,27 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
     if (local_word_count ==
         search_words.size()) { // if not more words to compare quit.
       break;
+    }
+  }
+
+  // Now we need to read all reversed and additionals and put it into a list of
+  // path_id count.
+  std::vector<search_path_ids_return> results;
+  // we will later combine them but it's easier like this.
+  std::vector<uint64_t> path_ids;
+  std::vector<uint32_t> counts;
+  if (result_word_ids.size() == 0)
+    return results;
+  for (int i = 0; i < result_word_ids.size(); ++i) {
+    for (const int &path_id : path_ids_from_word_id(result_word_ids[i])) {
+      // potential future performance improvments
+      if (auto it = std::find(path_ids.begin(), path_ids.end(), path_id);
+          it == path_ids.end()) {
+        path_ids.push_back(path_id);
+        counts.push_back(1);
+      } else {
+        ++counts[it - path_ids.begin()]; // increase count of the element
+      }
     }
   }
 }

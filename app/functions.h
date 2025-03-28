@@ -291,6 +291,7 @@ private:
                                    size_t &transaction_file_location);
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
+  static std::vector<uint64_t> path_ids_from_word_id(uint64_t word_id);
 
 public:
   static void save_config(const std::filesystem::path &config_index_path,
