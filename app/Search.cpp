@@ -25,4 +25,7 @@ void Search::search() {
       current_word.push_back(c);
     }
   }
+
+  std::vector<search_path_ids_return> path_ids_count =
+      Index::search_word_list(search_words, false, 3);
 }
