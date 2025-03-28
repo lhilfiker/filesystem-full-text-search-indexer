@@ -4,7 +4,7 @@
 
 void Search::search() {
   // Ask the user to input text.
-  std::string input = "";
+  std::string input = " ";
   std::cout << "Search\n\nEnter Search Query(Search by pressing ENTER):\n";
   std::getline(std::cin, input);
 
