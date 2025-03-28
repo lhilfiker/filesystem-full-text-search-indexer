@@ -90,6 +90,13 @@ public:
   static int start_from();
 };
 
+// search.cpp
+class Search {
+private:
+public:
+  static void search();
+};
+
 // helper.cpp
 class helper {
 private:
@@ -271,8 +278,8 @@ private:
       std::vector<Insertion> &to_insertions,
       int index_type); // index_type: 1 = words, 3 = reversed.
   static void write_to_transaction(std::vector<Transaction> &transactions,
-                        mio::mmap_sink &mmap_transactions,
-                        size_t &transaction_file_location);
+                                   mio::mmap_sink &mmap_transactions,
+                                   size_t &transaction_file_location);
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
 
