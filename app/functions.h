@@ -20,6 +20,15 @@ struct words_reversed {
   }
 };
 
+struct search_path_ids_return {
+  uint64_t path_id;
+  uint32_t count;
+
+  bool operator<(const search_path_ids_return &other) const {
+    return path_id < other.path_id;
+  }
+};
+
 struct index_combine_data {
   std::vector<std::string> &paths;
   const size_t &paths_size;
@@ -290,6 +299,9 @@ public:
   static int initialize();
   static int uninitialize();
   static int add(index_combine_data &index_to_add);
+  static std::vector<search_path_ids_return>
+  search_word_list(std::vector<std::string> search_words, bool exact_match,
+                   int min_char_for_match);
 };
 
 #endif
