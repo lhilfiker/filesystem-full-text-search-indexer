@@ -249,7 +249,7 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
   std::vector<uint32_t> counts;
   if (result_word_ids.size() == 0)
     return results;
-  for (int i = 0; i < result_word_ids.size(); ++i) {
+  for (size_t i = 0; i < result_word_ids.size(); ++i) {
     for (const int &path_id : path_ids_from_word_id(result_word_ids[i])) {
       // potential future performance improvments
       if (auto it = std::find(path_ids.begin(), path_ids.end(), path_id);
@@ -261,4 +261,10 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
       }
     }
   }
+  // convert into struct and return.
+  results.reserve(path_ids.size());
+  for (size_t i = 0; i < path_ids.size(); ++i) {
+    results.push_back({path_ids[i], counts[i]});
+  }
+  return results;
 }
