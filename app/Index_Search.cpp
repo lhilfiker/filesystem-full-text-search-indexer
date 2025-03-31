@@ -7,12 +7,6 @@
 #include <string>
 #include <vector>
 
-// Searches the word list for all words in search words and returns a list of
-// path ids and the count of how many appeared. exact_match: if enabled it not
-// count words that are the same as the query but different length. e.g query:
-// ap and it encounters apple. If false it would count that as a match.
-// min_char_for_match will also count words if the first x chars are the same,
-// only if exact_match is false.
 std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
   std::vector<uint64_t> path_ids;
   if ((word_id * 10) + 10 > reversed_size) {
@@ -72,6 +66,12 @@ std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
   return path_ids;
 }
 
+// Searches the word list for all words in search words and returns a list of
+// path ids and the count of how many appeared. exact_match: if enabled it not
+// count words that are the same as the query but different length. e.g query:
+// ap and it encounters apple. If false it would count that as a match.
+// min_char_for_match will also count words if the first x chars are the same,
+// only if exact_match is false.
 std::vector<search_path_ids_return>
 Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
                         int min_char_for_match) {
@@ -265,6 +265,45 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
   results.reserve(path_ids.size());
   for (size_t i = 0; i < path_ids.size(); ++i) {
     results.push_back({path_ids[i], counts[i]});
+  }
+  return results;
+}
+
+// return a unordered map of ID and path string.
+std::unordered_map<uint64_t, std::string>
+Index::id_to_path_string(std::vector<uint64_t> path_ids) {
+  std::unordered_map<uint64_t, std::string> results;
+  results.reserve(path_ids.size());
+
+  std::vector<uint64_t> sorted_path_ids = path_ids;
+  std::sort(sorted_path_ids.begin(), sorted_path_ids.end());
+  uint64_t path_count = 1; // on-disk path ids are indexed from 1.
+  uint64_t local_count = 0;
+  if (paths_size < 2) { // shouldn't happen. invalid. index corrupt.
+    log::error("Index: Search: id_to_path_string: Error. Paths index invalid. "
+               "Index most likely corrupt.");
+  }
+  for (size_t i = 0; i < paths_size; ++i) {
+    PathOffset *path_length = reinterpret_cast<PathOffset *>(
+        &mmap_paths[i]); // load the length offset
+    i += 2;
+
+    if (path_count == sorted_path_ids[local_count]) {
+      if (paths_size < i + 2 + path_length->offset) { // shouldn't happen.
+                                                      // invalid. index corrupt.
+        log::error(
+            "Index: Search: id_to_path_string: Error. Paths index invalid. "
+            "Index most likely corrupt.");
+      }
+      results[sorted_path_ids[local_count]] = std::string(
+          mmap_paths[i + 2], mmap_paths[i + 2 + path_length->offset]);
+      ++local_count;
+    }
+    ++path_count;
+    if (local_count == path_ids.size()) {
+      break;
+    }
+    i += path_length->offset;
   }
   return results;
 }

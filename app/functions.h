@@ -303,6 +303,8 @@ public:
   static std::vector<search_path_ids_return>
   search_word_list(std::vector<std::string> search_words, bool exact_match,
                    int min_char_for_match);
+  static std::unordered_map<uint64_t, std::string>
+  id_to_path_string(std::vector<uint64_t> path_ids);
 };
 
 #endif
