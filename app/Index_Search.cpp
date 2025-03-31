@@ -75,6 +75,9 @@ std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
 std::vector<search_path_ids_return>
 Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
                         int min_char_for_match) {
+  if (is_mapped == false) {
+    map();
+  }
   // sort first so we can do char for char compare.
   std::sort(search_words.begin(), search_words.end());
 
@@ -272,6 +275,9 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
 // return a unordered map of ID and path string.
 std::unordered_map<uint64_t, std::string>
 Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
+  if (is_mapped == false) {
+    map();
+  }
   std::unordered_map<uint64_t, std::string> results;
   results.reserve(path_ids.size());
 
