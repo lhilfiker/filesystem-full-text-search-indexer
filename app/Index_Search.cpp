@@ -271,11 +271,11 @@ Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
 
 // return a unordered map of ID and path string.
 std::unordered_map<uint64_t, std::string>
-Index::id_to_path_string(std::vector<uint64_t> path_ids) {
+Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
   std::unordered_map<uint64_t, std::string> results;
   results.reserve(path_ids.size());
 
-  std::vector<uint64_t> sorted_path_ids = path_ids;
+  std::vector<search_path_ids_return> sorted_path_ids = path_ids;
   std::sort(sorted_path_ids.begin(), sorted_path_ids.end());
   uint64_t path_count = 1; // on-disk path ids are indexed from 1.
   uint64_t local_count = 0;
@@ -288,14 +288,14 @@ Index::id_to_path_string(std::vector<uint64_t> path_ids) {
         &mmap_paths[i]); // load the length offset
     i += 2;
 
-    if (path_count == sorted_path_ids[local_count]) {
+    if (path_count == sorted_path_ids[local_count].path_id) {
       if (paths_size < i + 2 + path_length->offset) { // shouldn't happen.
                                                       // invalid. index corrupt.
         log::error(
             "Index: Search: id_to_path_string: Error. Paths index invalid. "
             "Index most likely corrupt.");
       }
-      results[sorted_path_ids[local_count]] = std::string(
+      results[sorted_path_ids[local_count].path_id] = std::string(
           mmap_paths[i + 2], mmap_paths[i + 2 + path_length->offset]);
       ++local_count;
     }
