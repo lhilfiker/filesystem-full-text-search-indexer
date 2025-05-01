@@ -289,20 +289,20 @@ Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
     log::error("Index: Search: id_to_path_string: Error. Paths index invalid. "
                "Index most likely corrupt.");
   }
-  for (size_t i = 0; i < paths_size; ++i) {
+  for (size_t i = 0; i < paths_size;) {
     PathOffset *path_length = reinterpret_cast<PathOffset *>(
         &mmap_paths[i]); // load the length offset
     i += 2;
 
     if (path_count == sorted_path_ids[local_count].path_id) {
-      if (paths_size < i + 2 + path_length->offset) { // shouldn't happen.
-                                                      // invalid. index corrupt.
+      if (paths_size < i + path_length->offset) { // shouldn't happen.
+                                                  // invalid. index corrupt.
         log::error(
             "Index: Search: id_to_path_string: Error. Paths index invalid. "
             "Index most likely corrupt.");
       }
-      results[sorted_path_ids[local_count].path_id] = std::string(
-          mmap_paths[i + 2], mmap_paths[i + 2 + path_length->offset]);
+      results[sorted_path_ids[local_count].path_id] =
+          std::string(&mmap_paths[i], path_length->offset);
       ++local_count;
     }
     ++path_count;
