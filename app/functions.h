@@ -20,6 +20,15 @@ struct words_reversed {
   }
 };
 
+struct search_path_ids_return {
+  uint64_t path_id;
+  uint32_t count;
+
+  bool operator<(const search_path_ids_return &other) const {
+    return path_id < other.path_id;
+  }
+};
+
 struct index_combine_data {
   std::vector<std::string> &paths;
   const size_t &paths_size;
@@ -88,6 +97,17 @@ public:
                           const int config_threads_to_use,
                           const size_t &config_local_index_memory);
   static int start_from();
+};
+
+// Search.cpp
+class Search {
+private:
+  static bool config_exact_match;
+  static uint8_t config_min_char_for_match;
+
+public:
+  static void save_config(bool exact_match, uint8_t min_char_for_match);
+  static void search();
 };
 
 // helper.cpp
@@ -275,6 +295,7 @@ private:
                                    size_t &transaction_file_location);
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
+  static std::vector<uint64_t> path_ids_from_word_id(uint64_t word_id);
 
 public:
   static void save_config(const std::filesystem::path &config_index_path,
@@ -283,6 +304,11 @@ public:
   static int initialize();
   static int uninitialize();
   static int add(index_combine_data &index_to_add);
+  static std::vector<search_path_ids_return>
+  search_word_list(std::vector<std::string> &search_words, bool exact_match,
+                   int min_char_for_match);
+  static std::unordered_map<uint64_t, std::string>
+  id_to_path_string(std::vector<search_path_ids_return> path_ids);
 };
 
 #endif

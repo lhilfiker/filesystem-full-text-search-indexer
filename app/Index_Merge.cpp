@@ -53,7 +53,10 @@ void Index::add_reversed_to_word(
     additional_free.push_back(
         {current_additional,
          {}}); // create an empty additional_free for the first one.
-
+    if ((current_additional * 50) > additional_size) {
+      log::error("Index: path_ids_from_word_id: to search word id would be at "
+                 "nonexisting location. Index most likely corrupt. Exiting");
+    }
     AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
         &mmap_additional[(current_additional - 1) * 50]);
     // load the current additional block. -1 because additional IDs start at 1.
@@ -68,6 +71,11 @@ void Index::add_reversed_to_word(
         } else {
           // load the new additional block
           current_additional = disk_additional->ids[24];
+          if ((current_additional * 50) > additional_size) {
+            log::error(
+                "Index: path_ids_from_word_id: to search word id would be at "
+                "nonexisting location. Index most likely corrupt. Exiting");
+          }
           disk_additional = reinterpret_cast<AdditionalBlock *>(
               &mmap_additional[(current_additional - 1) * 50]);
           i = 0;
