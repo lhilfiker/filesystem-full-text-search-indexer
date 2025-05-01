@@ -73,8 +73,8 @@ std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
 // min_char_for_match will also count words if the first x chars are the same,
 // only if exact_match is false.
 std::vector<search_path_ids_return>
-Index::search_word_list(std::vector<std::string> search_words, bool exact_match,
-                        int min_char_for_match) {
+Index::search_word_list(std::vector<std::string> &search_words,
+                        bool exact_match, int min_char_for_match) {
   if (is_mapped == false) {
     map();
   }

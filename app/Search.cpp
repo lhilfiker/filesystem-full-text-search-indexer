@@ -28,6 +28,12 @@ void Search::search() {
       current_word.push_back(c);
     }
   }
+  // Add last word
+  if (current_word.length() > 1 &&
+      current_word.length() < 100) { // allow bigger and smaller words.
+    // stem word
+    search_words.push_back(current_word);
+  }
 
   // get path ids and count of the search query
   std::vector<search_path_ids_return> path_ids_count =
