@@ -737,6 +737,11 @@ int Index::merge(index_combine_data &index_to_add) {
         on_disk_id = words_f[local_first_char - 'a'].id;
         disk_first_char = local_first_char;
       } else {
+        if (words_f[local_first_char - 'a'].location == words_size) {
+          // Words_f can have entries when if it is the same as words_size it
+          // means there are no words for this letter.
+          break;
+        }
         // This should not happen. Index is corrupted.
         log::error("Index: Combine: Words_f char value is higher than words "
                    "index size. This means the index is corrupted. Reset the "
