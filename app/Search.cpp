@@ -62,7 +62,7 @@ void Search::search() {
   std::cout << "\n\nSearch Results:\n";
   for (int i = 0; i < path_ids_count.size(); ++i) {
     std::cout << "\n " << std::to_string(i) << ". "
-              << path_string[path_ids_count[i].path_id] << "' with "
+              << path_string[path_ids_count[i].path_id] << " with "
               << std::to_string(path_ids_count[i].count) << " matches.\n";
   }
 }
