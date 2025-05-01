@@ -185,7 +185,10 @@ void Index::check_files() {
       helper::file_size(index_path / "words_f.index") == 0 ||
       !std::filesystem::exists(index_path / "reversed.index") ||
       helper::file_size(index_path / "reversed.index") == 0 ||
-      !std::filesystem::exists(index_path / "additional.index")) {
+      !std::filesystem::exists(index_path / "additional.index")
+      // Additional size can be 0 if there aren't any words with more than 4
+      // linked paths.
+  ) {
     first_time = true;
     log::write(
         1,
