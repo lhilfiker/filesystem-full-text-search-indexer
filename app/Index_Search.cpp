@@ -78,10 +78,14 @@ Index::search_word_list(std::vector<std::string> &search_words,
   if (is_mapped == false) {
     map();
   }
+  std::vector<uint64_t> result_word_ids;
+  std::vector<search_path_ids_return> results;
+
+  if (search_words.size() == 0) {
+    return results;
+  }
   // sort first so we can do char for char compare.
   std::sort(search_words.begin(), search_words.end());
-
-  std::vector<uint64_t> result_word_ids;
 
   // copy words_f into memory
   std::vector<WordsFValue> words_f(26);
@@ -255,7 +259,6 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
   // Now we need to read all reversed and additionals and put it into a list of
   // path_id count.
-  std::vector<search_path_ids_return> results;
   // we will later combine them but it's easier like this.
   std::vector<uint64_t> path_ids;
   std::vector<uint32_t> counts;
