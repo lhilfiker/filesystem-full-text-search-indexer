@@ -202,7 +202,7 @@ int indexer::start_from() {
         continue;
       }
       if (current_batch_add_running != 0 && !needs_a_queue) {
-        int i = 0;
+        size_t i = 0;
         for (threads_jobs &job : async_awaits) {
           if (job.future.wait_for(std::chrono::nanoseconds(0)) ==
               std::future_status::ready) {
@@ -227,7 +227,8 @@ int indexer::start_from() {
         }
       }
       if (current_batch_add_running != threads_to_use - 1 && !needs_a_queue) {
-        for (int i = current_batch_add_running; i < threads_to_use - 1; ++i) {
+        for (size_t i = current_batch_add_running; i < threads_to_use - 1;
+             ++i) {
           if (queue.size() <= current_batch_add_next + threads_to_use) {
             needs_a_queue = true;
             break;
@@ -247,7 +248,7 @@ int indexer::start_from() {
 
       if (!queue_has_place(batch_queue_added_size, filesize,
                            thread_max_filesize, batch_queue_add_start)) {
-        for (int i = 0; threads_to_use > i; ++i) {
+        for (size_t i = 0; threads_to_use > i; ++i) {
           batch_queue_added_size.push_back(0);
           queue.push_back({});
           ++batch_queue_add_start;
@@ -280,7 +281,7 @@ int indexer::start_from() {
     bool all_done = false;
     while (!all_done) {
       if (current_batch_add_running != 0) {
-        int i = 0;
+        size_t i = 0;
         for (threads_jobs &job : async_awaits) {
           if (job.future.wait_for(std::chrono::nanoseconds(0)) ==
               std::future_status::ready) {
@@ -307,7 +308,7 @@ int indexer::start_from() {
             50)); // to not utilize 100% cpu in the main process.
       }
       if (current_batch_add_running != threads_to_use) {
-        for (int i = current_batch_add_running; i < threads_to_use; ++i) {
+        for (size_t i = current_batch_add_running; i < threads_to_use; ++i) {
           if (queue.size() <= current_batch_add_next) {
             if (current_batch_add_running == 0)
               all_done = true;
