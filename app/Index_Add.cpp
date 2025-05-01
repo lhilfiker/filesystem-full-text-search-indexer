@@ -64,7 +64,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   // paths_count
   // write the word count as 4 bytes values each to disk.
   file_location = 0;
-  for (int i = 0; i < index_to_add.paths_count.size(); ++i) {
+  for (size_t i = 0; i < index_to_add.paths_count.size(); ++i) {
     PathsCountItem new_paths_count{index_to_add.paths_count[i]};
     for (int j = 0; j < 4; ++j) {
       mmap_paths_count[file_location] = new_paths_count.bytes[j];
@@ -130,7 +130,7 @@ int Index::add_new(index_combine_data &index_to_add) {
       to_set.clear();
     }
   }
-  for (const int &j :
+  for (const size_t &j :
        to_set) { // if there are any left we set them to the end of words
     words_f[j].location = file_location;
     words_f[j].id = on_disk_id;
@@ -154,7 +154,7 @@ int Index::add_new(index_combine_data &index_to_add) {
     ReversedBlock current_ReversedBlock{};
     if (reversed.reversed.size() <= 4) {
       // we just need a reversed so we will write that.
-      int i = 0;
+      size_t i = 0;
       for (const uint32_t &r_id : reversed.reversed) {
         current_ReversedBlock.ids[i] = r_id + 1; // paths are indexed from 1
         ++i;
@@ -162,8 +162,8 @@ int Index::add_new(index_combine_data &index_to_add) {
     } else {
       // create additional blocks and write if full. At the end write current
       // additional that has not been written.
-      int additional_i = 0;
-      int reversed_i = 0;
+      size_t additional_i = 0;
+      size_t reversed_i = 0;
       AdditionalBlock additional{};
       for (const uint32_t &path_id : reversed.reversed) {
         if (reversed_i < 4) {

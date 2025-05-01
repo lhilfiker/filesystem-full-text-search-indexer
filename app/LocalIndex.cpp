@@ -11,7 +11,7 @@ LocalIndex::LocalIndex() {
   path_word_count_size = 0;
 }
 
-int LocalIndex::size() {
+size_t LocalIndex::size() {
   return paths_size + words_size + paths_size + path_word_count_size +
          reversed_size;
 }
@@ -104,7 +104,7 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
 
   std::vector<uint32_t> paths_id;
   size_t paths_last = paths.size();
-  int i = 0;
+  size_t i = 0;
 
   for (const std::string &path_to_insert : to_combine_index.paths) {
     if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert);
@@ -127,12 +127,12 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
   sort();
   to_combine_index.sort();
 
-  int words_reversed_count = words_and_reversed.size();
-  int to_combine_count = to_combine_index.words_and_reversed.size();
+  size_t words_reversed_count = words_and_reversed.size();
+  size_t to_combine_count = to_combine_index.words_and_reversed.size();
   if (to_combine_index.words_and_reversed.empty())
     return;
-  int local_counter = 0;
-  int to_combine_counter = 0;
+  size_t local_counter = 0;
+  size_t to_combine_counter = 0;
   if (to_combine_index.words_and_reversed.size() != 0) {
     while (local_counter < words_reversed_count) {
       // if found add converted path ids

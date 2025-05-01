@@ -8,20 +8,20 @@
 bool Index::is_config_loaded = false;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
-int Index::buffer_size = 0;
+int64_t Index::buffer_size = 0;
 std::filesystem::path Index::index_path;
-int Index::paths_size = 0;
-int Index::paths_size_buffer = 0;
-int Index::paths_count_size = 0;
-int Index::paths_count_size_buffer = 0;
-int Index::words_size = 0;
-int Index::words_size_buffer = 0;
-int Index::words_f_size = 0;
-int Index::words_f_size_buffer = 0;
-int Index::reversed_size = 0;
-int Index::reversed_size_buffer = 0;
-int Index::additional_size = 0;
-int Index::additional_size_buffer = 0;
+int64_t Index::paths_size = 0;
+int64_t Index::paths_size_buffer = 0;
+int64_t Index::paths_count_size = 0;
+int64_t Index::paths_count_size_buffer = 0;
+int64_t Index::words_size = 0;
+int64_t Index::words_size_buffer = 0;
+int64_t Index::words_f_size = 0;
+int64_t Index::words_f_size_buffer = 0;
+int64_t Index::reversed_size = 0;
+int64_t Index::reversed_size_buffer = 0;
+int64_t Index::additional_size = 0;
+int64_t Index::additional_size_buffer = 0;
 mio::mmap_sink Index::mmap_paths;
 mio::mmap_sink Index::mmap_paths_count;
 mio::mmap_sink Index::mmap_words;
@@ -30,7 +30,7 @@ mio::mmap_sink Index::mmap_reversed;
 mio::mmap_sink Index::mmap_additional;
 
 void Index::save_config(const std::filesystem::path &config_index_path,
-                        const int config_buffer_size) {
+                        const uint64_t config_buffer_size) {
   index_path = config_index_path;
   buffer_size = config_buffer_size;
   if (buffer_size < 10000) {
