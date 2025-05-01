@@ -113,6 +113,12 @@ Index::search_word_list(std::vector<std::string> &search_words,
         on_disk_id = words_f[local_first_char - 'a'].id;
         disk_first_char = local_first_char;
       } else {
+        if (words_f[local_first_char - 'a'].location == words_size) {
+          // Words_f can have entries when if it is the same as words_size it
+          // means there are no words for this letter and no subsequent letters
+          // too
+          break;
+        }
         // This should not happen. Index is corrupted.
         log::error("Index: Search: Words_f char value is higher than words "
                    "index size. This means the index is corrupted. Reset the "
@@ -176,7 +182,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
               word_seperator -
               29; // 29 because its length of word + then the next seperator
           ++on_disk_id;
-          local_first_char = search_words[local_word_count][i];
+          local_first_char = search_words[local_word_count][0];
 
           break;
         }
@@ -194,7 +200,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
             break;
           }
           local_word_length = search_words[local_word_count].length();
-          local_first_char = search_words[local_word_count][i];
+          local_first_char = search_words[local_word_count][0];
           break;
         }
 
@@ -222,7 +228,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
           break;
         }
         local_word_length = search_words[local_word_count].length();
-        local_first_char = search_words[local_word_count][i];
+        local_first_char = search_words[local_word_count][0];
         break;
       }
 
