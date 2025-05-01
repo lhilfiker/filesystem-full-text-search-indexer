@@ -124,9 +124,11 @@ int Index::execute_transactions() {
               : (current_header->index_type == 1
                      ? &mmap_words[current_header->location + shift_amount]
                      : (current_header->index_type == 2
-                            ? &mmap_words_f[current_header->location + shift_amount]
+                            ? &mmap_words_f[current_header->location +
+                                            shift_amount]
                             : (current_header->index_type == 3
-                                   ? &mmap_reversed[current_header->location + shift_amount]
+                                   ? &mmap_reversed[current_header->location +
+                                                    shift_amount]
                                    : (current_header->index_type == 4
                                           ? &mmap_additional[current_header
                                                                  ->location]
@@ -195,6 +197,26 @@ int Index::execute_transactions() {
                                              : index_path /
                                                    "paths_count.index")))),
              current_header->content_length);
+      switch (current_header->index_type) {
+      case 0:
+        paths_size = current_header->content_length;
+        break;
+      case 1:
+        words_size = current_header->content_length;
+        break;
+      case 2:
+        words_f_size = current_header->content_length;
+        break;
+      case 3:
+        reversed_size = current_header->content_length;
+        break;
+      case 4:
+        additional_size = current_header->content_length;
+        break;
+      default:
+        paths_count_size = current_header->content_length;
+        break;
+      }
       map();
       log::write(
           1, "Index: Transaction: Resize operation completed for index " +
@@ -238,9 +260,10 @@ int Index::execute_transactions() {
 
     // snyc before we mark as done.
     if (current_header->operation_type != 1 ||
-        transaction_current_write_sync_batch >
-            5000 || transaction_current_write_sync_batch == 0) { // sync only if it was not a move operation or 5000 move
-                    // operations happend
+        transaction_current_write_sync_batch > 5000 ||
+        transaction_current_write_sync_batch ==
+            0) { // sync only if it was not a move operation or 5000 move
+                 // operations happend
       if (sync_all() == 1) {
         log::error(
             "Error when syncing indexes to disk. Exiting Program to save "
