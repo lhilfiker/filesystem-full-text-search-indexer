@@ -837,8 +837,8 @@ int Index::merge(index_combine_data &index_to_add) {
                        additional_new_needed_size, words_new_needed_size,
                        reversed_new_needed_size, on_disk_id, local_word_count,
                        paths_mapping);
-          words_F_change[disk_first_char - 'a' + 1] += local_word_length + 1;
-          ++words_F_ID_change[disk_first_char - 'a' + 1];
+          words_F_change[local_first_char - 'a' + 1] += local_word_length + 1;
+          ++words_F_ID_change[local_first_char - 'a' + 1];
           ++local_word_count;
           if (local_word_count ==
               index_to_add.words_and_reversed
@@ -876,8 +876,8 @@ int Index::merge(index_combine_data &index_to_add) {
                      additional_new_needed_size, words_new_needed_size,
                      reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
-        words_F_change[disk_first_char - 'a' + 1] += local_word_length + 1;
-        ++words_F_ID_change[disk_first_char - 'a' + 1];
+        words_F_change[local_first_char - 'a' + 1] += local_word_length + 1;
+        ++words_F_ID_change[local_first_char - 'a' + 1];
         ++local_word_count;
         if (local_word_count ==
             index_to_add.words_and_reversed
@@ -929,7 +929,8 @@ int Index::merge(index_combine_data &index_to_add) {
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
                    1] += local_word_length + 1;
-    ++words_F_ID_change[disk_first_char - 'a' + 1];
+    ++words_F_ID_change
+        [(index_to_add.words_and_reversed[local_word_count].word[0] - 'a') + 1];
   }
 
   // calculate the new words f values and create a transaction to update
@@ -941,6 +942,7 @@ int Index::merge(index_combine_data &index_to_add) {
   uint64_t all_size = 0;
   uint64_t all_id_change = 0;
   for (int i = 0; i < 26; ++i) {
+
     all_size += words_F_change[i];
     all_id_change += words_F_ID_change[i];
     words_f[i].location += all_size;
