@@ -99,10 +99,14 @@ public:
   static int start_from();
 };
 
-// search.cpp
+// Search.cpp
 class Search {
 private:
+  static bool config_exact_match;
+  static uint8_t config_min_char_for_match;
+
 public:
+  static void save_config(bool exact_match, uint8_t min_char_for_match);
   static void search();
 };
 
