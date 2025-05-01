@@ -52,7 +52,7 @@ private:
 
 public:
   LocalIndex();
-  int size();
+  size_t size();
   void clear();
   uint32_t add_path(const std::string &path_to_insert);
   void add_words(std::unordered_set<std::string> &words_to_insert,
@@ -234,20 +234,20 @@ private:
   static bool is_config_loaded;
   static bool is_mapped;
   static bool first_time;
-  static int buffer_size;
+  static int64_t buffer_size;
   static std::filesystem::path index_path;
-  static int paths_size;
-  static int paths_size_buffer;
-  static int paths_count_size;
-  static int paths_count_size_buffer;
-  static int words_size;
-  static int words_size_buffer;
-  static int words_f_size;
-  static int words_f_size_buffer;
-  static int reversed_size;
-  static int reversed_size_buffer;
-  static int additional_size;
-  static int additional_size_buffer;
+  static int64_t paths_size;
+  static int64_t paths_size_buffer;
+  static int64_t paths_count_size;
+  static int64_t paths_count_size_buffer;
+  static int64_t words_size;
+  static int64_t words_size_buffer;
+  static int64_t words_f_size;
+  static int64_t words_f_size_buffer;
+  static int64_t reversed_size;
+  static int64_t reversed_size_buffer;
+  static int64_t additional_size;
+  static int64_t additional_size_buffer;
   static mio::mmap_sink mmap_paths;
   static mio::mmap_sink mmap_paths_count;
   static mio::mmap_sink mmap_words;
@@ -295,7 +295,7 @@ private:
 
 public:
   static void save_config(const std::filesystem::path &config_index_path,
-                          const int config_buffer_size);
+                          const int64_t config_buffer_size);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();

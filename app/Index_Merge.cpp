@@ -60,7 +60,7 @@ void Index::add_reversed_to_word(
     AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
         &mmap_additional[(current_additional - 1) * 50]);
     // load the current additional block. -1 because additional IDs start at 1.
-    int i = 0;
+    size_t i = 0;
     while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
            0) { // Or when there is no new additional left it will break out
       // inside.
@@ -199,7 +199,7 @@ void Index::add_reversed_to_word(
           19) /
          24) *
         50); // so many additional we need.
-    int in_additional_counter = 0;
+    size_t in_additional_counter = 0;
     while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
            0) {
 
@@ -387,7 +387,7 @@ void Index::insertion_to_transactions(
   size_t byte_shift = 0;
   // we make a list of moves so everything fits. then we make transactions from
   // last to first to move them.
-  for (int i = 0; i < to_insertions.size(); ++i) {
+  for (size_t i = 0; i < to_insertions.size(); ++i) {
     if (i == 0) {
       last_start_location = to_insertions[i].header.location;
     }
@@ -476,7 +476,7 @@ void Index::insertion_to_transactions(
 
   // now that there is place we write the insertions as normal at their place.
   // Their location already got updated so it's correct.
-  for (int i = 0; i < to_insertions.size(); ++i) {
+  for (size_t i = 0; i < to_insertions.size(); ++i) {
     Transaction insert_item{0,
                             static_cast<uint8_t>(index_type),
                             to_insertions[i].header.location,
@@ -780,7 +780,7 @@ int Index::merge(index_combine_data &index_to_add) {
       // go through start position until end position comparing each char until
       // either it is smaller or bigger. then just try to find the next
       // seperator.
-      for (int i = 1; mmap_words[on_disk_count + i] < 31; ++i) {
+      for (size_t i = 1; mmap_words[on_disk_count + i] < 31; ++i) {
         ++word_disk_seperator;
         if (words_size <= on_disk_count + i) {
           log::error("Index: Combine: Index ends before the next word "

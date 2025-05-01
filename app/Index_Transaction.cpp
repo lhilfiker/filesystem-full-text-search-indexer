@@ -131,9 +131,11 @@ int Index::execute_transactions() {
                                                     shift_amount]
                                    : (current_header->index_type == 4
                                           ? &mmap_additional[current_header
-                                                                 ->location]
-                                          : &mmap_paths_count
-                                                [current_header->location])))),
+                                                                 ->location +
+                                                             shift_amount]
+                                          : &mmap_paths_count[current_header
+                                                                  ->location +
+                                                              shift_amount])))),
           current_header->index_type == 0
               ? &mmap_paths[current_header->location]
               : (current_header->index_type == 1
@@ -189,7 +191,7 @@ int Index::execute_transactions() {
                  : (current_header->index_type == 1
                         ? index_path / "words.index"
                         : (current_header->index_type == 2
-                               ? index_path / "wordsf.index"
+                               ? index_path / "words_f.index"
                                : (current_header->index_type == 3
                                       ? index_path / "reversed.index"
                                       : (current_header->index_type == 4
