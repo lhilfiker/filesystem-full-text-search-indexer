@@ -221,8 +221,10 @@ Index::search_word_list(std::vector<std::string> &search_words,
       // If disk char > local char
       if ((int)mmap_words[on_disk_count + 1 + i] >
           (int)(search_words[local_word_count][i] - 'a')) {
-        if (!exact_match && i >= min_char_for_match)
+        if (!exact_match && i >= min_char_for_match) {
+          result_word_ids.push_back(on_disk_id);
           ++local_word_count;
+        }
         if (local_word_count ==
             search_words.size()) { // if not more words to compare quit.
           break;
@@ -235,8 +237,10 @@ Index::search_word_list(std::vector<std::string> &search_words,
       // If disk char < local char
       if ((int)mmap_words[on_disk_count + 1 + i] <
           (int)(search_words[local_word_count][i] - 'a')) {
-        if (!exact_match && i >= min_char_for_match)
+        if (!exact_match && i >= min_char_for_match) {
+          result_word_ids.push_back(on_disk_id);
           ++local_word_count;
+        }
         on_disk_count +=
             word_seperator -
             29; // 29 because its length of word + then the next seperator
