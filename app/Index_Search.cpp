@@ -207,7 +207,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
         // If its the last on disk char and at the end and not the same
         // length. means we need to skip this word.
         if (i == word_seperator - 31) {
-          if (!exact_match) {
+          if (!exact_match && i >= min_char_for_match) {
             result_word_ids.push_back(on_disk_id);
           }
           on_disk_count +=
@@ -223,8 +223,8 @@ Index::search_word_list(std::vector<std::string> &search_words,
           (int)(search_words[local_word_count][i] - 'a')) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
-          ++local_word_count;
         }
+        ++local_word_count;
         if (local_word_count ==
             search_words.size()) { // if not more words to compare quit.
           break;
@@ -239,7 +239,6 @@ Index::search_word_list(std::vector<std::string> &search_words,
           (int)(search_words[local_word_count][i] - 'a')) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
-          ++local_word_count;
         }
         on_disk_count +=
             word_seperator -
