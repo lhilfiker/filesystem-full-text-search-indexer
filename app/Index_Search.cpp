@@ -287,7 +287,11 @@ Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
   if (is_mapped == false) {
     map();
   }
+
   std::unordered_map<uint64_t, std::string> results;
+  if (path_ids.size() == 0) {
+    return results;
+  }
   results.reserve(path_ids.size());
 
   std::vector<search_path_ids_return> sorted_path_ids = path_ids;
