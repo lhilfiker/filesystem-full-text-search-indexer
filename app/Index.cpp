@@ -30,7 +30,7 @@ mio::mmap_sink Index::mmap_reversed;
 mio::mmap_sink Index::mmap_additional;
 
 void Index::save_config(const std::filesystem::path &config_index_path,
-                        const uint64_t config_buffer_size) {
+                        const int64_t config_buffer_size) {
   index_path = config_index_path;
   buffer_size = config_buffer_size;
   if (buffer_size < 10000) {
