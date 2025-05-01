@@ -12,7 +12,7 @@ uint8_t Search::config_min_char_for_match = 4;
 // To overwrite them
 void Search::save_config(bool exact_match, uint8_t min_char_for_match) {
   config_exact_match = exact_match;
-  config_exact_match = min_char_for_match;
+  config_min_char_for_match = min_char_for_match;
 }
 
 void Search::search() {
