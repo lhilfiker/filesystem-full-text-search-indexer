@@ -13,26 +13,31 @@
 #include <vector>
 
 // First define the size based on the path ID type
-#if MAX_PATH_ID_LINK_SIZE == 2
+#if PATH_ID_LINK_SIZE == 2
 #define PATH_ID_TYPE uint16_t
-#elif MAX_PATH_ID_LINK_SIZE == 4
+#elif PATH_ID_LINK_SIZE == 4
 #define PATH_ID_TYPE uint32_t
-#elif MAX_PATH_ID_LINK_SIZE == 8
+#elif PATH_ID_LINK_SIZE == 8
 #define PATH_ID_TYPE uint64_t
 #else
-#error "MAX_PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#error "PATH_ID_LINK_SIZE must be 2, 4, or 8"
 #endif
 
 // Define the additional ID type
-#if MAX_ADDITIONAL_ID_LINK_SIZE == 2
+#if ADDITIONAL_ID_LINK_SIZE == 2
 #define ADDITIONAL_ID_TYPE uint16_t
-#elif MAX_ADDITIONAL_ID_LINK_SIZE == 4
+#elif ADDITIONAL_ID_LINK_SIZE == 4
 #define ADDITIONAL_ID_TYPE uint32_t
-#elif MAX_ADDITIONAL_ID_LINK_SIZE == 8
+#elif ADDITIONAL_ID_LINK_SIZE == 8
 #define ADDITIONAL_ID_TYPE uint64_t
 #else
-#error "MAX_ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
+#error "ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
 #endif
+
+#define REVERSED_ENTRY_SIZE                                                    \
+  (REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE + ADDITIONAL_ID_LINK_SIZE)
+#define ADDITIONAL_ENTRY_SIZE                                                  \
+  (ADDITIONAL_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE + ADDITIONAL_ID_LINK_SIZE)
 
 struct words_reversed {
   std::string word;
@@ -211,7 +216,7 @@ union WordsFValue {
     uint64_t location;
     PATH_ID_TYPE id;
   };
-  unsigned char bytes[8 + MAX_PATH_ID_LINK_SIZE];
+  unsigned char bytes[8 + PATH_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
@@ -220,23 +225,22 @@ union WordsFValue {
 
 union ReversedBlock {
   struct {
-    PATH_ID_TYPE path[MAX_REVERSED_PATH_LINKS_AMOUNT];
+    PATH_ID_TYPE path[REVERSED_PATH_LINKS_AMOUNT];
     ADDITIONAL_ID_TYPE additional[1];
   } ids;
-  unsigned char bytes[(MAX_REVERSED_PATH_LINKS_AMOUNT * MAX_PATH_ID_LINK_SIZE) +
-                      MAX_ADDITIONAL_ID_LINK_SIZE];
+  unsigned char bytes[(REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
+                      ADDITIONAL_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
 #pragma pack(push, 1)
 union AdditionalBlock {
   struct {
-    PATH_ID_TYPE path[MAX_ADDITIONAL_PATH_LINKS_AMOUNT];
+    PATH_ID_TYPE path[ADDITIONAL_PATH_LINKS_AMOUNT];
     ADDITIONAL_ID_TYPE additional[1];
   } ids;
-  unsigned char
-      bytes[(MAX_ADDITIONAL_PATH_LINKS_AMOUNT * MAX_PATH_ID_LINK_SIZE) +
-            MAX_ADDITIONAL_ID_LINK_SIZE];
+  unsigned char bytes[(ADDITIONAL_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
+                      ADDITIONAL_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
@@ -251,23 +255,23 @@ union PathOffset {
 // PathIDOffset with depending on compiletime config different sizes.
 #pragma pack(push, 1)
 
-#if MAX_PATH_ID_LINK_SIZE == 2
+#if PATH_ID_LINK_SIZE == 2
 union PathIDOffset {
   uint16_t offset;
   unsigned char bytes[2];
 };
-#elif MAX_PATH_ID_LINK_SIZE == 4
+#elif PATH_ID_LINK_SIZE == 4
 union PathIDOffset {
   uint32_t offset;
   unsigned char bytes[4];
 };
-#elif MAX_PATH_ID_LINK_SIZE == 8
+#elif PATH_ID_LINK_SIZE == 8
 union PathIDOffset {
   uint64_t offset;
   unsigned char bytes[8];
 };
 #else
-#error "MAX_PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#error "PATH_ID_LINK_SIZE must be 2, 4, or 8"
 #endif
 #pragma pack(pop)
 
@@ -312,12 +316,6 @@ private:
 
   // Config Values
   static std::filesystem::path CONFIG_INDEX_PATH;
-  static uint8_t CONFIG_PATH_ID_LINK_SIZE;
-  static uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE;
-  static uint16_t CONFIG_REVERSED_PATH_LINKS_AMOUNT;
-  static uint16_t CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT;
-  static uint32_t CONFIG_REVERSED_ENTRY_SIZE;
-  static uint32_t CONFIG_ADDITIONAL_ENTRY_SIZE;
 
 private:
   static void check_files();
@@ -358,11 +356,7 @@ private:
   static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
 
 public:
-  static void save_config(const std::filesystem::path &index_path,
-                          const uint8_t path_id_link_size,
-                          const uint8_t additional_id_link_size,
-                          const uint16_t reversed_path_links_amount,
-                          const uint16_t additional_path_links_amount);
+  static void save_config(const std::filesystem::path &index_path);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();

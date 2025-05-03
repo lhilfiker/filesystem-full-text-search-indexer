@@ -32,17 +32,6 @@ mio::mmap_sink Index::mmap_additional;
 // Config Values, they will be set once and never again while the index is
 // initialized
 std::filesystem::path Index::CONFIG_INDEX_PATH;
-uint8_t CONFIG_PATH_ID_LINK_SIZE = DEFAULT_PATH_ID_LINK_SIZE;
-uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE = DEFAULT_ADDITIONAL_ID_LINK_SIZE;
-uint16_t CONFIG_REVERSED_PATH_LINKS_AMOUNT = DEFAULT_REVERSED_PATH_LINKS_AMOUNT;
-uint16_t CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT =
-    DEFAULT_ADDITIONAL_PATH_LINKS_AMOUNT;
-uint32_t CONFIG_REVERSED_ENTRY_SIZE =
-    CONFIG_REVERSED_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
-    CONFIG_ADDITIONAL_ID_LINK_SIZE;
-uint32_t CONFIG_ADDITIONAL_ENTRY_SIZE =
-    CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
-    CONFIG_ADDITIONAL_ID_LINK_SIZE;
 
 void Index::save_config(const std::filesystem::path &index_path,
                         const uint8_t path_id_link_size,
@@ -55,48 +44,6 @@ void Index::save_config(const std::filesystem::path &index_path,
   }
   CONFIG_INDEX_PATH =
       index_path; // Index path validation happens in check_files
-
-  if (path_id_link_size == 2 || path_id_link_size == 4 ||
-      path_id_link_size == 8) {
-    CONFIG_PATH_ID_LINK_SIZE = path_id_link_size;
-  } else {
-    log::write(3,
-               "Index: save_config: Invalid path id link size. Can either "
-               "be 2,4 or 8(depending on compile options). Set to defaut of" +
-                   std::to_string(MAX_PATH_ID_LINK_SIZE) + ".");
-  }
-  if (additional_id_link_size == 2 || additional_id_link_size == 4 ||
-      additional_id_link_size == 8) {
-    CONFIG_ADDITIONAL_ID_LINK_SIZE = additional_id_link_size;
-  } else {
-    log::write(3,
-               "Index: save_config: Invalid path id link size. Can either "
-               "be 2,4 or 8(depending on compile options). Set to defaut of" +
-                   std::to_string(DEFAULT_ADDITIONAL_ID_LINK_SIZE) + ".");
-  }
-  if (reversed_path_links_amount >= 2 &&
-      reversed_path_links_amount <= MAX_REVERSED_PATH_LINKS_AMOUNT) {
-    CONFIG_REVERSED_PATH_LINKS_AMOUNT = reversed_path_links_amount;
-  } else {
-    log::write(3, "Index: save_config: Invalid reversed path links amount. "
-                  "Needs to be beetween 2 and 500. Set to default of 4.");
-  }
-  if (additional_path_links_amount >= 2 &&
-      additional_path_links_amount <= MAX_ADDITIONAL_PATH_LINKS_AMOUNT) {
-    CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT = additional_path_links_amount;
-  } else {
-    log::write(3, "Index: save_config: Invalid reversed path links amount. "
-                  "Needs to be beetween 2 and 500. Set to default of 24.");
-  }
-
-  // Now we recalculate CONFIG_REVERSED_ENTRY_SIZE and
-  // CONFIG_ADDITIONAL_ENTRY_SIZE based on potentialy nondefault config values.
-  CONFIG_REVERSED_ENTRY_SIZE =
-      CONFIG_REVERSED_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
-      CONFIG_ADDITIONAL_ID_LINK_SIZE;
-  CONFIG_ADDITIONAL_ENTRY_SIZE =
-      CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
-      CONFIG_ADDITIONAL_ID_LINK_SIZE;
 
   is_config_loaded = true;
   log::write(1, "Index: save_config: saved config successfully.");

@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "index_config.h"
 #include "lib/mio.hpp"
 #include <array>
 #include <cstring>
@@ -15,55 +16,50 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
   }
   // load the reversed block into memory.
   ReversedBlock *disk_reversed = reinterpret_cast<ReversedBlock *>(
-      &mmap_reversed[word_id * CONFIG_REVERSED_ENTRY_SIZE]);
-  for (int i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT; ++i) {
-    if (disk_reversed->ids[i] != 0) {
-      path_ids.push_back(disk_reversed->ids[i]);
+      &mmap_reversed[word_id * REVERSED_ENTRY_SIZE]);
+  for (int i = 0; i < REVERSED_PATH_LINKS_AMOUNT; ++i) {
+    if (disk_reversed->ids.path[i] != 0) {
+      path_ids.push_back(disk_reversed->ids.path[i]);
     }
   }
 
-  if (disk_reversed->ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT] == 0) {
+  if (disk_reversed->ids.additional[0] == 0) {
     // if no additional is linked we return here.
     return path_ids;
   }
-  if ((disk_reversed->ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT] *
-       CONFIG_ADDITIONAL_ENTRY_SIZE) > additional_size) {
+  if ((disk_reversed->ids.additional[0] * ADDITIONAL_ENTRY_SIZE) >
+      additional_size) {
     log::error("Index: path_ids_from_word_id: to search word id would be at "
                "nonexisting location. Index most likely corrupt. Exiting");
   }
   AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
-      &mmap_additional[(disk_reversed->ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT] -
-                        1) *
-                       CONFIG_ADDITIONAL_ENTRY_SIZE]);
+      &mmap_additional[(disk_reversed->ids.additional[0] - 1) *
+                       ADDITIONAL_ENTRY_SIZE]);
 
   // load the current additional block. -1 because additional IDs start at 1.
   int i = 0;
-  size_t current_additional =
-      disk_reversed->ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT];
+  size_t current_additional = disk_reversed->ids.additional[0];
   while (true) { // it will break when no new additional is linked
-    if (i == CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT) {
-      if (disk_additional->ids[CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT] == 0) {
+    if (i == ADDITIONAL_PATH_LINKS_AMOUNT) {
+      if (disk_additional->ids.additional[0] == 0) {
         // no additionals are left.
         break;
       } else {
         // load the new additional block
-        current_additional =
-            disk_additional->ids[CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT];
-        if ((current_additional * CONFIG_ADDITIONAL_ENTRY_SIZE) >
-            additional_size) {
+        current_additional = disk_additional->ids.additional[0];
+        if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
           log::error(
               "Index: path_ids_from_word_id: to search word id would be at "
               "nonexisting location. Index most likely corrupt. Exiting");
         }
         disk_additional = reinterpret_cast<AdditionalBlock *>(
-            &mmap_additional[(current_additional - 1) *
-                             CONFIG_ADDITIONAL_ENTRY_SIZE]);
+            &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
         i = 0;
       }
     }
-    if (disk_additional->ids[i] != 0) {
+    if (disk_additional->ids.path[i] != 0) {
       // save path id
-      path_ids.push_back(disk_additional->ids[i]);
+      path_ids.push_back(disk_additional->ids.path[i]);
     }
 
     ++i;
@@ -267,7 +263,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
   // Now we need to read all reversed and additionals and put it into a list of
   // path_id count.
   // we will later combine them but it's easier like this.
-  std::vector<uint64_t> path_ids;
+  std::vector<PATH_ID_TYPE> path_ids;
   std::vector<uint32_t> counts;
   if (result_word_ids.size() == 0)
     return results;

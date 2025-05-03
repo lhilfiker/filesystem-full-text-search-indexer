@@ -19,30 +19,29 @@ int Index::add_new(index_combine_data &index_to_add) {
   // of space?
   words_f_size_buffer =
       26 *
-      (8 + MAX_PATH_ID_LINK_SIZE); // uint64_t stored as 8 bytes(disk location))
-                                   // + PATH_ID_TYPE stored as 4 bytes(disk id)
-                                   // for each letter in the alphabet.
+      (8 + PATH_ID_LINK_SIZE); // uint64_t stored as 8 bytes(disk location))
+                               // + PATH_ID_TYPE stored as 4 bytes(disk id)
+                               // for each letter in the alphabet.
 
   reversed_size_buffer =
-      index_to_add.words_and_reversed.size() * CONFIG_REVERSED_ENTRY_SIZE;
+      index_to_add.words_and_reversed.size() * REVERSED_ENTRY_SIZE;
   additional_size_buffer = 0;
   for (const words_reversed &additional_reversed_counter :
        index_to_add.words_and_reversed) {
     if (additional_reversed_counter.reversed.size() <=
-        CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
+        REVERSED_PATH_LINKS_AMOUNT) {
       continue; // if it fits in only a reverse nlock no additional is
                 // requiered.
     }
     additional_size_buffer +=
         (additional_reversed_counter.reversed.size() -
-         CONFIG_REVERSED_PATH_LINKS_AMOUNT + CONFIG_ADDITIONAL_ID_LINK_SIZE -
-         1) /
-        CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT; // celling divsion to round up to
-                                             // the next big number.
+         REVERSED_PATH_LINKS_AMOUNT + ADDITIONAL_ID_LINK_SIZE - 1) /
+        ADDITIONAL_PATH_LINKS_AMOUNT; // celling divsion to round up to
+                                      // the next big number.
   }
   additional_size_buffer *=
-      CONFIG_ADDITIONAL_ENTRY_SIZE; // amount of additionals times the bytes per
-                                    // additional
+      ADDITIONAL_ENTRY_SIZE; // amount of additionals times the bytes per
+                             // additional
 
   // resize
   unmap();
@@ -151,8 +150,8 @@ int Index::add_new(index_combine_data &index_to_add) {
   file_location = 0;
   for (const WordsFValue &word_f : words_f) {
     std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0],
-                (8 + MAX_PATH_ID_LINK_SIZE));
-    file_location += (8 + MAX_PATH_ID_LINK_SIZE);
+                (8 + PATH_ID_LINK_SIZE));
+    file_location += (8 + PATH_ID_LINK_SIZE);
   }
 
   words_f_size = file_location;
@@ -165,7 +164,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   for (const words_reversed &reversed : index_to_add.words_and_reversed) {
     // check if we need only a reversed block or also additionals.
     ReversedBlock current_ReversedBlock{};
-    if (reversed.reversed.size() <= CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
+    if (reversed.reversed.size() <= REVERSED_PATH_LINKS_AMOUNT) {
       // we just need a reversed so we will write that.
       size_t i = 0;
       for (const PATH_ID_TYPE &r_id : reversed.reversed) {
@@ -180,43 +179,28 @@ int Index::add_new(index_combine_data &index_to_add) {
       size_t reversed_i = 0;
       AdditionalBlock additional{};
       for (const PATH_ID_TYPE &path_id : reversed.reversed) {
-        if (reversed_i < CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
+        if (reversed_i < REVERSED_PATH_LINKS_AMOUNT) {
           current_ReversedBlock.ids.path[reversed_i] = path_id + 1;
           ++reversed_i;
           continue;
         }
-        if (reversed_i == CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
-          current_ReversedBlock.ids
-              .additional[CONFIG_REVERSED_PATH_LINKS_AMOUNT] = additional_id;
+        if (reversed_i == REVERSED_PATH_LINKS_AMOUNT) {
+          current_ReversedBlock.ids.additional[REVERSED_PATH_LINKS_AMOUNT] =
+              additional_id;
           ++reversed_i;
         }
         if (additional_i ==
-            CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT) { // the next additional id
-                                                   // field.
-          additional.ids.additional[CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT] =
+            ADDITIONAL_PATH_LINKS_AMOUNT) { // the next additional id
+                                            // field.
+          additional.ids.additional[ADDITIONAL_PATH_LINKS_AMOUNT] =
               additional_id + 1;
           additional_i = 0;
 
-          // Write it to the mmap file. Writing like this because of
-          // configurable byte sizes.
           uint16_t byte_counter = 0;
-          for (uint16_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
-            // write the bytes
-            for (uint8_t j = 0; j < CONFIG_PATH_ID_LINK_SIZE; ++j) {
-              mmap_additional[additional_file_location] =
-                  additional.bytes[byte_counter];
-              ++byte_counter;
-              ++additional_file_location;
-            }
-            byte_counter += MAX_PATH_ID_LINK_SIZE - DEFAULT_PATH_ID_LINK_SIZE;
-          }
-          for (uint8_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
-            mmap_additional[additional_file_location] =
-                additional.bytes[byte_counter];
-            ++byte_counter;
+          for (const char &byte : additional.bytes) {
+            mmap_additional[additional_file_location] = byte;
             ++additional_file_location;
           }
-
           ++additional_id;
           additional = {};
         }
@@ -224,46 +208,17 @@ int Index::add_new(index_combine_data &index_to_add) {
         ++additional_i;
       }
       if (additional_i != 0) {
-        // Write it to the mmap file. Writing like this because of
-        // configurable byte sizes.
-        uint16_t byte_counter = 0;
-        for (uint16_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
-          // write the bytes
-          for (uint8_t j = 0; j < CONFIG_PATH_ID_LINK_SIZE; ++j) {
-            mmap_additional[additional_file_location] =
-                additional.bytes[byte_counter];
-            ++byte_counter;
-            ++additional_file_location;
-          }
-          byte_counter += MAX_PATH_ID_LINK_SIZE - DEFAULT_PATH_ID_LINK_SIZE;
-        }
-        for (uint8_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
-          mmap_additional[additional_file_location] =
-              additional.bytes[byte_counter];
-          ++byte_counter;
+        for (const char &byte : additional.bytes) {
+          mmap_additional[additional_file_location] = byte;
           ++additional_file_location;
         }
         ++additional_id;
       }
     }
 
-    // write reversed block. Write it to the mmap file. Writing like this
-    // because of configurable byte sizes.
-    uint16_t byte_counter = 0;
-    for (uint16_t i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT; ++i) {
-      // write the bytes
-      for (uint8_t j = 0; j < CONFIG_PATH_ID_LINK_SIZE; ++j) {
-        mmap_reversed[additional_file_location] =
-            current_ReversedBlock.bytes[byte_counter];
-        ++byte_counter;
-        ++file_location;
-      }
-      byte_counter += MAX_PATH_ID_LINK_SIZE - DEFAULT_PATH_ID_LINK_SIZE;
-    }
-    for (uint8_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
-      mmap_reversed[additional_file_location] =
-          current_ReversedBlock.bytes[byte_counter];
-      ++byte_counter;
+    // write reversed block
+    for (int i = 0; i < REVERSED_ENTRY_SIZE; ++i) {
+      mmap_reversed[file_location] = current_ReversedBlock.bytes[i];
       ++file_location;
     }
   }
