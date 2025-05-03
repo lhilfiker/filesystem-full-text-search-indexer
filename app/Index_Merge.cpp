@@ -150,7 +150,7 @@ void Index::add_reversed_to_word(
           // get the first local id. then convert it to disk id and save it to
           // the offset. PathIDOffset is the same The Path ID  size of a
           // reversed slot.
-          PathAdditionalOffset content;
+          AdditionalOffset content;
           content.offset = paths_mapping.by_local[a_id];
           // add it to the transaction to overwrite the empty place with the new
           // disk id and then delete it from the local reversed list.
@@ -196,7 +196,7 @@ void Index::add_reversed_to_word(
           0, 1, ADDITIONAL_ID_LINK_SIZE};
     }
 
-    PathAdditionalOffset content;
+    AdditionalOffset content;
     current_additional = ((additional_size + additional_new_needed_size) /
                           ADDITIONAL_ENTRY_SIZE) +
                          1; // get the ID of the new additional ID at the end.
@@ -235,7 +235,7 @@ void Index::add_reversed_to_word(
         // additional and go to the next.
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0) { // If this will be the last one we will add 0.
-          PathAdditionalOffset add;
+          AdditionalOffset add;
           add.offset = 0;
           for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
             additional_new_transaction.content += content.bytes[i];
@@ -245,7 +245,7 @@ void Index::add_reversed_to_word(
         }
         in_additional_counter = 0;
         ++current_additional;
-        PathAdditionalOffset add;
+        AdditionalOffset add;
         add.offset = current_additional;
         for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
           additional_new_transaction.content += content.bytes[i];
@@ -261,7 +261,7 @@ void Index::add_reversed_to_word(
         for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
           additional_new_transaction.content += add.bytes[i];
         }
-        PathAdditionalOffset add_additional;
+        AdditionalOffset add_additional;
         add_additional.offset = 0;
         for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
           additional_new_transaction.content += add_additional.bytes[i];

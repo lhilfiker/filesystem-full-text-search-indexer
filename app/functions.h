@@ -278,17 +278,17 @@ union PathIDOffset {
 #pragma pack(push, 1)
 
 #if ADDITIONAL_ID_LINK_SIZE == 2
-union PathAdditionalOffset {
+union AdditionalOffset {
   uint16_t offset;
   unsigned char bytes[2];
 };
 #elif ADDITIONAL_ID_LINK_SIZE == 4
-union PathAdditionalOffset {
+union AdditionalOffset {
   uint32_t offset;
   unsigned char bytes[4];
 };
 #elif ADDITIONAL_ID_LINK_SIZE == 8
-union PathAdditionalOffset {
+union AdditionalOffset {
   uint64_t offset;
   unsigned char bytes[8];
 };
