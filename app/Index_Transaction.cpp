@@ -13,18 +13,16 @@ int Index::execute_transactions() {
   size_t transaction_current_location = 0;
   mio::mmap_sink mmap_transactions;
   mmap_transactions = mio::make_mmap_sink(
-      (index_path / "transaction" / "transaction.list").string(), 0,
+      (CONFIG_INDEX_PATH / "transaction" / "transaction.list").string(), 0,
       mio::map_entire_file, ec);
   /*log::write(1, "Index: Transaction: Detected " +
                     std::to_string(
-                        std::filesystem::file_size(index_path / "transaction" /
-                                                   "transaction.list") /
-                        27) +
-                    " potential transactions");
+                        std::filesystem::file_size(CONFIG_INDEX_PATH /
+     "transaction" / "transaction.list") / 27) + " potential transactions");
   */
   while (transaction_current_location + 27 <
          std::filesystem::file_size(
-             index_path / "transaction" /
+             CONFIG_INDEX_PATH / "transaction" /
              "transaction.list")) { // if we can read current position + a whole
                                     // trasactionheader
     TransactionHeader *current_header = reinterpret_cast<TransactionHeader *>(
@@ -70,11 +68,11 @@ int Index::execute_transactions() {
         if (current_header->operation_type ==
             3) { // If it is a backup creation we just delete the current backup
                  // file if it exists and then continue.
-          std::filesystem::remove(index_path / "transaction" / "backups" /
-                                  backup_file_name);
+          std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
+                                  "backups" / backup_file_name);
         } else {
           if (current_header->content_length !=
-              std::filesystem::file_size(index_path / "transaction" /
+              std::filesystem::file_size(CONFIG_INDEX_PATH / "transaction" /
                                          "backups" / backup_file_name)) {
             log::error("Transaction: backup file corrupt. Can not restore from "
                        "backup. Index potentially corrupt. Exiting. This "
@@ -82,7 +80,7 @@ int Index::execute_transactions() {
           }
           mio::mmap_sink mmap_backup;
           mmap_backup = mio::make_mmap_sink(
-              (index_path / "transaction" / "backups" / backup_file_name)
+              (CONFIG_INDEX_PATH / "transaction" / "backups" / backup_file_name)
                   .string(),
               0, mio::map_entire_file, ec);
           // restore from backup. overwrite then continue.
@@ -187,16 +185,17 @@ int Index::execute_transactions() {
       mmap_transactions.sync(ec);
       unmap();
       resize(current_header->index_type == 0
-                 ? index_path / "paths.index"
+                 ? CONFIG_INDEX_PATH / "paths.index"
                  : (current_header->index_type == 1
-                        ? index_path / "words.index"
+                        ? CONFIG_INDEX_PATH / "words.index"
                         : (current_header->index_type == 2
-                               ? index_path / "words_f.index"
+                               ? CONFIG_INDEX_PATH / "words_f.index"
                                : (current_header->index_type == 3
-                                      ? index_path / "reversed.index"
+                                      ? CONFIG_INDEX_PATH / "reversed.index"
                                       : (current_header->index_type == 4
-                                             ? index_path / "additional.index"
-                                             : index_path /
+                                             ? CONFIG_INDEX_PATH /
+                                                   "additional.index"
+                                             : CONFIG_INDEX_PATH /
                                                    "paths_count.index")))),
              current_header->content_length);
       switch (current_header->index_type) {
@@ -229,12 +228,14 @@ int Index::execute_transactions() {
       mmap_transactions.sync(ec);
       std::string backup_file_name =
           std::to_string(current_header->backup_id) + ".backup";
-      std::ofstream{index_path / "transaction" / "backups" / backup_file_name};
-      resize(index_path / "transaction" / "backups" / backup_file_name,
+      std::ofstream{CONFIG_INDEX_PATH / "transaction" / "backups" /
+                    backup_file_name};
+      resize(CONFIG_INDEX_PATH / "transaction" / "backups" / backup_file_name,
              current_header->content_length);
       mio::mmap_sink mmap_backup;
       mmap_backup = mio::make_mmap_sink(
-          (index_path / "transaction" / "backups" / backup_file_name).string(),
+          (CONFIG_INDEX_PATH / "transaction" / "backups" / backup_file_name)
+              .string(),
           0, mio::map_entire_file, ec);
       std::memcpy(
           &mmap_backup[0],
@@ -299,10 +300,12 @@ int Index::execute_transactions() {
   log::write(2,
              "Index: Transaction: Cleaning up transaction files and backups");
 
-  std::filesystem::remove(index_path / "transaction" / "transaction.list");
+  std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
+                          "transaction.list");
   // removing all backups because they are not needed anymore.
-  std::filesystem::remove_all(index_path / "transaction" / "backups");
-  std::filesystem::create_directories(index_path / "transaction" / "backups");
+  std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
+  std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
+                                      "backups");
   log::write(2, "Index: Transaction: Execution finished.");
   return 0;
 }

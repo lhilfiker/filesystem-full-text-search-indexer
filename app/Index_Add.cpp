@@ -34,12 +34,12 @@ int Index::add_new(index_combine_data &index_to_add) {
 
   // resize
   unmap();
-  resize(index_path / "paths.index", paths_size_buffer);
-  resize(index_path / "paths_count.index", paths_count_size_buffer);
-  resize(index_path / "words.index", words_size_buffer);
-  resize(index_path / "words_f.index", words_f_size_buffer);
-  resize(index_path / "reversed.index", reversed_size_buffer);
-  resize(index_path / "additional.index", additional_size_buffer);
+  resize(CONFIG_INDEX_PATH / "paths.index", paths_size_buffer);
+  resize(CONFIG_INDEX_PATH / "paths_count.index", paths_count_size_buffer);
+  resize(CONFIG_INDEX_PATH / "words.index", words_size_buffer);
+  resize(CONFIG_INDEX_PATH / "words_f.index", words_f_size_buffer);
+  resize(CONFIG_INDEX_PATH / "reversed.index", reversed_size_buffer);
+  resize(CONFIG_INDEX_PATH / "additional.index", additional_size_buffer);
   map();
 
   // write all paths to disk with a offset in beetween.

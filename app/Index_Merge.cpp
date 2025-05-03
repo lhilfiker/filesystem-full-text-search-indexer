@@ -989,7 +989,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // backups / backupid.backup
 
   std::filesystem::path transaction_path =
-      index_path / "transaction" / "transaction.list";
+      CONFIG_INDEX_PATH / "transaction" / "transaction.list";
 
   size_t recalculated_size = 0;
   for (const auto &tx : transactions) {
