@@ -259,7 +259,6 @@ private:
   static mio::mmap_sink mmap_additional;
 
   // Config Values
-  static int64_t CONFIG_BUFFER_SIZE;
   static std::filesystem::path CONFIG_INDEX_PATH;
   static uint8_t CONFIG_PATH_ID_LINK_SIZE;
   static uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE;
@@ -308,7 +307,6 @@ private:
 
 public:
   static void save_config(const std::filesystem::path &index_path,
-                          const int64_t buffer_size,
                           const uint8_t path_id_link_size,
                           const uint8_t additional_id_link_size,
                           const uint16_t reversed_path_links_amount,

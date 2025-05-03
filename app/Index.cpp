@@ -30,7 +30,6 @@ mio::mmap_sink Index::mmap_additional;
 
 // Config Values, they will be set once and never again while the index is
 // initialized
-int64_t Index::CONFIG_BUFFER_SIZE = 0;
 std::filesystem::path Index::CONFIG_INDEX_PATH;
 uint8_t CONFIG_PATH_ID_LINK_SIZE = 2;
 uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE = 4;
@@ -44,7 +43,6 @@ uint32_t CONFIG_ADDITIONAL_ENTRY_SIZE =
     CONFIG_ADDITIONAL_ID_LINK_SIZE;
 
 void Index::save_config(const std::filesystem::path &index_path,
-                        const int64_t buffer_size,
                         const uint8_t path_id_link_size,
                         const uint8_t additional_id_link_size,
                         const uint16_t reversed_path_links_amount,
@@ -54,18 +52,6 @@ void Index::save_config(const std::filesystem::path &index_path,
                   "save config. Try to uninitialize first.");
   }
   CONFIG_INDEX_PATH = index_path;
-
-  CONFIG_BUFFER_SIZE = buffer_size;
-  if (CONFIG_BUFFER_SIZE < 10000) {
-    CONFIG_BUFFER_SIZE = 10000;
-    log::write(3, "Index: save_config: buffer size needs to be atleast 10000. "
-                  "setting it to 10000.");
-  }
-  if (CONFIG_BUFFER_SIZE > 10000000) {
-    CONFIG_BUFFER_SIZE = 10000000;
-    log::write(3, "Index: save_config: buffer size can not be larger than "
-                  "~10MB, setting it to ~10MB");
-  }
 
   is_config_loaded = true;
   log::write(1, "Index: save_config: saved config successfully.");
