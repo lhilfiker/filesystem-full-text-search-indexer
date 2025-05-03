@@ -219,10 +219,10 @@ union WordsFValue {
 #pragma pack(push, 1)
 
 union ReversedBlock {
-  struct ids {
+  struct {
     PATH_ID_TYPE path[MAX_REVERSED_PATH_LINKS_AMOUNT];
     ADDITIONAL_ID_TYPE additional[1];
-  };
+  } ids;
   unsigned char bytes[(MAX_REVERSED_PATH_LINKS_AMOUNT * MAX_PATH_ID_LINK_SIZE) +
                       MAX_ADDITIONAL_ID_LINK_SIZE];
 };
@@ -230,10 +230,10 @@ union ReversedBlock {
 
 #pragma pack(push, 1)
 union AdditionalBlock {
-  struct ids {
+  struct {
     PATH_ID_TYPE path[MAX_ADDITIONAL_PATH_LINKS_AMOUNT];
     ADDITIONAL_ID_TYPE additional[1];
-  };
+  } ids;
   unsigned char
       bytes[(MAX_ADDITIONAL_PATH_LINKS_AMOUNT * MAX_PATH_ID_LINK_SIZE) +
             MAX_ADDITIONAL_ID_LINK_SIZE];
