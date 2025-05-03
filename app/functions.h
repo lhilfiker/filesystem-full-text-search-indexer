@@ -2,6 +2,7 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#include "index_config.h"
 #include "lib/mio.hpp"
 #include <array>
 #include <filesystem>
@@ -161,8 +162,8 @@ struct Transaction {
   std::string content; // For move operations this will be 8 bytes always and it
                        // is a uint64_t and signals the byte shift.
 };
-#pragma pack(push, 1)
 
+#pragma pack(push, 1)
 union InsertionHeader {
   struct {
     uint64_t location;
@@ -183,7 +184,6 @@ struct PathsMapping {
 };
 
 #pragma pack(push, 1)
-
 union WordsFValue {
   struct {
     uint64_t location;
@@ -193,32 +193,85 @@ union WordsFValue {
 };
 #pragma pack(pop)
 
+// First define the size based on the path ID type
+#if MAX_PATH_ID_LINK_SIZE == 2
+#define PATH_ID_TYPE uint16_t
+#elif MAX_PATH_ID_LINK_SIZE == 4
+#define PATH_ID_TYPE uint32_t
+#elif MAX_PATH_ID_LINK_SIZE == 8
+#define PATH_ID_TYPE uint64_t
+#else
+#error "MAX_PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+
+// Define the additional ID type
+#if MAX_ADDITIONAL_ID_LINK_SIZE == 2
+#define ADDITIONAL_ID_TYPE uint16_t
+#elif MAX_ADDITIONAL_ID_LINK_SIZE == 4
+#define ADDITIONAL_ID_TYPE uint32_t
+#elif MAX_ADDITIONAL_ID_LINK_SIZE == 8
+#define ADDITIONAL_ID_TYPE uint64_t
+#else
+#error "MAX_ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+
+// ReversedBlock with depending on compiletime config different sizes.
 #pragma pack(push, 1)
 
 union ReversedBlock {
-  uint16_t ids[5];
-  unsigned char bytes[10];
+  struct ids {
+    PATH_ID_TYPE path[MAX_REVERSED_PATH_LINKS_AMOUNT];
+    ADDITIONAL_ID_TYPE additional[1];
+  };
+  unsigned char bytes[(MAX_REVERSED_PATH_LINKS_AMOUNT * MAX_PATH_ID_LINK_SIZE) +
+                      MAX_ADDITIONAL_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-
 union AdditionalBlock {
-  uint16_t ids[25];
-  unsigned char bytes[50];
+  struct ids {
+    PATH_ID_TYPE path[MAX_ADDITIONAL_PATH_LINKS_AMOUNT];
+    ADDITIONAL_ID_TYPE additional[1];
+  };
+  unsigned char
+      bytes[(MAX_ADDITIONAL_PATH_LINKS_AMOUNT * MAX_PATH_ID_LINK_SIZE) +
+            MAX_ADDITIONAL_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
+// Path Offsets
 #pragma pack(push, 1)
-
 union PathOffset {
   uint16_t offset;
   unsigned char bytes[2];
 };
 #pragma pack(pop)
 
+// PathIDOffset with depending on compiletime config different sizes.
 #pragma pack(push, 1)
 
+#if MAX_PATH_ID_LINK_SIZE == 2
+union PathIDOffset {
+  uint16_t offset;
+  unsigned char bytes[2];
+};
+#elif MAX_PATH_ID_LINK_SIZE == 4
+union PathIDOffset {
+  uint32_t offset;
+  unsigned char bytes[4];
+};
+#elif MAX_PATH_ID_LINK_SIZE == 8
+union PathIDOffset {
+  uint64_t offset;
+  unsigned char bytes[8];
+};
+#else
+#error "MAX_PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 union PathsCountItem {
   uint32_t num;
   unsigned char bytes[4];
@@ -226,7 +279,6 @@ union PathsCountItem {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-
 union MoveOperationContent {
   uint64_t num;
   unsigned char bytes[8];
