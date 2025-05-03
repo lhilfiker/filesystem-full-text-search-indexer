@@ -20,17 +20,26 @@ int Index::add_new(index_combine_data &index_to_add) {
   words_f_size_buffer =
       26 * 12; // uint64_t stored as 8 bytes(disk location)) + uint32_t stored
                // as 4 bytes(disk id) for each letter in the alphabet.
-  reversed_size_buffer = index_to_add.words_and_reversed.size() *
-                         10; // each word id has a 10 byte block.
+
+  reversed_size_buffer =
+      index_to_add.words_and_reversed.size() * CONFIG_REVERSED_ENTRY_SIZE;
   additional_size_buffer = 0;
   for (const words_reversed &additional_reversed_counter :
        index_to_add.words_and_reversed) {
-    if (additional_reversed_counter.reversed.size() < 5)
-      continue; // if under 4 words, no additional is requiered.
+    if (additional_reversed_counter.reversed.size() <=
+        CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
+      continue; // if it fits in only a reverse nlock no additional is
+                // requiered.
+    }
     additional_size_buffer +=
-        (additional_reversed_counter.reversed.size() + 19) / 24;
+        (additional_reversed_counter.reversed.size() -
+         CONFIG_REVERSED_PATH_LINKS_AMOUNT - 1) /
+        CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT; // celling divsion to round up to
+                                             // the next big number.
   }
-  additional_size_buffer *= 50;
+  additional_size_buffer *=
+      CONFIG_ADDITIONAL_ENTRY_SIZE; // amount of additionals times the bytes per
+                                    // additional
 
   // resize
   unmap();
@@ -152,7 +161,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   for (const words_reversed &reversed : index_to_add.words_and_reversed) {
     // check if we need only a reversed block or also additionals.
     ReversedBlock current_ReversedBlock{};
-    if (reversed.reversed.size() <= 4) {
+    if (reversed.reversed.size() <= CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
       // we just need a reversed so we will write that.
       size_t i = 0;
       for (const uint32_t &r_id : reversed.reversed) {
@@ -166,17 +175,21 @@ int Index::add_new(index_combine_data &index_to_add) {
       size_t reversed_i = 0;
       AdditionalBlock additional{};
       for (const uint32_t &path_id : reversed.reversed) {
-        if (reversed_i < 4) {
+        if (reversed_i < CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
           current_ReversedBlock.ids[reversed_i] = path_id + 1;
           ++reversed_i;
           continue;
         }
-        if (reversed_i == 4) {
-          current_ReversedBlock.ids[4] = additional_id;
+        if (reversed_i == CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
+          current_ReversedBlock.ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT] =
+              additional_id;
           ++reversed_i;
         }
-        if (additional_i == 24) { // the next additional id field.
-          additional.ids[24] = additional_id + 1;
+        if (additional_i ==
+            CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT) { // the next additional id
+                                                   // field.
+          additional.ids[CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT] =
+              additional_id + 1;
           additional_i = 0;
           for (const char &byte : additional.bytes) {
             mmap_additional[additional_file_location] = byte;
@@ -198,7 +211,7 @@ int Index::add_new(index_combine_data &index_to_add) {
     }
 
     // write reversed block
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < CONFIG_REVERSED_ENTRY_SIZE; ++i) {
       mmap_reversed[file_location] = current_ReversedBlock.bytes[i];
       ++file_location;
     }
