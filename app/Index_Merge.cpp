@@ -211,8 +211,8 @@ void Index::add_reversed_to_word(
     Transaction additional_new_transaction;
     additional_new_transaction.content.reserve(
         ((index_to_add.words_and_reversed[local_word_count].reversed.size() +
-          ADDITIONAL_ID_LINK_SIZE - 1) /
-         ADDITIONAL_ID_LINK_SIZE) *
+          ADDITIONAL_PATH_LINKS_AMOUNT - 1) /
+         ADDITIONAL_PATH_LINKS_AMOUNT) *
         ADDITIONAL_ENTRY_SIZE); // so many additional we need.
     size_t in_additional_counter = 0;
     while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
