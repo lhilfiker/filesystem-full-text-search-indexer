@@ -258,7 +258,7 @@ void Index::add_reversed_to_word(
            ++in_additional_counter) {
         PathIDOffset add;
         add.offset = 0;
-        for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+        for (uint8_t i = 0; i < PATH_ID_LINK_SIZE; ++i) {
           additional_new_transaction.content += add.bytes[i];
         }
         AdditionalOffset add_additional;
