@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "index_config.h"
 #include "lib/mio.hpp"
 #include <cstring>
 #include <filesystem>
@@ -31,10 +32,11 @@ mio::mmap_sink Index::mmap_additional;
 // Config Values, they will be set once and never again while the index is
 // initialized
 std::filesystem::path Index::CONFIG_INDEX_PATH;
-uint8_t CONFIG_PATH_ID_LINK_SIZE = 2;
-uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE = 4;
-uint16_t CONFIG_REVERSED_PATH_LINKS_AMOUNT = 4;
-uint16_t CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT = 24;
+uint8_t CONFIG_PATH_ID_LINK_SIZE = DEFAULT_PATH_ID_LINK_SIZE;
+uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE = DEFAULT_ADDITIONAL_ID_LINK_SIZE;
+uint16_t CONFIG_REVERSED_PATH_LINKS_AMOUNT = DEFAULT_REVERSED_PATH_LINKS_AMOUNT;
+uint16_t CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT =
+    DEFAULT_ADDITIONAL_PATH_LINKS_AMOUNT;
 uint32_t CONFIG_REVERSED_ENTRY_SIZE =
     CONFIG_REVERSED_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
     CONFIG_ADDITIONAL_ID_LINK_SIZE;
@@ -58,25 +60,29 @@ void Index::save_config(const std::filesystem::path &index_path,
       path_id_link_size == 8) {
     CONFIG_PATH_ID_LINK_SIZE = path_id_link_size;
   } else {
-    log::write(3, "Index: save_config: Invalid path id link size. Can either "
-                  "be 2,4 or 8. Set to defaut of 2.");
+    log::write(3,
+               "Index: save_config: Invalid path id link size. Can either "
+               "be 2,4 or 8(depending on compile options). Set to defaut of" +
+                   std::to_string(MAX_PATH_ID_LINK_SIZE) + ".");
   }
   if (additional_id_link_size == 2 || additional_id_link_size == 4 ||
       additional_id_link_size == 8) {
     CONFIG_ADDITIONAL_ID_LINK_SIZE = additional_id_link_size;
   } else {
-    log::write(
-        3, "Index: save_config: Invalid additional id link size. Can either "
-           "be 2,4 or 8. Set to defaut of 4.");
+    log::write(3,
+               "Index: save_config: Invalid path id link size. Can either "
+               "be 2,4 or 8(depending on compile options). Set to defaut of" +
+                   std::to_string(DEFAULT_ADDITIONAL_ID_LINK_SIZE) + ".");
   }
-  if (reversed_path_links_amount >= 2 && reversed_path_links_amount <= 500) {
+  if (reversed_path_links_amount >= 2 &&
+      reversed_path_links_amount <= MAX_REVERSED_PATH_LINKS_AMOUNT) {
     CONFIG_REVERSED_PATH_LINKS_AMOUNT = reversed_path_links_amount;
   } else {
     log::write(3, "Index: save_config: Invalid reversed path links amount. "
                   "Needs to be beetween 2 and 500. Set to default of 4.");
   }
   if (additional_path_links_amount >= 2 &&
-      additional_path_links_amount <= 500) {
+      additional_path_links_amount <= MAX_ADDITIONAL_PATH_LINKS_AMOUNT) {
     CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT = additional_path_links_amount;
   } else {
     log::write(3, "Index: save_config: Invalid reversed path links amount. "
