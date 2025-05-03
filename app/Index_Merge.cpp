@@ -223,7 +223,7 @@ void Index::add_reversed_to_word(
       // add path id for local id and then erase it.
       PathIDOffset content;
       content.offset = paths_mapping.by_local[a_id];
-      for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+      for (uint8_t i = 0; i < PATH_ID_LINK_SIZE; ++i) {
         additional_new_transaction.content += content.bytes[i];
       }
       index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
