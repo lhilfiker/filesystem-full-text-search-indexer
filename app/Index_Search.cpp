@@ -93,7 +93,9 @@ Index::search_word_list(std::vector<std::string> &search_words,
   // copy words_f into memory
   std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
-    std::memcpy(&words_f[i].bytes[0], &mmap_words_f[i * 12], 12);
+    std::memcpy(&words_f[i].bytes[0],
+                &mmap_words_f[i * (8 + PATH_ID_LINK_SIZE)],
+                (8 + PATH_ID_LINK_SIZE));
   }
 
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
