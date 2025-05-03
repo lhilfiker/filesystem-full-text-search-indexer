@@ -51,7 +51,46 @@ void Index::save_config(const std::filesystem::path &index_path,
     log::write(3, "Index: save_config: Index was already initialzed, can not "
                   "save config. Try to uninitialize first.");
   }
-  CONFIG_INDEX_PATH = index_path;
+  CONFIG_INDEX_PATH =
+      index_path; // Index path validation happens in check_files
+
+  if (path_id_link_size == 2 || path_id_link_size == 4 ||
+      path_id_link_size == 8) {
+    CONFIG_PATH_ID_LINK_SIZE = path_id_link_size;
+  } else {
+    log::write(3, "Index: save_config: Invalid path id link size. Can either "
+                  "be 2,4 or 8. Set to defaut of 2.");
+  }
+  if (additional_id_link_size == 2 || additional_id_link_size == 4 ||
+      additional_id_link_size == 8) {
+    CONFIG_ADDITIONAL_ID_LINK_SIZE = additional_id_link_size;
+  } else {
+    log::write(
+        3, "Index: save_config: Invalid additional id link size. Can either "
+           "be 2,4 or 8. Set to defaut of 4.");
+  }
+  if (reversed_path_links_amount >= 2 && reversed_path_links_amount <= 500) {
+    CONFIG_REVERSED_PATH_LINKS_AMOUNT = reversed_path_links_amount;
+  } else {
+    log::write(3, "Index: save_config: Invalid reversed path links amount. "
+                  "Needs to be beetween 2 and 500. Set to default of 4.");
+  }
+  if (additional_path_links_amount >= 2 &&
+      additional_path_links_amount <= 500) {
+    CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT = additional_path_links_amount;
+  } else {
+    log::write(3, "Index: save_config: Invalid reversed path links amount. "
+                  "Needs to be beetween 2 and 500. Set to default of 24.");
+  }
+
+  // Now we recalculate CONFIG_REVERSED_ENTRY_SIZE and
+  // CONFIG_ADDITIONAL_ENTRY_SIZE based on potentialy nondefault config values.
+  CONFIG_REVERSED_ENTRY_SIZE =
+      CONFIG_REVERSED_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
+      CONFIG_ADDITIONAL_ID_LINK_SIZE;
+  CONFIG_ADDITIONAL_ENTRY_SIZE =
+      CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT * CONFIG_PATH_ID_LINK_SIZE +
+      CONFIG_ADDITIONAL_ID_LINK_SIZE;
 
   is_config_loaded = true;
   log::write(1, "Index: save_config: saved config successfully.");
