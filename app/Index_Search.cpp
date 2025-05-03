@@ -10,7 +10,7 @@
 
 std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
   std::vector<PATH_ID_TYPE> path_ids;
-  if ((word_id * 10) + 10 > reversed_size) {
+  if ((word_id * REVERSED_ENTRY_SIZE) + REVERSED_ENTRY_SIZE > reversed_size) {
     log::error("Index: path_ids_from_word_id: to search word id would be at "
                "nonexisting location. Index most likely corrupt. Exiting");
   }

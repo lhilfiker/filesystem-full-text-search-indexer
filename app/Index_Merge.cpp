@@ -66,7 +66,7 @@ void Index::add_reversed_to_word(
     while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
            0) { // Or when there is no new additional left it will break out
       // inside.
-      if (i == ADDITIONAL_ID_LINK_SIZE) {
+      if (i == ADDITIONAL_PATH_LINKS_AMOUNT) {
         if (disk_additional->ids.additional[0] == 0) {
           // no additionals are left.
           break;
@@ -969,8 +969,8 @@ int Index::merge(index_combine_data &index_to_add) {
   // all. This is not an ideal implementation because we copy the whole
   // thing. When we add custom words_f length then we can make a better
   // implementation that is faster and saves memory and space.
-  Transaction words_f_new{0, 2, 0, 0, 1, 312};
-  words_f_new.content.resize(312);
+  Transaction words_f_new{0, 2, 0, 0, 1, ((8 + PATH_ID_LINK_SIZE) * 26)};
+  words_f_new.content.resize(((8 + PATH_ID_LINK_SIZE) * 26));
   uint64_t all_size = 0;
   uint64_t all_id_change = 0;
   for (int i = 0; i < 26; ++i) {
