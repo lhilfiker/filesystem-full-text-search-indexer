@@ -33,7 +33,8 @@ int Index::add_new(index_combine_data &index_to_add) {
     }
     additional_size_buffer +=
         (additional_reversed_counter.reversed.size() -
-         CONFIG_REVERSED_PATH_LINKS_AMOUNT - 1) /
+         CONFIG_REVERSED_PATH_LINKS_AMOUNT + CONFIG_ADDITIONAL_ID_LINK_SIZE -
+         1) /
         CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT; // celling divsion to round up to
                                              // the next big number.
   }
