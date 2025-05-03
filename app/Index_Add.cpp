@@ -169,7 +169,8 @@ int Index::add_new(index_combine_data &index_to_add) {
       // we just need a reversed so we will write that.
       size_t i = 0;
       for (const PATH_ID_TYPE &r_id : reversed.reversed) {
-        current_ReversedBlock.ids[i] = r_id + 1; // paths are indexed from 1
+        current_ReversedBlock.ids.path[i] =
+            r_id + 1; // paths are indexed from 1
         ++i;
       }
     } else {
@@ -180,43 +181,89 @@ int Index::add_new(index_combine_data &index_to_add) {
       AdditionalBlock additional{};
       for (const PATH_ID_TYPE &path_id : reversed.reversed) {
         if (reversed_i < CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
-          current_ReversedBlock.ids[reversed_i] = path_id + 1;
+          current_ReversedBlock.ids.path[reversed_i] = path_id + 1;
           ++reversed_i;
           continue;
         }
         if (reversed_i == CONFIG_REVERSED_PATH_LINKS_AMOUNT) {
-          current_ReversedBlock.ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT] =
-              additional_id;
+          current_ReversedBlock.ids
+              .additional[CONFIG_REVERSED_PATH_LINKS_AMOUNT] = additional_id;
           ++reversed_i;
         }
         if (additional_i ==
             CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT) { // the next additional id
                                                    // field.
-          additional.ids[CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT] =
+          additional.ids.additional[CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT] =
               additional_id + 1;
           additional_i = 0;
-          for (const char &byte : additional.bytes) {
-            mmap_additional[additional_file_location] = byte;
+
+          // Write it to the mmap file. Writing like this because of
+          // configurable byte sizes.
+          uint16_t byte_counter = 0;
+          for (uint16_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
+            // write the bytes
+            for (uint8_t j = 0; j < CONFIG_PATH_ID_LINK_SIZE; ++j) {
+              mmap_additional[additional_file_location] =
+                  additional.bytes[byte_counter];
+              ++byte_counter;
+              ++additional_file_location;
+            }
+            byte_counter += MAX_PATH_ID_LINK_SIZE - DEFAULT_PATH_ID_LINK_SIZE;
+          }
+          for (uint8_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
+            mmap_additional[additional_file_location] =
+                additional.bytes[byte_counter];
+            ++byte_counter;
             ++additional_file_location;
           }
+
           ++additional_id;
           additional = {};
         }
-        additional.ids[additional_i] = path_id + 1;
+        additional.ids.path[additional_i] = path_id + 1;
         ++additional_i;
       }
       if (additional_i != 0) {
-        for (const char &byte : additional.bytes) {
-          mmap_additional[additional_file_location] = byte;
+        // Write it to the mmap file. Writing like this because of
+        // configurable byte sizes.
+        uint16_t byte_counter = 0;
+        for (uint16_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
+          // write the bytes
+          for (uint8_t j = 0; j < CONFIG_PATH_ID_LINK_SIZE; ++j) {
+            mmap_additional[additional_file_location] =
+                additional.bytes[byte_counter];
+            ++byte_counter;
+            ++additional_file_location;
+          }
+          byte_counter += MAX_PATH_ID_LINK_SIZE - DEFAULT_PATH_ID_LINK_SIZE;
+        }
+        for (uint8_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
+          mmap_additional[additional_file_location] =
+              additional.bytes[byte_counter];
+          ++byte_counter;
           ++additional_file_location;
         }
         ++additional_id;
       }
     }
 
-    // write reversed block
-    for (int i = 0; i < CONFIG_REVERSED_ENTRY_SIZE; ++i) {
-      mmap_reversed[file_location] = current_ReversedBlock.bytes[i];
+    // write reversed block. Write it to the mmap file. Writing like this
+    // because of configurable byte sizes.
+    uint16_t byte_counter = 0;
+    for (uint16_t i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT; ++i) {
+      // write the bytes
+      for (uint8_t j = 0; j < CONFIG_PATH_ID_LINK_SIZE; ++j) {
+        mmap_reversed[additional_file_location] =
+            current_ReversedBlock.bytes[byte_counter];
+        ++byte_counter;
+        ++file_location;
+      }
+      byte_counter += MAX_PATH_ID_LINK_SIZE - DEFAULT_PATH_ID_LINK_SIZE;
+    }
+    for (uint8_t i = 0; i < CONFIG_ADDITIONAL_ID_LINK_SIZE; ++i) {
+      mmap_reversed[additional_file_location] =
+          current_ReversedBlock.bytes[byte_counter];
+      ++byte_counter;
       ++file_location;
     }
   }

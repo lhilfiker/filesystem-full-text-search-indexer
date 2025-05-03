@@ -38,7 +38,7 @@
 // paths increase this to 8. Valid options are ONLY 2, 4 and 8.
 // Note: If you increase this but not use it fully in the config it may lead to
 // wasted space in memory.
-#define DEFAULT_PATH_ID_LINK_SIZE 4
+#define DEFAULT_PATH_ID_LINK_SIZE 2
 // This changes the default value. This should NEVER be higer than
 // MAX_PATH_ID_LINK_SIZE
 

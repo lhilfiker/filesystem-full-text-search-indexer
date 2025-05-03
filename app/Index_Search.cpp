@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
-  std::vector<uint64_t> path_ids;
+std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
+  std::vector<PATH_ID_TYPE> path_ids;
   if ((word_id * 10) + 10 > reversed_size) {
     log::error("Index: path_ids_from_word_id: to search word id would be at "
                "nonexisting location. Index most likely corrupt. Exiting");
@@ -292,13 +292,13 @@ Index::search_word_list(std::vector<std::string> &search_words,
 }
 
 // return a unordered map of ID and path string.
-std::unordered_map<uint64_t, std::string>
+std::unordered_map<PATH_ID_TYPE, std::string>
 Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
   if (is_mapped == false) {
     map();
   }
 
-  std::unordered_map<uint64_t, std::string> results;
+  std::unordered_map<PATH_ID_TYPE, std::string> results;
   if (path_ids.size() == 0) {
     return results;
   }
