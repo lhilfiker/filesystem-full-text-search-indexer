@@ -9,7 +9,7 @@
 void Index::add_reversed_to_word(
     index_combine_data &index_to_add, uint64_t &on_disk_count,
     std::vector<Transaction> &transactions, size_t &additional_new_needed_size,
-    size_t &reversed_new_needed_size, uint32_t &on_disk_id,
+    size_t &reversed_new_needed_size, uint64_t &on_disk_id,
     const size_t &local_word_count, PathsMapping &paths_mapping) {
 
   if (on_disk_id * CONFIG_REVERSED_ENTRY_SIZE + CONFIG_REVERSED_ENTRY_SIZE >
@@ -24,7 +24,7 @@ void Index::add_reversed_to_word(
   std::vector<uint16_t> reversed_free;
 
   struct AdditionalFree {
-    size_t additional_id;
+    ADDITIONAL_ID_TYPE additional_id;
     std::vector<uint16_t> free;
   };
   std::vector<AdditionalFree> additional_free;
@@ -35,7 +35,7 @@ void Index::add_reversed_to_word(
 
   // we remove already existing path_ids from the local reversed and save slots
   // that are empty.
-  for (int i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT;
+  for (uint16_t i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT;
        ++i) { // 4 blocks per reversed
     if (disk_reversed->ids[i] != 0) {
       index_to_add.words_and_reversed[local_word_count].reversed.erase(
@@ -281,7 +281,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
                          std::vector<Insertion> &reversed_insertions,
                          size_t &additional_new_needed_size,
                          size_t &words_new_needed_size,
-                         size_t &reversed_new_needed_size, uint32_t &on_disk_id,
+                         size_t &reversed_new_needed_size, uint64_t &on_disk_id,
                          const size_t &local_word_count,
                          PathsMapping &paths_mapping) {
 
@@ -292,7 +292,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
       on_disk_count,
       word_length +
           1}; // when we call it on_disk_count is before the word starts we just
-  // compared and determined we went passed out target.
+  // compared and determined we went passed our target.
   new_word.content.reserve(word_length + 1);
   if (word_length + 30 > 254) {
     new_word.content += (char)255;
@@ -314,7 +314,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
   reversed_new_needed_size += CONFIG_REVERSED_ENTRY_SIZE;
   new_reversed.content.reserve(CONFIG_REVERSED_ENTRY_SIZE);
   ReversedBlock current_ReversedBlock{};
-  for (int i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT; ++i) {
+  for (uint16_t i = 0; i < CONFIG_REVERSED_PATH_LINKS_AMOUNT; ++i) {
     if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
         0) {
       current_ReversedBlock.ids[i] = 0;
@@ -328,7 +328,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() == 0) {
     current_ReversedBlock.ids[CONFIG_REVERSED_PATH_LINKS_AMOUNT] = 0;
   } else {
-    size_t current_additional =
+    ADDITIONAL_ID_TYPE current_additional =
         ((additional_size + additional_new_needed_size) /
          CONFIG_ADDITIONAL_ENTRY_SIZE) +
         1; // 1-indexed
@@ -381,7 +381,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
   }
 
   // convert to bytes and add insertion
-  for (int i = 0; i < CONFIG_REVERSED_ENTRY_SIZE; ++i) {
+  for (size_t i = 0; i < CONFIG_REVERSED_ENTRY_SIZE; ++i) {
     new_reversed.content.push_back(current_ReversedBlock.bytes[i]);
   }
   reversed_insertions.push_back(new_reversed);
@@ -567,7 +567,7 @@ int Index::merge(index_combine_data &index_to_add) {
   // local id to disk id and vica versa.
   // TODO: more memory efficent converting. Currently this would double the RAM
   // usage and violate the memory limit set by the user.
-  std::unordered_map<std::string, uint16_t> paths_search;
+  std::unordered_map<std::string, PATH_ID_TYPE> paths_search;
   size_t path_insertion_count = 0;
   for (const std::string &s : index_to_add.paths) {
     paths_search[s] = path_insertion_count;
@@ -577,7 +577,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
   // go through index on disk and map disk Id to local Id.
   uint64_t on_disk_count = 0;
-  uint32_t on_disk_id = 1;
+  uint64_t on_disk_id = 1;
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
   // paths_size is the count of bytes of the index on disk.
@@ -724,7 +724,9 @@ int Index::merge(index_combine_data &index_to_add) {
   // copy words_f into memory
   std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
-    std::memcpy(&words_f[i].bytes[0], &mmap_words_f[i * 12], 12);
+    std::memcpy(&words_f[i].bytes[0],
+                &mmap_words_f[i * (8 + MAX_PATH_ID_LINK_SIZE)],
+                (8 + MAX_PATH_ID_LINK_SIZE));
   }
 
   // This is needed when we add new words. Each time we add a new word the start
@@ -749,7 +751,7 @@ int Index::merge(index_combine_data &index_to_add) {
   char local_first_char =
       index_to_add.words_and_reversed[local_word_count].word[0];
 
-  uint64_t disk_additional_ids =
+  ADDITIONAL_ID_TYPE disk_additional_ids =
       (additional_size / CONFIG_ADDITIONAL_ENTRY_SIZE) + 1;
 
   // check each word on disk. if it is different first letter we will skip using
@@ -969,7 +971,8 @@ int Index::merge(index_combine_data &index_to_add) {
     all_id_change += words_F_ID_change[i];
     words_f[i].location += all_size;
     words_f[i].id += all_id_change;
-    std::memcpy(&words_f_new.content[i * 12], &words_f[i].bytes[0], 12);
+    std::memcpy(&words_f_new.content[i * (8 + MAX_PATH_ID_LINK_SIZE)],
+                &words_f[i].bytes[0], (8 + MAX_PATH_ID_LINK_SIZE));
   }
   transactions.push_back(words_f_new);
 

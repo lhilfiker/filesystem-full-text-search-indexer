@@ -12,9 +12,31 @@
 #include <unordered_set>
 #include <vector>
 
+// First define the size based on the path ID type
+#if MAX_PATH_ID_LINK_SIZE == 2
+#define PATH_ID_TYPE uint16_t
+#elif MAX_PATH_ID_LINK_SIZE == 4
+#define PATH_ID_TYPE uint32_t
+#elif MAX_PATH_ID_LINK_SIZE == 8
+#define PATH_ID_TYPE uint64_t
+#else
+#error "MAX_PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+
+// Define the additional ID type
+#if MAX_ADDITIONAL_ID_LINK_SIZE == 2
+#define ADDITIONAL_ID_TYPE uint16_t
+#elif MAX_ADDITIONAL_ID_LINK_SIZE == 4
+#define ADDITIONAL_ID_TYPE uint32_t
+#elif MAX_ADDITIONAL_ID_LINK_SIZE == 8
+#define ADDITIONAL_ID_TYPE uint64_t
+#else
+#error "MAX_ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+
 struct words_reversed {
   std::string word;
-  std::unordered_set<uint32_t> reversed;
+  std::unordered_set<PATH_ID_TYPE> reversed;
 
   bool operator<(const words_reversed &other) const {
     return word < other.word;
@@ -22,7 +44,7 @@ struct words_reversed {
 };
 
 struct search_path_ids_return {
-  uint64_t path_id;
+  PATH_ID_TYPE path_id;
   uint32_t count;
 
   bool operator<(const search_path_ids_return &other) const {
@@ -55,9 +77,9 @@ public:
   LocalIndex();
   size_t size();
   void clear();
-  uint32_t add_path(const std::string &path_to_insert);
+  PATH_ID_TYPE add_path(const std::string &path_to_insert);
   void add_words(std::unordered_set<std::string> &words_to_insert,
-                 uint32_t path_id);
+                 PATH_ID_TYPE path_id);
   void sort();
   void add_to_disk();
   void combine(LocalIndex &to_combine_index);
@@ -179,41 +201,19 @@ struct Insertion {
 };
 
 struct PathsMapping {
-  std::unordered_map<uint16_t, uint16_t> by_local;
-  std::unordered_map<uint16_t, uint16_t> by_disk;
+  std::unordered_map<PATH_ID_TYPE, PATH_ID_TYPE> by_local;
+  std::unordered_map<PATH_ID_TYPE, PATH_ID_TYPE> by_disk;
 };
 
 #pragma pack(push, 1)
 union WordsFValue {
   struct {
     uint64_t location;
-    uint32_t id;
+    PATH_ID_TYPE id;
   };
-  unsigned char bytes[12];
+  unsigned char bytes[8 + MAX_PATH_ID_LINK_SIZE];
 };
 #pragma pack(pop)
-
-// First define the size based on the path ID type
-#if MAX_PATH_ID_LINK_SIZE == 2
-#define PATH_ID_TYPE uint16_t
-#elif MAX_PATH_ID_LINK_SIZE == 4
-#define PATH_ID_TYPE uint32_t
-#elif MAX_PATH_ID_LINK_SIZE == 8
-#define PATH_ID_TYPE uint64_t
-#else
-#error "MAX_PATH_ID_LINK_SIZE must be 2, 4, or 8"
-#endif
-
-// Define the additional ID type
-#if MAX_ADDITIONAL_ID_LINK_SIZE == 2
-#define ADDITIONAL_ID_TYPE uint16_t
-#elif MAX_ADDITIONAL_ID_LINK_SIZE == 4
-#define ADDITIONAL_ID_TYPE uint32_t
-#elif MAX_ADDITIONAL_ID_LINK_SIZE == 8
-#define ADDITIONAL_ID_TYPE uint64_t
-#else
-#error "MAX_ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
-#endif
 
 // ReversedBlock with depending on compiletime config different sizes.
 #pragma pack(push, 1)
@@ -332,7 +332,7 @@ private:
                                    std::vector<Transaction> &transactions,
                                    size_t &additional_new_needed_size,
                                    size_t &reversed_new_needed_size,
-                                   uint32_t &on_disk_id,
+                                   uint64_t &on_disk_id,
                                    const size_t &local_word_count,
                                    PathsMapping &paths_mapping);
   static void add_new_word(index_combine_data &index_to_add,
@@ -343,7 +343,7 @@ private:
                            size_t &additional_new_needed_size,
                            size_t &words_new_needed_size,
                            size_t &reversed_new_needed_size,
-                           uint32_t &on_disk_id, const size_t &local_word_count,
+                           uint64_t &on_disk_id, const size_t &local_word_count,
                            PathsMapping &paths_mapping);
   static void insertion_to_transactions(
       std::vector<Transaction> &transactions,
@@ -355,7 +355,7 @@ private:
                                    size_t &transaction_file_location);
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
-  static std::vector<uint64_t> path_ids_from_word_id(uint64_t word_id);
+  static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
 
 public:
   static void save_config(const std::filesystem::path &index_path,
@@ -370,7 +370,7 @@ public:
   static std::vector<search_path_ids_return>
   search_word_list(std::vector<std::string> &search_words, bool exact_match,
                    int min_char_for_match);
-  static std::unordered_map<uint64_t, std::string>
+  static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
 };
 

@@ -6,6 +6,8 @@
 // needs. Changing these values can reduce memory usage and speed up the systems
 // or allow for even bigger indexes.
 
+// Changing any of these values will entail a recreation of the index.
+
 #define MAX_REVERSED_PATH_LINKS_AMOUNT 10
 // This will change how much Path id links can be max in a reversed block.
 // Changing this allows to set higher values in the config.
