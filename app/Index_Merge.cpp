@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "index_config.h"
 #include "lib/mio.hpp"
 #include <array>
 #include <cstring>
@@ -107,20 +108,23 @@ void Index::add_reversed_to_word(
                                            3,
                                            (on_disk_id * REVERSED_ENTRY_SIZE) +
                                                reversed_new_needed_size +
-                                               (free_slot * 2),
+                                               (free_slot * PATH_ID_LINK_SIZE),
                                            0,
                                            1,
-                                           2};
+                                           PATH_ID_LINK_SIZE};
       const auto &r_id =
           *index_to_add.words_and_reversed[local_word_count].reversed.begin();
       // get the first local id. then convert it to disk id and save it to the
-      // offset. PathOffset is the same as The 2 Byte value of a reversed slot.
-      PathOffset content;
+      // offset. PathIDOffset is the same  The Path ID size of a reversed
+      // slot.
+      PathIDOffset content;
       content.offset = paths_mapping.by_local[r_id];
       // add it to the transaction to overwrite the empty place with the new
       // disk id and then delete it from the local reversed list.
-      reversed_add_transaction.content += content.bytes[0];
-      reversed_add_transaction.content += content.bytes[1];
+      for (uint8_t i = 0; i < PATH_ID_LINK_SIZE; ++i) {
+        reversed_add_transaction.content += content.bytes[i];
+      }
+
       index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
       transactions.push_back(reversed_add_transaction);
 
@@ -137,21 +141,22 @@ void Index::add_reversed_to_word(
               0,
               4,
               ((free_slot_block.additional_id - 1) * ADDITIONAL_ENTRY_SIZE) +
-                  (free_slot * 2),
+                  (free_slot * PATH_ID_LINK_SIZE),
               0,
               1,
-              2};
+              ADDITIONAL_ID_LINK_SIZE};
           const auto &a_id = *index_to_add.words_and_reversed[local_word_count]
                                   .reversed.begin();
           // get the first local id. then convert it to disk id and save it to
-          // the offset. PathOffset is the same as The 2 Byte value of a
+          // the offset. PathIDOffset is the same The Path ID  size of a
           // reversed slot.
-          PathOffset content;
+          PathAdditionalOffset content;
           content.offset = paths_mapping.by_local[a_id];
           // add it to the transaction to overwrite the empty place with the new
           // disk id and then delete it from the local reversed list.
-          additional_add_transaction.content += content.bytes[0];
-          additional_add_transaction.content += content.bytes[1];
+          for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+            additional_add_transaction.content += content.bytes[i];
+          }
           index_to_add.words_and_reversed[local_word_count].reversed.erase(
               a_id);
           transactions.push_back(additional_add_transaction);
@@ -175,30 +180,31 @@ void Index::add_reversed_to_word(
     if (current_additional != 0) {
       // Create a new additional transaction for the end
       additional_add_transaction = {
-          0,
-          4,
+          0, 4,
           (current_additional * ADDITIONAL_ENTRY_SIZE) -
-              2, // we overwrite the last additionals additional_id.
-          0,
-          1,
-          2};
+              ADDITIONAL_ID_LINK_SIZE, // we overwrite the last additionals
+                                       // additional_id.
+          0, 1, ADDITIONAL_ID_LINK_SIZE};
     } else { // reversed
       additional_add_transaction = {
           0, 3,
           (on_disk_id * REVERSED_ENTRY_SIZE) + reversed_new_needed_size +
-              8, // we overwrite the reversed additional_id.
-                 // on_disk_id starts from 0.
-          0, 1, 2};
+              REVERSED_ENTRY_SIZE -
+              ADDITIONAL_ID_LINK_SIZE, // we overwrite the reversed
+                                       // additional_id. on_disk_id starts from
+                                       // 0.
+          0, 1, ADDITIONAL_ID_LINK_SIZE};
     }
 
-    PathOffset content;
+    PathAdditionalOffset content;
     current_additional = ((additional_size + additional_new_needed_size) /
                           ADDITIONAL_ENTRY_SIZE) +
                          1; // get the ID of the new additional ID at the end.
     content.offset = current_additional;
     // add it to the transaction
-    additional_add_transaction.content += content.bytes[0];
-    additional_add_transaction.content += content.bytes[1];
+    for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+      additional_add_transaction.content += content.bytes[i];
+    }
     transactions.push_back(additional_add_transaction);
 
     // go through all missing local Ids and add them to additionals
@@ -215,10 +221,11 @@ void Index::add_reversed_to_word(
       const auto &a_id =
           *index_to_add.words_and_reversed[local_word_count].reversed.begin();
       // add path id for local id and then erase it.
-      PathOffset content;
+      PathIDOffset content;
       content.offset = paths_mapping.by_local[a_id];
-      additional_new_transaction.content += content.bytes[0];
-      additional_new_transaction.content += content.bytes[1];
+      for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+        additional_new_transaction.content += content.bytes[i];
+      }
       index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
 
       ++in_additional_counter;
@@ -228,29 +235,37 @@ void Index::add_reversed_to_word(
         // additional and go to the next.
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0) { // If this will be the last one we will add 0.
-          PathOffset add;
+          PathAdditionalOffset add;
           add.offset = 0;
-          additional_new_transaction.content += add.bytes[0];
-          additional_new_transaction.content += add.bytes[1];
+          for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+            additional_new_transaction.content += content.bytes[i];
+          }
           in_additional_counter = 0;
           break;
         }
         in_additional_counter = 0;
         ++current_additional;
-        PathOffset add;
+        PathAdditionalOffset add;
         add.offset = current_additional;
-        additional_new_transaction.content += add.bytes[0];
-        additional_new_transaction.content += add.bytes[1];
+        for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+          additional_new_transaction.content += content.bytes[i];
+        };
       }
     }
     // If an additional is not full we fill it with 0.
     if (in_additional_counter != 0) {
-      for (; in_additional_counter <= ADDITIONAL_ID_LINK_SIZE;
+      for (; in_additional_counter < ADDITIONAL_ID_LINK_SIZE;
            ++in_additional_counter) {
-        PathOffset add;
+        PathIDOffset add;
         add.offset = 0;
-        additional_new_transaction.content += add.bytes[0];
-        additional_new_transaction.content += add.bytes[1];
+        for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+          additional_new_transaction.content += add.bytes[i];
+        }
+        PathAdditionalOffset add_additional;
+        add_additional.offset = 0;
+        for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+          additional_new_transaction.content += add_additional.bytes[i];
+        }
       }
     }
     // add the transaction

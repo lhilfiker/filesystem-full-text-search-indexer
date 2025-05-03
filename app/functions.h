@@ -276,6 +276,28 @@ union PathIDOffset {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
+
+#if ADDITIONAL_ID_LINK_SIZE == 2
+union PathAdditionalOffset {
+  uint16_t offset;
+  unsigned char bytes[2];
+};
+#elif ADDITIONAL_ID_LINK_SIZE == 4
+union PathAdditionalOffset {
+  uint32_t offset;
+  unsigned char bytes[4];
+};
+#elif ADDITIONAL_ID_LINK_SIZE == 8
+union PathAdditionalOffset {
+  uint64_t offset;
+  unsigned char bytes[8];
+};
+#else
+#error "ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 union PathsCountItem {
   uint32_t num;
   unsigned char bytes[4];
