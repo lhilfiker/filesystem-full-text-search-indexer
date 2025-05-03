@@ -236,10 +236,9 @@ union MoveOperationContent {
 class Index {
 private:
   static bool is_config_loaded;
+  static bool initialzed;
   static bool is_mapped;
   static bool first_time;
-  static int64_t buffer_size;
-  static std::filesystem::path index_path;
   static int64_t paths_size;
   static int64_t paths_size_buffer;
   static int64_t paths_count_size;
@@ -258,6 +257,16 @@ private:
   static mio::mmap_sink mmap_words_f;
   static mio::mmap_sink mmap_reversed;
   static mio::mmap_sink mmap_additional;
+
+  // Config Values
+  static int64_t CONFIG_BUFFER_SIZE;
+  static std::filesystem::path CONFIG_INDEX_PATH;
+  static uint8_t CONFIG_PATH_ID_LINK_SIZE;
+  static uint8_t CONFIG_ADDITIONAL_ID_LINK_SIZE;
+  static uint16_t CONFIG_REVERSED_PATH_LINKS_AMOUNT;
+  static uint16_t CONFIG_ADDITIONAL_PATH_LINKS_AMOUNT;
+  static uint32_t CONFIG_REVERSED_ENTRY_SIZE;
+  static uint32_t CONFIG_ADDITIONAL_ENTRY_SIZE;
 
 private:
   static void check_files();
@@ -298,8 +307,12 @@ private:
   static std::vector<uint64_t> path_ids_from_word_id(uint64_t word_id);
 
 public:
-  static void save_config(const std::filesystem::path &config_index_path,
-                          const int64_t config_buffer_size);
+  static void save_config(const std::filesystem::path &index_path,
+                          const int64_t buffer_size,
+                          const uint8_t path_id_link_size,
+                          const uint8_t additional_id_link_size,
+                          const uint16_t reversed_path_links_amount,
+                          const uint16_t additional_path_links_amount);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
