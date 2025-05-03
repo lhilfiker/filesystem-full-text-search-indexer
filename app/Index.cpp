@@ -33,11 +33,7 @@ mio::mmap_sink Index::mmap_additional;
 // initialized
 std::filesystem::path Index::CONFIG_INDEX_PATH;
 
-void Index::save_config(const std::filesystem::path &index_path,
-                        const uint8_t path_id_link_size,
-                        const uint8_t additional_id_link_size,
-                        const uint16_t reversed_path_links_amount,
-                        const uint16_t additional_path_links_amount) {
+void Index::save_config(const std::filesystem::path &index_path) {
   if (initialzed) {
     log::write(3, "Index: save_config: Index was already initialzed, can not "
                   "save config. Try to uninitialize first.");
