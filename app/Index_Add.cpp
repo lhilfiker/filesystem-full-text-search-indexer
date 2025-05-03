@@ -185,15 +185,13 @@ int Index::add_new(index_combine_data &index_to_add) {
           continue;
         }
         if (reversed_i == REVERSED_PATH_LINKS_AMOUNT) {
-          current_ReversedBlock.ids.additional[REVERSED_PATH_LINKS_AMOUNT] =
-              additional_id;
+          current_ReversedBlock.ids.additional[0] = additional_id;
           ++reversed_i;
         }
         if (additional_i ==
             ADDITIONAL_PATH_LINKS_AMOUNT) { // the next additional id
                                             // field.
-          additional.ids.additional[ADDITIONAL_PATH_LINKS_AMOUNT] =
-              additional_id + 1;
+          additional.ids.additional[0] = additional_id + 1;
           additional_i = 0;
 
           uint16_t byte_counter = 0;
