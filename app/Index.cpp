@@ -7,7 +7,7 @@
 #include <string>
 
 bool Index::is_config_loaded = false;
-bool Index::initialzed = false;
+bool Index::initialized = false;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
 int64_t Index::paths_size = 0;
@@ -34,7 +34,7 @@ mio::mmap_sink Index::mmap_additional;
 std::filesystem::path Index::CONFIG_INDEX_PATH;
 
 void Index::save_config(const std::filesystem::path &index_path) {
-  if (initialzed) {
+  if (initialized) {
     log::write(3, "Index: save_config: Index was already initialzed, can not "
                   "save config. Try to uninitialize first.");
   }
@@ -263,7 +263,7 @@ int Index::initialize() {
                                         "backups");
   }
 
-  initialzed = true;
+  initialized = true;
 
   return 0;
 }
@@ -279,7 +279,7 @@ int Index::uninitialize() {
     log::write(4, "Index: uninitialize: could not unmap.");
     return 1;
   }
-  initialzed = false;
+  initialized = false;
   return 0;
 }
 

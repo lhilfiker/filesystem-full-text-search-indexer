@@ -314,7 +314,7 @@ union MoveOperationContent {
 class Index {
 private:
   static bool is_config_loaded;
-  static bool initialzed;
+  static bool initialized;
   static bool is_mapped;
   static bool first_time;
   static int64_t paths_size;

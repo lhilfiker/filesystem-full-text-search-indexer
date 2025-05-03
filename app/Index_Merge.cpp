@@ -238,7 +238,7 @@ void Index::add_reversed_to_word(
           AdditionalOffset add;
           add.offset = 0;
           for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
-            additional_new_transaction.content += content.bytes[i];
+            additional_new_transaction.content += add.bytes[i];
           }
           in_additional_counter = 0;
           break;
