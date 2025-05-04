@@ -96,7 +96,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
   }
 
   if (ec) {
-    log::write(3, "indexerer: get_words: error reading / normalizing file.");
+    log::write(3, "indexer: get_words: error reading / normalizing file.");
   }
   return words_return;
 }
