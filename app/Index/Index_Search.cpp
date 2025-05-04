@@ -135,7 +135,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
     // read the one byte word sperator.
     WordSeperator word_sep;
-    for (uint8_t i = 0; i < WORD_SEPERATOR_SIZE; ++i) {
+    for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
       word_sep.bytes[i] = mmap_words[on_disk_count + i];
     }
     WORD_SEPERATOR_TYPE word_seperator = word_sep.seperator;
@@ -147,13 +147,13 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
     if (disk_first_char <
         mmap_words[on_disk_count +
-                   WORD_SEPERATOR_SIZE]) { // + 1 because of the word seperator
-      disk_first_char = mmap_words[on_disk_count + WORD_SEPERATOR_SIZE];
+                   WORD_SEPARATOR_SIZE]) { // + 1 because of the word seperator
+      disk_first_char = mmap_words[on_disk_count + WORD_SEPARATOR_SIZE];
     }
 
     for (int i = 0; i < word_seperator; ++i) {
 
-      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] ==
+      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] ==
           (int)(search_words[local_word_count][i])) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
@@ -165,7 +165,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
           }
           local_word_length = search_words[local_word_count].length();
           on_disk_count +=
-              word_seperator + WORD_SEPERATOR_SIZE; // then the next seperator
+              word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
           ++on_disk_id;
           local_first_char = search_words[local_word_count][0];
 
@@ -196,14 +196,14 @@ Index::search_word_list(std::vector<std::string> &search_words,
             result_word_ids.push_back(on_disk_id);
           }
           on_disk_count +=
-              word_seperator + WORD_SEPERATOR_SIZE; // then the next seperator
+              word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
           ++on_disk_id;
           break;
         }
       }
 
       // If disk char > local char
-      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] >
+      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] >
           (int)(search_words[local_word_count][i])) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
@@ -219,7 +219,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
       }
 
       // If disk char < local char
-      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] <
+      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] <
           (int)(search_words[local_word_count][i])) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);

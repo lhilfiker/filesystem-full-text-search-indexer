@@ -16,7 +16,7 @@ int Index::add_new(index_combine_data &index_to_add) {
 
   words_size_buffer =
       index_to_add.words_size +
-      (index_to_add.words_and_reversed.size() * WORD_SEPERATOR_SIZE);
+      (index_to_add.words_and_reversed.size() * WORD_SEPARATOR_SIZE);
 
   words_f_size_buffer =
       26 *
@@ -109,7 +109,7 @@ int Index::add_new(index_combine_data &index_to_add) {
     WordSeperator word_seperator;
     word_seperator.seperator = word_length;
 
-    for (uint8_t i = 0; i < WORD_SEPERATOR_SIZE; ++i) {
+    for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
       mmap_words[file_location] = word_seperator.bytes[i];
       ++file_location;
     }

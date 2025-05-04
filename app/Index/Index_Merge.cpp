@@ -303,18 +303,18 @@ void Index::add_new_word(index_combine_data &index_to_add,
       word_length +
           1}; // when we call it on_disk_count is before the word starts we just
   // compared and determined we went passed our target.
-  new_word.content.reserve(word_length + WORD_SEPERATOR_SIZE);
+  new_word.content.reserve(word_length + WORD_SEPARATOR_SIZE);
   WordSeperator word_seperator;
   word_seperator.seperator = word_length;
 
-  for (uint8_t i = 0; i < WORD_SEPERATOR_SIZE; ++i) {
+  for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
     new_word.content += word_seperator.bytes[i];
   }
   for (const char c : index_to_add.words_and_reversed[local_word_count].word) {
     new_word.content += c;
   }
   // update new needed size
-  words_new_needed_size += word_length + WORD_SEPERATOR_SIZE;
+  words_new_needed_size += word_length + WORD_SEPARATOR_SIZE;
   words_insertions.push_back(new_word);
 
   // We create a reversed insertion and remove the first 4 already and check if
@@ -792,7 +792,7 @@ int Index::merge(index_combine_data &index_to_add) {
 
     // read the one byte word sperator.
     WordSeperator word_sep;
-    for (uint8_t i = 0; i < WORD_SEPERATOR_SIZE; ++i) {
+    for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
       word_sep.bytes[i] = mmap_words[on_disk_count + i];
     }
     WORD_SEPERATOR_TYPE word_seperator = word_sep.seperator;
@@ -804,14 +804,14 @@ int Index::merge(index_combine_data &index_to_add) {
 
     if (disk_first_char <
         mmap_words[on_disk_count +
-                   WORD_SEPERATOR_SIZE]) { // + 1 because of the word seperator
-      disk_first_char = mmap_words[on_disk_count + WORD_SEPERATOR_SIZE];
+                   WORD_SEPARATOR_SIZE]) { // + 1 because of the word seperator
+      disk_first_char = mmap_words[on_disk_count + WORD_SEPARATOR_SIZE];
     }
 
     for (int i = 0; i < word_seperator; ++i) {
       // If current chars are the same + word on disk length same as on local
       // length and last char add to existing word
-      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] ==
+      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] ==
           (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
@@ -831,7 +831,7 @@ int Index::merge(index_combine_data &index_to_add) {
               index_to_add.words_and_reversed[local_word_count].word.length();
           on_disk_count +=
               word_seperator +
-              WORD_SEPERATOR_SIZE; // word length + the next seperator
+              WORD_SEPARATOR_SIZE; // word length + the next seperator
           ++on_disk_id;
           local_first_char =
               index_to_add.words_and_reversed[local_word_count].word[0];
@@ -849,7 +849,7 @@ int Index::merge(index_combine_data &index_to_add) {
                        reversed_new_needed_size, on_disk_id, local_word_count,
                        paths_mapping);
           words_F_change[local_first_char - 'a' + 1] +=
-              local_word_length + WORD_SEPERATOR_SIZE;
+              local_word_length + WORD_SEPARATOR_SIZE;
           ++words_F_ID_change[local_first_char - 'a' + 1];
           ++local_word_count;
           if (local_word_count ==
@@ -869,7 +869,7 @@ int Index::merge(index_combine_data &index_to_add) {
         if (i == word_seperator - 1) {
           // skip
           Log::write(1, "Index: Merge: Skip Word on Disk");
-          on_disk_count += word_seperator + WORD_SEPERATOR_SIZE;
+          on_disk_count += word_seperator + WORD_SEPARATOR_SIZE;
           // + then the next seperator
           ++on_disk_id;
           break;
@@ -877,7 +877,7 @@ int Index::merge(index_combine_data &index_to_add) {
       }
 
       // If disk char > local char
-      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] >
+      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] >
           (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
         // insert new
         Log::write(1, "Index: Merge: Add new Word");
@@ -887,7 +887,7 @@ int Index::merge(index_combine_data &index_to_add) {
                      reversed_new_needed_size, on_disk_id, local_word_count,
                      paths_mapping);
         words_F_change[local_first_char - 'a' + 1] +=
-            local_word_length + WORD_SEPERATOR_SIZE;
+            local_word_length + WORD_SEPARATOR_SIZE;
         ++words_F_ID_change[local_first_char - 'a' + 1];
         ++local_word_count;
         if (local_word_count ==
@@ -903,12 +903,12 @@ int Index::merge(index_combine_data &index_to_add) {
       }
 
       // If disk char < local char
-      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] <
+      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] <
           (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
         // skip
         Log::write(1, "Index: Merge: Skip Word on Disk");
         on_disk_count +=
-            word_seperator + WORD_SEPERATOR_SIZE; // + then the next seperator
+            word_seperator + WORD_SEPARATOR_SIZE; // + then the next seperator
         ++on_disk_id;
         break;
       }
@@ -937,7 +937,7 @@ int Index::merge(index_combine_data &index_to_add) {
                  local_word_count, paths_mapping);
     words_F_change[(index_to_add.words_and_reversed[local_word_count].word[0] -
                     'a') +
-                   1] += local_word_length + WORD_SEPERATOR_SIZE;
+                   1] += local_word_length + WORD_SEPARATOR_SIZE;
     ++words_F_ID_change
         [(index_to_add.words_and_reversed[local_word_count].word[0] - 'a') + 1];
   }

@@ -46,14 +46,14 @@
 #endif
 
 // Define the Word Seperator type
-#if WORD_SEPERATOR_SIZE == 1
+#if WORD_SEPARATOR_SIZE == 1
 #define WORD_SEPERATOR_TYPE uint8_t
-#elif WORD_SEPERATOR_SIZE == 2
+#elif WORD_SEPARATOR_SIZE == 2
 #define WORD_SEPERATOR_TYPE uint16_t
-#elif WORD_SEPERATOR_SIZE == 4
+#elif WORD_SEPARATOR_SIZE == 4
 #define WORD_SEPERATOR_TYPE uint32_t
 #else
-#error "WORD_SEPERATOR_SIZE must be 1, 2, or 4"
+#error "WORD_SEPARATOR_SIZE must be 1, 2, or 4"
 #endif
 
 #define REVERSED_ENTRY_SIZE                                                    \
@@ -134,7 +134,7 @@ union ReversedBlock {
 
 union WordSeperator {
   WORD_SEPERATOR_TYPE seperator;
-  unsigned char bytes[WORD_SEPERATOR_SIZE];
+  unsigned char bytes[WORD_SEPARATOR_SIZE];
 };
 #pragma pack(pop)
 
