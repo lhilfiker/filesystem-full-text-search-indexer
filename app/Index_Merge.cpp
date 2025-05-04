@@ -230,8 +230,8 @@ void Index::add_reversed_to_word(
 
       ++in_additional_counter;
       if (in_additional_counter ==
-          ADDITIONAL_ID_LINK_SIZE) { // if the current additional is full
-                                     // we add reference to the new
+          ADDITIONAL_PATH_LINKS_AMOUNT) { // if the current additional is full
+                                          // we add reference to the new
         // additional and go to the next.
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0) { // If this will be the last one we will add 0.
@@ -349,7 +349,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
     new_additionals.content.reserve(ADDITIONAL_ENTRY_SIZE);
     while (true) {
       AdditionalBlock additional{};
-      for (int i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+      for (int i = 0; i < ADDITIONAL_PATH_LINKS_AMOUNT; ++i) {
         if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
             0) {
           additional.ids.path[i] = 0;

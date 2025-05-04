@@ -150,8 +150,8 @@ int Index::add_new(index_combine_data &index_to_add) {
   file_location = 0;
   for (const WordsFValue &word_f : words_f) {
     std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0],
-                (8 + PATH_ID_LINK_SIZE));
-    file_location += (8 + PATH_ID_LINK_SIZE);
+                (8 + WORDS_F_LOCATION_SIZE));
+    file_location += (8 + WORDS_F_LOCATION_SIZE);
   }
 
   words_f_size = file_location;
