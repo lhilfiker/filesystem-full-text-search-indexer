@@ -795,7 +795,7 @@ int Index::merge(index_combine_data &index_to_add) {
     for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
       word_sep.bytes[i] = mmap_words[on_disk_count + i];
     }
-    WORD_SEPERATOR_TYPE word_seperator = word_sep.seperator;
+    WORD_SEPARATOR_TYPE word_seperator = word_sep.seperator;
     if (word_seperator <= 0) {
       // can't be 0 or lower than 0. index corrupt most likely
       Log::error("Index: Combine: Word Seperator is 0 or lower. This can not "
