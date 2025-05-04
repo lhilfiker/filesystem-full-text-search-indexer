@@ -96,7 +96,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
   }
 
   if (ec) {
-    log::write(3, "indexerer: get_words: error reading / normalizing file.");
+    log::write(3, "indexer: get_words: error reading / normalizing file.");
   }
   return words_return;
 }
@@ -346,7 +346,7 @@ int indexer::start_from() {
                     std::to_string(paths_size / 1000000));
   log::write(2, "files too big to be indexed: " +
                     std::to_string(too_big_files.size()));
-  log::write(2, "writting to disk");
+  log::write(2, "writing to disk");
   index.add_to_disk();
   return 0;
 }
