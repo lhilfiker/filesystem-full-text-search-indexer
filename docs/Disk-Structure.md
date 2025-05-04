@@ -56,11 +56,11 @@ Most sizes can be increased or decreased to allow for larger indexes or to optim
   ```
 - **Details**:
   - 26 entries (a-z)
-  - Each entry is an 8-byte uin64_t and a 4 byte uint32_t(This can be changed by editing index_config.h WORDS_F_LOCATION_SIZE to either 2,4 or 8 bytes(uint16t,uint32t,uint64t) ). total 12(or more) bytes per letter.
+  - Each entry is an 8-byte uint64_t and a 4 byte uint32_t(This can be changed by editing index_config.h WORDS_F_LOCATION_SIZE to either 2,4 or 8 bytes(uint16t,uint32t,uint64t) ). total 12(or more) bytes per letter.
   - Points to first occurrence in words.index as a byte location.(e.g the words with letter 'b' begin t byte 300.) and it's ID. ID is needed to then access its reversed or additional.
   - Enables quick letter-based searches
   - If one entry doesn't have a word connected yet we set its location to the value of the next entry that has one or the end of the file location.
-  - In the future will be able to also seperate the second char of a char. e.g aa, ab, ac ... da, db..
+  - In the future will be able to also separate the second char of a char. e.g aa, ab, ac ... da, db..
 
 ### 5. Reversed Index (`reversed.index`)
 - **Purpose**: Maps words to containing documents
