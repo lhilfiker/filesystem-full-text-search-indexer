@@ -36,13 +36,10 @@ Most sizes can be increased or decreased to allow for larger indexes or to optim
 - **Purpose**: Stores all unique indexed words
 - **Format**:
   ```
-  [length byte][word chars][length byte][word chars]...
+  [length byte(s)][word chars][length byte(s)][word chars]...
   ```
 - **Details**:
-  - Length byte encodes word length:
-    - 0-30: Direct word length
-    - >30: Used as separators 
-    - 255: Words longer than 255 chars
+  - Length byte encodes word length as normal number. It i by default 1 byte but can be increased to 2 or 4 in index_config (WORD_SEPERATOR_SIZE)
   - One byte per character(letter 'a' encoded as standart unsigned char(Extended ASCII))
   - Alphabetically sorted for binary search
   - Words are linked to reversed based on ID. The first word is linked to reversed ID0. The fifth to ID4.
