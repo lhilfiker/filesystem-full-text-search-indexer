@@ -261,11 +261,11 @@ void Index::add_reversed_to_word(
         for (uint8_t i = 0; i < PATH_ID_LINK_SIZE; ++i) {
           additional_new_transaction.content += add.bytes[i];
         }
-        AdditionalOffset add_additional;
-        add_additional.offset = 0;
-        for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
-          additional_new_transaction.content += add_additional.bytes[i];
-        }
+      }
+      AdditionalOffset add_additional;
+      add_additional.offset = 0;
+      for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
+        additional_new_transaction.content += add_additional.bytes[i];
       }
     }
     // add the transaction
