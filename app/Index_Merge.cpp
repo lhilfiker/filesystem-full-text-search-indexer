@@ -733,8 +733,8 @@ int Index::merge(index_combine_data &index_to_add) {
   std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
     std::memcpy(&words_f[i].bytes[0],
-                &mmap_words_f[i * (8 + PATH_ID_LINK_SIZE)],
-                (8 + PATH_ID_LINK_SIZE));
+                &mmap_words_f[i * (8 + WORDS_F_LOCATION_SIZE)],
+                (8 + WORDS_F_LOCATION_SIZE));
   }
 
   // This is needed when we add new words. Each time we add a new word the start
@@ -969,8 +969,8 @@ int Index::merge(index_combine_data &index_to_add) {
   // all. This is not an ideal implementation because we copy the whole
   // thing. When we add custom words_f length then we can make a better
   // implementation that is faster and saves memory and space.
-  Transaction words_f_new{0, 2, 0, 0, 1, ((8 + PATH_ID_LINK_SIZE) * 26)};
-  words_f_new.content.resize(((8 + PATH_ID_LINK_SIZE) * 26));
+  Transaction words_f_new{0, 2, 0, 0, 1, ((8 + WORDS_F_LOCATION_SIZE) * 26)};
+  words_f_new.content.resize(((8 + WORDS_F_LOCATION_SIZE) * 26));
   uint64_t all_size = 0;
   uint64_t all_id_change = 0;
   for (int i = 0; i < 26; ++i) {
@@ -979,8 +979,8 @@ int Index::merge(index_combine_data &index_to_add) {
     all_id_change += words_F_ID_change[i];
     words_f[i].location += all_size;
     words_f[i].id += all_id_change;
-    std::memcpy(&words_f_new.content[i * (8 + PATH_ID_LINK_SIZE)],
-                &words_f[i].bytes[0], (8 + PATH_ID_LINK_SIZE));
+    std::memcpy(&words_f_new.content[i * (8 + WORDS_F_LOCATION_SIZE)],
+                &words_f[i].bytes[0], (8 + WORDS_F_LOCATION_SIZE));
   }
   transactions.push_back(words_f_new);
 

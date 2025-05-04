@@ -34,6 +34,17 @@
 #error "ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
 #endif
 
+// Define the Words_f Location type
+#if WORDS_F_LOCATION_SIZE == 2
+#define WORDS_F_LOCATION_TYPE uint16_t
+#elif WORDS_F_LOCATION_SIZE == 4
+#define WORDS_F_LOCATION_TYPE uint32_t
+#elif WORDS_F_LOCATION_SIZE == 8
+#define WORDS_F_LOCATION_TYPE uint64_t
+#else
+#error "WORDS_F_LOCATION_SIZE must be 2, 4, or 8"
+#endif
+
 #define REVERSED_ENTRY_SIZE                                                    \
   (REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE + ADDITIONAL_ID_LINK_SIZE)
 #define ADDITIONAL_ENTRY_SIZE                                                  \
@@ -214,9 +225,9 @@ struct PathsMapping {
 union WordsFValue {
   struct {
     uint64_t location;
-    PATH_ID_TYPE id;
+    WORDS_F_LOCATION_TYPE id;
   };
-  unsigned char bytes[8 + PATH_ID_LINK_SIZE];
+  unsigned char bytes[8 + WORDS_F_LOCATION_SIZE];
 };
 #pragma pack(pop)
 

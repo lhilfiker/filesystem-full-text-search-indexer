@@ -19,9 +19,9 @@ int Index::add_new(index_combine_data &index_to_add) {
   // of space?
   words_f_size_buffer =
       26 *
-      (8 + PATH_ID_LINK_SIZE); // uint64_t stored as 8 bytes(disk location))
-                               // + PATH_ID_TYPE stored as 4 bytes(disk id)
-                               // for each letter in the alphabet.
+      (8 + WORDS_F_LOCATION_SIZE); // uint64_t stored as 8 bytes(disk location))
+                                   // + PATH_ID_TYPE stored as 4 bytes(disk id)
+                                   // for each letter in the alphabet.
 
   reversed_size_buffer =
       index_to_add.words_and_reversed.size() * REVERSED_ENTRY_SIZE;
