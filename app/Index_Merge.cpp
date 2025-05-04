@@ -254,7 +254,7 @@ void Index::add_reversed_to_word(
     }
     // If an additional is not full we fill it with 0.
     if (in_additional_counter != 0) {
-      for (; in_additional_counter < ADDITIONAL_ID_LINK_SIZE;
+      for (; in_additional_counter < ADDITIONAL_PATH_LINKS_AMOUNT;
            ++in_additional_counter) {
         PathIDOffset add;
         add.offset = 0;
