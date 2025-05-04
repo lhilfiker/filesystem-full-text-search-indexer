@@ -45,6 +45,17 @@
 #error "WORDS_F_LOCATION_SIZE must be 2, 4, or 8"
 #endif
 
+// Define the Word Seperator type
+#if WORD_SEPARATOR_SIZE == 1
+#define WORD_SEPARATOR_TYPE uint8_t
+#elif WORD_SEPARATOR_SIZE == 2
+#define WORD_SEPARATOR_TYPE uint16_t
+#elif WORD_SEPARATOR_SIZE == 4
+#define WORD_SEPARATOR_TYPE uint32_t
+#else
+#error "WORD_SEPARATOR_SIZE must be 1, 2, or 4"
+#endif
+
 #define REVERSED_ENTRY_SIZE                                                    \
   (REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE + ADDITIONAL_ID_LINK_SIZE)
 #define ADDITIONAL_ENTRY_SIZE                                                  \
@@ -116,6 +127,14 @@ union ReversedBlock {
   } ids;
   unsigned char bytes[(REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
                       ADDITIONAL_ID_LINK_SIZE];
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+
+union WordSeperator {
+  WORD_SEPARATOR_TYPE seperator;
+  unsigned char bytes[WORD_SEPARATOR_SIZE];
 };
 #pragma pack(pop)
 

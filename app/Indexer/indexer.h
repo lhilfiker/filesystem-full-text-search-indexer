@@ -4,7 +4,7 @@
 
 #include "../LocalIndex/localindex.h"
 #include "../lib/mio.hpp"
-#include "index_types.h"
+#include "indexer_types.h"
 #include <array>
 #include <filesystem>
 #include <future>

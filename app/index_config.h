@@ -38,4 +38,9 @@
 // is 4. If you plan to have more paths increase this to 4 or 8. Valid options
 // are ONLY 2, 4 and 8.
 
+#define WORD_SEPARATOR_SIZE 1
+// This changes the size of the byte seperator before each word in words.index.
+// 1 byte allows for a max length of 255 of a single word. 2 byte would allow up
+// to 65536. Allowed values are 1,2 or 4.
+
 #endif // INDEX_CONFIG_H

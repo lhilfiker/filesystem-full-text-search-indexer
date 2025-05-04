@@ -6,7 +6,7 @@
 #include <string>
 
 int Index::execute_transactions() {
-  log::write(2, "Index: Transaction: Beginning execution of transaction list");
+  Log::write(2, "Index: Transaction: Beginning execution of transaction list");
   std::error_code ec;
   size_t transaction_current_id = 0;
   size_t transaction_current_write_sync_batch = 0;
@@ -15,7 +15,7 @@ int Index::execute_transactions() {
   mmap_transactions = mio::make_mmap_sink(
       (CONFIG_INDEX_PATH / "transaction" / "transaction.list").string(), 0,
       mio::map_entire_file, ec);
-  /*log::write(1, "Index: Transaction: Detected " +
+  /*Log::write(1, "Index: Transaction: Detected " +
                     std::to_string(
                         std::filesystem::file_size(CONFIG_INDEX_PATH /
      "transaction" / "transaction.list") / 27) + " potential transactions");
@@ -31,7 +31,7 @@ int Index::execute_transactions() {
                                              // transaction.
                                              // In execute_transactions, right
                                              // after loading the header
-    log::write(
+    Log::write(
         1, "Transaction header dump - status: " +
                std::to_string(current_header->status) +
                ", index_type: " + std::to_string(current_header->index_type) +
@@ -42,7 +42,7 @@ int Index::execute_transactions() {
                ", content_length: " +
                std::to_string(current_header->content_length));
     if (current_header->status == 2) {
-      log::write(
+      Log::write(
           1, "Index: Transaction: Skipping already completed transaction #" +
                  std::to_string(transaction_current_id));
       // skip as already complete
@@ -59,7 +59,7 @@ int Index::execute_transactions() {
     if (current_header->status == 1) {
       // check if need to restore from backup
       if (current_header->backup_id != 0) {
-        log::write(1, "Index: Transaction: Processing backup ID " +
+        Log::write(1, "Index: Transaction: Processing backup ID " +
                           std::to_string(current_header->backup_id) +
                           " for transaction #" +
                           std::to_string(transaction_current_id));
@@ -74,7 +74,7 @@ int Index::execute_transactions() {
           if (current_header->content_length !=
               std::filesystem::file_size(CONFIG_INDEX_PATH / "transaction" /
                                          "backups" / backup_file_name)) {
-            log::error("Transaction: backup file corrupt. Can not restore from "
+            Log::error("Transaction: backup file corrupt. Can not restore from "
                        "backup. Index potentially corrupt. Exiting. This "
                        "should never happen.");
           }
@@ -99,13 +99,13 @@ int Index::execute_transactions() {
     }
     if (current_header->status == 0 && transaction_current_id == 0) {
       // did not start yet. transaction file not successfully writen. Abort
-      log::write(
+      Log::write(
           2, "Index: Transaction: transaction list appears to have not "
              "finished creating. Deleting only incomplete Transaction List.");
       break;
     }
     // continue executing transaction.
-    log::write(1, "Index: Transaction: Executing transaction #" +
+    Log::write(1, "Index: Transaction: Executing transaction #" +
                       std::to_string(transaction_current_id) + " type=" +
                       std::to_string(current_header->operation_type) +
                       " index=" + std::to_string(current_header->index_type));
@@ -148,7 +148,7 @@ int Index::execute_transactions() {
                                           : &mmap_paths_count
                                                 [current_header->location])))),
           current_header->content_length);
-      log::write(1, "Index: Transaction: Move operation completed for index " +
+      Log::write(1, "Index: Transaction: Move operation completed for index " +
                         std::to_string(current_header->index_type) +
                         " at location " +
                         std::to_string(current_header->location));
@@ -175,7 +175,7 @@ int Index::execute_transactions() {
                                                 [current_header->location])))),
           &mmap_transactions[transaction_current_location + 27],
           current_header->content_length);
-      log::write(1, "Index: Transaction: Write operation completed for index " +
+      Log::write(1, "Index: Transaction: Write operation completed for index " +
                         std::to_string(current_header->index_type) +
                         " at location " +
                         std::to_string(current_header->location));
@@ -219,7 +219,7 @@ int Index::execute_transactions() {
         break;
       }
       map();
-      log::write(
+      Log::write(
           1, "Index: Transaction: Resize operation completed for index " +
                  std::to_string(current_header->index_type) + " and size: " +
                  std::to_string(current_header->content_length));
@@ -255,7 +255,7 @@ int Index::execute_transactions() {
           current_header->content_length);
       mmap_backup.sync(ec);
       mmap_backup.unmap();
-      log::write(
+      Log::write(
           1, "Index: Transaction: Backup operation completed for index " +
                  std::to_string(current_header->index_type) + " at location " +
                  std::to_string(current_header->location));
@@ -268,11 +268,11 @@ int Index::execute_transactions() {
             0) { // sync only if it was not a move operation or 5000 move
                  // operations happend
       if (sync_all() == 1) {
-        log::error(
+        Log::error(
             "Error when syncing indexes to disk. Exiting Program to save "
             "data. Please restart to see if the issue continues.");
       } else {
-        log::write(
+        Log::write(
             1, "Index: Transaction: Successfully synced index changes to disk");
       }
       transaction_current_write_sync_batch = 0;
@@ -291,13 +291,13 @@ int Index::execute_transactions() {
       transaction_current_location += 8;
     }
     transaction_current_location += 27;
-    log::write(1, "Index: Transaction: Completed transaction #" +
+    Log::write(1, "Index: Transaction: Completed transaction #" +
                       std::to_string(transaction_current_id - 1));
   }
-  log::write(2, "Index: Transaction: Successfully completed " +
+  Log::write(2, "Index: Transaction: Successfully completed " +
                     std::to_string(transaction_current_id) + " transactions");
 
-  log::write(2,
+  Log::write(2,
              "Index: Transaction: Cleaning up transaction files and backups");
 
   std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
@@ -306,6 +306,6 @@ int Index::execute_transactions() {
   std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
   std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
                                       "backups");
-  log::write(2, "Index: Transaction: Execution finished.");
+  Log::write(2, "Index: Transaction: Execution finished.");
   return 0;
 }

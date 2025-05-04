@@ -59,7 +59,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
   std::string current_word = "";
   if (!ec) {
     for (char c : file) {
-      helper::convert_char(c);
+      Helper::convert_char(c);
       if (c == '!') {
         if (current_word.length() > 4 && current_word.length() < 15) {
           // stem word
@@ -79,7 +79,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
   // file name
   current_word.clear();
   for (char c : path.filename().string()) {
-    helper::convert_char(c);
+    Helper::convert_char(c);
     if (c == '!') {
       if (current_word.length() > 4 && current_word.length() < 15) {
         // stem word
@@ -103,7 +103,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
 
 std::unordered_set<std::string>
 indexer::get_words(const std::filesystem::path &path) {
-  std::string extension = helper::file_extension(path);
+  std::string extension = Helper::file_extension(path);
 
   if (extension == ".txt")
     return get_words_text(path);

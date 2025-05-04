@@ -1,22 +1,23 @@
 #include "../Logging/logging.h"
 #include "index.h"
+#include "index_types.h"
 #include <cstring>
 #include <filesystem>
 #include <string>
 
 int Index::add_new(index_combine_data &index_to_add) {
   std::error_code ec;
-  log::write(2, "Index: add: first time write.");
+  Log::write(2, "Index: add: first time write.");
   // paths
   size_t file_location = 0;
   // resize files to make enough space to write all the data
   paths_size_buffer = (index_to_add.paths.size() * 2) + index_to_add.paths_size;
   paths_count_size_buffer = index_to_add.paths.size() * 4;
+
   words_size_buffer =
-      index_to_add.words_size + index_to_add.words_and_reversed.size();
-  // words_f_size maybe needs to be extended to allow larger numbers if 8
-  // bytes turn out to be too small. maybe automatically resize if running out
-  // of space?
+      index_to_add.words_size +
+      (index_to_add.words_and_reversed.size() * WORD_SEPARATOR_SIZE);
+
   words_f_size_buffer =
       26 *
       (8 + WORDS_F_LOCATION_SIZE); // uint64_t stored as 8 bytes(disk location))
@@ -70,7 +71,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   index_to_add.paths.clear(); // free memory as we have written this to memory
                               // already and don't need it anymore.
 
-  log::write(2, "Index: add: paths written.");
+  Log::write(2, "Index: add: paths written.");
 
   // paths_count
   // write the word count as 4 bytes values each to disk.
@@ -85,7 +86,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   paths_count_size = file_location;
   index_to_add.paths_count.clear(); // free memory
 
-  log::write(2, "Index: add: paths_count written.");
+  Log::write(2, "Index: add: paths_count written.");
 
   // words & words_f & reversed
   std::vector<WordsFValue> words_f(26);
@@ -105,23 +106,22 @@ int Index::add_new(index_combine_data &index_to_add) {
     // We use a 1byte seperator beetween each word. We also directly use it to
     // indicate how long the word is.
     size_t word_length = word.word.length();
-    if (word_length + 30 >
-        254) { // if the word is under 225 in length we can save it directly,
-               // if not we set 255 to indicate that we need to count
-               // manually. +30 as under is reserved for actual chars.
-      mmap_words[file_location] = 255;
-    } else {
-      mmap_words[file_location] = word_length + 30;
+    WordSeperator word_seperator;
+    word_seperator.seperator = word_length;
+
+    for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
+      mmap_words[file_location] = word_seperator.bytes[i];
+      ++file_location;
     }
-    ++file_location;
+
     for (const char c : word.word) {
-      mmap_words[file_location] = c - 'a';
+      mmap_words[file_location] = c;
       ++file_location;
     }
     ++on_disk_id;
   }
   words_size = file_location;
-  log::write(2, "indexer: add: words written");
+  Log::write(2, "indexer: add: words written");
 
   // write words_f
   std::vector<uint32_t> to_set;
@@ -155,7 +155,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   }
 
   words_f_size = file_location;
-  log::write(2, "indexer: add: words_f written");
+  Log::write(2, "indexer: add: words_f written");
 
   // reversed & additional
   file_location = 0;
@@ -221,13 +221,13 @@ int Index::add_new(index_combine_data &index_to_add) {
     }
   }
   reversed_size = file_location;
-  log::write(2, "indexer: add: reversed and additonal written");
+  Log::write(2, "indexer: add: reversed and additonal written");
 
   // we do not need to resize because we already know the size accuratly.
   first_time = false;
 
   if (ec) {
-    log::write(3, "Index: add: error");
+    Log::write(3, "Index: add: error");
     return 1;
   }
   return 0;
