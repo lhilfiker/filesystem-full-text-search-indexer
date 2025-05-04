@@ -134,50 +134,29 @@ Index::search_word_list(std::vector<std::string> &search_words,
     }
 
     // read the one byte word sperator.
-    uint8_t word_seperator = mmap_words[on_disk_count];
-    uint32_t word_disk_seperator = 30;
-
-    if (word_seperator < 31 ||
-        (word_seperator - 29) + on_disk_count >
-            words_size + 1) { // 0-30 is reserved. if it is higher it is for
-      // seperator. If the seperator here is 0-30 the index
-      // is corrupted.
-      Log::error(
-          "Index: Search: word seperator is invalid. This means the index is "
-          "most likely corrupted. Stopping to protect the index.");
+    WordSeperator word_sep;
+    for (uint8_t i = 0; i < WORD_SEPERATOR_SIZE; ++i) {
+      word_sep.bytes[i] = mmap_words[on_disk_count + i];
     }
+    WORD_SEPERATOR_TYPE word_seperator = word_sep.seperator;
+    if (word_seperator <= 0) {
+      // can't be 0 or lower than 0. index corrupt most likely
+      Log::error("Index: Combine: Word Seperator is 0 or lower. This can not "
+                 "be. Index most likely corrupt.");
+    }
+
     if (disk_first_char <
-        mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
-      disk_first_char = mmap_words[on_disk_count + 1];
-    }
-    if (word_seperator ==
-        255) { // This means the word is larger than 255 bytes. We need to count
-               // it manually until we reach another 30< byte.
-      // go through start position until end position comparing each char until
-      // either it is smaller or bigger. then just try to find the next
-      // seperator.
-      for (int i = 1; mmap_words[on_disk_count + i] < 31; ++i) {
-        ++word_disk_seperator;
-        if (words_size <= on_disk_count + i) {
-          Log::error("Index: Search: Index ends before the next word "
-                     "seperator appeared.");
-        }
-        if (word_seperator < 255) {
-          Log::error("Index: Search: Word seperator is smaller then the "
-                     "expected 255+. Index most likely corrupt.");
-        }
-      }
-    } else {
-      word_disk_seperator = word_seperator;
+        mmap_words[on_disk_count +
+                   WORD_SEPERATOR_SIZE]) { // + 1 because of the word seperator
+      disk_first_char = mmap_words[on_disk_count + WORD_SEPERATOR_SIZE];
     }
 
-    for (int i = 0; i < word_seperator - 30; ++i) {
+    for (int i = 0; i < word_seperator; ++i) {
 
-      if ((int)mmap_words[on_disk_count + 1 + i] ==
+      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] ==
           (int)(search_words[local_word_count][i])) {
         // If its last char and words are the same length we found it.
-        if (i == local_word_length - 1 &&
-            word_seperator - 30 == local_word_length) {
+        if (i == local_word_length - 1 && word_seperator == local_word_length) {
           result_word_ids.push_back(on_disk_id);
           ++local_word_count;
           if (local_word_count ==
@@ -186,8 +165,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
           }
           local_word_length = search_words[local_word_count].length();
           on_disk_count +=
-              word_seperator -
-              29; // 29 because its length of word + then the next seperator
+              word_seperator + WORD_SEPERATOR_SIZE; // then the next seperator
           ++on_disk_id;
           local_first_char = search_words[local_word_count][0];
 
@@ -213,20 +191,19 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
         // If its the last on disk char and at the end and not the same
         // length. means we need to skip this word.
-        if (i == word_seperator - 31) {
+        if (i == word_seperator - 1) {
           if (!exact_match && i >= min_char_for_match) {
             result_word_ids.push_back(on_disk_id);
           }
           on_disk_count +=
-              word_seperator -
-              29; // 29 because its length of word + then the next seperator
+              word_seperator + WORD_SEPERATOR_SIZE; // then the next seperator
           ++on_disk_id;
           break;
         }
       }
 
       // If disk char > local char
-      if ((int)mmap_words[on_disk_count + 1 + i] >
+      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] >
           (int)(search_words[local_word_count][i])) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
@@ -242,14 +219,12 @@ Index::search_word_list(std::vector<std::string> &search_words,
       }
 
       // If disk char < local char
-      if ((int)mmap_words[on_disk_count + 1 + i] <
+      if ((int)mmap_words[on_disk_count + WORD_SEPERATOR_SIZE + i] <
           (int)(search_words[local_word_count][i])) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
         }
-        on_disk_count +=
-            word_seperator -
-            29; // 29 because its length of word + then the next seperator
+        on_disk_count += word_seperator + 1; // then the next seperator
         ++on_disk_id;
         break;
       }
