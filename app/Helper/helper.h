@@ -11,8 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
-// Helper/helper.cpp
-class helper {
+// Helper/Helper.cpp
+class Helper {
 private:
   static const std::array<char, 256> conversion_table;
   static const std::unordered_map<char, char> special_chars;

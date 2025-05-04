@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
-// Indexer/indexer.cpp
+// Indexer/Indexer.cpp
 class indexer {
 private:
   static bool config_loaded;

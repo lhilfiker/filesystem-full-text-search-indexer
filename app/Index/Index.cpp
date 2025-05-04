@@ -35,14 +35,14 @@ std::filesystem::path Index::CONFIG_INDEX_PATH;
 
 void Index::save_config(const std::filesystem::path &index_path) {
   if (initialized) {
-    log::write(3, "Index: save_config: Index was already initialzed, can not "
+    Log::write(3, "Index: save_config: Index was already initialzed, can not "
                   "save config. Try to uninitialize first.");
   }
   CONFIG_INDEX_PATH =
       index_path; // Index path validation happens in check_files
 
   is_config_loaded = true;
-  log::write(1, "Index: save_config: saved config successfully.");
+  Log::write(1, "Index: save_config: saved config successfully.");
   return;
 }
 
@@ -53,11 +53,11 @@ void Index::resize(const std::filesystem::path path_to_resize,
   std::error_code ec;
   std::filesystem::resize_file(path_to_resize, size);
   if (ec) {
-    log::error("Index: resize: could not resize file at path: " +
+    Log::error("Index: resize: could not resize file at path: " +
                (path_to_resize).string() +
                " with size: " + std::to_string(size) + ".");
   }
-  log::write(1, "Index: resize: resized file successfully.");
+  Log::write(1, "Index: resize: resized file successfully.");
   return;
 }
 
@@ -82,10 +82,10 @@ int Index::unmap() {
     mmap_additional.unmap();
   }
   if (ec) {
-    log::write(4, "Index: unmap: error when unmapping index files.");
+    Log::write(4, "Index: unmap: error when unmapping index files.");
     return 1;
   }
-  log::write(1, "Index: unmap: unmapped all successfully.");
+  Log::write(1, "Index: unmap: unmapped all successfully.");
   return 0;
 }
 
@@ -135,30 +135,30 @@ int Index::map() {
                             0, mio::map_entire_file, ec);
   }
   if (ec) {
-    log::write(3, "Index: map: error when mapping index files.");
+    Log::write(3, "Index: map: error when mapping index files.");
     return 1;
   }
-  log::write(1, "Index: map: mapped all successfully.");
+  Log::write(1, "Index: map: mapped all successfully.");
   return 0;
 }
 
 void Index::check_files() {
   if (!is_config_loaded) {
-    log::error("Index: check_files: config not loaded. can not continue.");
+    Log::error("Index: check_files: config not loaded. can not continue.");
   }
-  log::write(1, "Index: check_files: checking files.");
+  Log::write(1, "Index: check_files: checking files.");
   std::error_code ec;
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH)) {
-    log::write(1, "Index: check_files: creating index directory.");
+    Log::write(1, "Index: check_files: creating index directory.");
     std::filesystem::create_directories(CONFIG_INDEX_PATH);
   }
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction")) {
-    log::write(1, "Index: check_files: creating transaction directory.");
+    Log::write(1, "Index: check_files: creating transaction directory.");
     std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction");
   }
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction" /
                                      "backups")) {
-    log::write(1,
+    Log::write(1,
                "Index: check_files: creating transaction backups directory.");
     std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
                                         "backups");
@@ -167,7 +167,7 @@ void Index::check_files() {
   if (std::filesystem::exists(CONFIG_INDEX_PATH / "firsttimewrite.info")) {
     // If this is still here it means that the first time write failed. delete
     // all index files.
-    log::write(2, "Index: check_files: First time write didn't complete last "
+    Log::write(2, "Index: check_files: First time write didn't complete last "
                   "time. Index possibly corrupt. Deleting to start fresh.");
     std::filesystem::remove(CONFIG_INDEX_PATH / "paths.index");
     std::filesystem::remove(CONFIG_INDEX_PATH / "paths_count.index");
@@ -181,21 +181,21 @@ void Index::check_files() {
   }
 
   if (!std::filesystem::exists(CONFIG_INDEX_PATH / "paths.index") ||
-      helper::file_size(CONFIG_INDEX_PATH / "paths.index") == 0 ||
+      Helper::file_size(CONFIG_INDEX_PATH / "paths.index") == 0 ||
       !std::filesystem::exists(CONFIG_INDEX_PATH / "paths_count.index") ||
-      helper::file_size(CONFIG_INDEX_PATH / "paths_count.index") == 0 ||
+      Helper::file_size(CONFIG_INDEX_PATH / "paths_count.index") == 0 ||
       !std::filesystem::exists(CONFIG_INDEX_PATH / "words.index") ||
-      helper::file_size(CONFIG_INDEX_PATH / "words.index") == 0 ||
+      Helper::file_size(CONFIG_INDEX_PATH / "words.index") == 0 ||
       !std::filesystem::exists(CONFIG_INDEX_PATH / "words_f.index") ||
-      helper::file_size(CONFIG_INDEX_PATH / "words_f.index") == 0 ||
+      Helper::file_size(CONFIG_INDEX_PATH / "words_f.index") == 0 ||
       !std::filesystem::exists(CONFIG_INDEX_PATH / "reversed.index") ||
-      helper::file_size(CONFIG_INDEX_PATH / "reversed.index") == 0 ||
+      Helper::file_size(CONFIG_INDEX_PATH / "reversed.index") == 0 ||
       !std::filesystem::exists(CONFIG_INDEX_PATH / "additional.index")
       // Additional size can be 0 if there aren't any words with more than 4
       // linked paths.
   ) {
     first_time = true;
-    log::write(
+    Log::write(
         1,
         "Index: check_files: index files damaged / not existing, recreating.");
     std::ofstream{CONFIG_INDEX_PATH / "paths.index"};
@@ -209,7 +209,7 @@ void Index::check_files() {
                             "transaction.list");
   }
   if (ec) {
-    log::error("Index: check_files: error accessing/creating index files in " +
+    Log::error("Index: check_files: error accessing/creating index files in " +
                (CONFIG_INDEX_PATH).string() + ".");
   }
   return;
@@ -217,7 +217,7 @@ void Index::check_files() {
 
 int Index::initialize() {
   if (!is_config_loaded) {
-    log::write(4, "Index: initialize: config not loaded. can not continue.");
+    Log::write(4, "Index: initialize: config not loaded. can not continue.");
     return 1;
   }
   is_mapped = false;
@@ -226,16 +226,16 @@ int Index::initialize() {
   check_files(); // check if index files exist and create them.
   map();         // ignore error here as it might fail if file size is 0.
   // get actual sizes of the files.
-  paths_size = helper::file_size(CONFIG_INDEX_PATH / "paths.index");
-  paths_count_size = helper::file_size(CONFIG_INDEX_PATH / "paths_count.index");
-  words_size = helper::file_size(CONFIG_INDEX_PATH / "words.index");
-  words_f_size = helper::file_size(CONFIG_INDEX_PATH / "words_f.index");
-  reversed_size = helper::file_size(CONFIG_INDEX_PATH / "reversed.index");
-  additional_size = helper::file_size(CONFIG_INDEX_PATH / "additional.index");
+  paths_size = Helper::file_size(CONFIG_INDEX_PATH / "paths.index");
+  paths_count_size = Helper::file_size(CONFIG_INDEX_PATH / "paths_count.index");
+  words_size = Helper::file_size(CONFIG_INDEX_PATH / "words.index");
+  words_f_size = Helper::file_size(CONFIG_INDEX_PATH / "words_f.index");
+  reversed_size = Helper::file_size(CONFIG_INDEX_PATH / "reversed.index");
+  additional_size = Helper::file_size(CONFIG_INDEX_PATH / "additional.index");
   // If an error occured exit.
   if (paths_size == -1 || words_size == -1 || words_f_size == -1 ||
       reversed_size == -1 || additional_size == -1) {
-    log::error("Index: initialize: could not get actual size of index "
+    Log::error("Index: initialize: could not get actual size of index "
                "files, exiting.");
     return 1;
   }
@@ -244,20 +244,20 @@ int Index::initialize() {
   // check if transaction file exists
   if (std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
                               "transaction.list")) {
-    log::write(2, "Index: a transaction file still exists. Checking if Index "
+    Log::write(2, "Index: a transaction file still exists. Checking if Index "
                   "needs to be repaired.");
     if (execute_transactions() == 1) {
-      log::error(
+      Log::error(
           "Index: while checking transaction file an error occured. Exiting.");
     }
-    log::write(
+    Log::write(
         2, "Index: transaction file successfully checked. Finishing startup.");
   }
   // removing all backups because they are not needed anymore.
   std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction" /
                                      "backups")) {
-    log::write(1,
+    Log::write(1,
                "Index: intitialize: creating transactions backups directory.");
     std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
                                         "backups");
@@ -270,13 +270,13 @@ int Index::initialize() {
 
 int Index::uninitialize() {
   if (!is_config_loaded) {
-    log::write(4, "Index: uninitialize: config not loaded. can not continue.");
+    Log::write(4, "Index: uninitialize: config not loaded. can not continue.");
     return 1;
   }
   is_mapped = false;
   // write caches, etc...
   if (unmap() == 1) {
-    log::write(4, "Index: uninitialize: could not unmap.");
+    Log::write(4, "Index: uninitialize: could not unmap.");
     return 1;
   }
   initialized = false;
@@ -296,7 +296,7 @@ int Index::add(index_combine_data &index_to_add) {
       return 0;
     } else {
       // if an error occured exit.
-      log::error("Index: Frist time write failed. Exiting. Corupted index "
+      Log::error("Index: Frist time write failed. Exiting. Corupted index "
                  "files will be deleted on startup.");
     }
   } else {

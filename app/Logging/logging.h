@@ -11,7 +11,7 @@
 #include <vector>
 
 // Logging/logger.cpp
-class log {
+class Log {
 private:
   static int min_log_level;
   static constexpr std::array<std::string_view, 4> log_level_text = {

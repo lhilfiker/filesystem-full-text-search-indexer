@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-int helper::file_size(const std::filesystem::path &file_path) {
+int Helper::file_size(const std::filesystem::path &file_path) {
   int size = -1;
   std::error_code ec;
   size = std::filesystem::file_size(file_path, ec);
@@ -13,11 +13,11 @@ int helper::file_size(const std::filesystem::path &file_path) {
 // returns the extension of the file. Currently it will determine that by the
 // extension in the filename. It may be changed for a better dedection in the
 // future.
-std::string helper::file_extension(const std::filesystem::path &path) {
+std::string Helper::file_extension(const std::filesystem::path &path) {
   return path.extension();
 }
 
-void helper::convert_char(char &c) {
+void Helper::convert_char(char &c) {
   if (c >= 0 && c < 256) {
     c = conversion_table[static_cast<unsigned char>(c)];
   } else {
@@ -31,7 +31,7 @@ void helper::convert_char(char &c) {
   return;
 }
 
-const std::array<char, 256> helper::conversion_table = []() {
+const std::array<char, 256> Helper::conversion_table = []() {
   std::array<char, 256> table;
   for (int i = 0; i < 256; ++i) {
     char c = static_cast<char>(i);
@@ -47,7 +47,7 @@ const std::array<char, 256> helper::conversion_table = []() {
 }();
 
 // Initialize the special characters map
-const std::unordered_map<char, char> helper::special_chars = {
+const std::unordered_map<char, char> Helper::special_chars = {
     {'ä', 'a'}, {'Ä', 'a'}, {'å', 'a'}, {'Å', 'a'}, {'à', 'a'}, {'À', 'a'},
     {'á', 'a'}, {'Á', 'a'}, {'â', 'a'}, {'Â', 'a'}, {'ã', 'a'}, {'Ã', 'a'},
     {'ö', 'o'}, {'Ö', 'o'}, {'ò', 'o'}, {'Ò', 'o'}, {'ó', 'o'}, {'Ó', 'o'},

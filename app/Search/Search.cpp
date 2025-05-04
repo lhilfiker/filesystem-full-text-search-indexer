@@ -28,7 +28,7 @@ void Search::search() {
   std::string current_word = "";
   current_word.reserve(100);
   for (char c : input) {
-    helper::convert_char(c);
+    Helper::convert_char(c);
     if (c == '!') {
       if (current_word.length() > 1 &&
           current_word.length() < 100) { // allow bigger and smaller words.

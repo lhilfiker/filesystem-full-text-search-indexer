@@ -3,9 +3,9 @@
 #include <iostream>
 #include <string>
 
-int log::min_log_level = 1;
+int Log::min_log_level = 1;
 
-void log::save_config(const int config_min_log_level) {
+void Log::save_config(const int config_min_log_level) {
   // min_log_level
   if (config_min_log_level >= 1 && config_min_log_level <= 4) {
     min_log_level = config_min_log_level;
@@ -16,7 +16,7 @@ void log::save_config(const int config_min_log_level) {
   }
 }
 
-void log::write(const int log_level, const std::string &log_message) {
+void Log::write(const int log_level, const std::string &log_message) {
   // log_level: 1 = debug, 2 = info, 3 = warn, 4 = critical
   if (min_log_level <= log_level) {
     if (log_level >= 1 && log_level <= 4) {
@@ -27,7 +27,7 @@ void log::write(const int log_level, const std::string &log_message) {
   }
 }
 
-void log::error(const std::string &error_message) {
+void Log::error(const std::string &error_message) {
   // for now, it will just log it and throw an error.
   write(4, "ERROR: " + error_message);
   throw 1;
