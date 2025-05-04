@@ -43,7 +43,7 @@ Most sizes can be increased or decreased to allow for larger indexes or to optim
     - 0-30: Direct word length
     - >30: Used as separators 
     - 255: Words longer than 255 chars
-  - One byte per character(letter 'a' starts at 0.)
+  - One byte per character(letter 'a' encoded as standart unsigned char(Extended ASCII))
   - Alphabetically sorted for binary search
   - Words are linked to reversed based on ID. The first word is linked to reversed ID0. The fifth to ID4.
   - WordsID or on Disk ID start from 0 and are only actually used on disk in words_f.

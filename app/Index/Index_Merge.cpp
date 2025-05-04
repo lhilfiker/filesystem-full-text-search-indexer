@@ -13,7 +13,7 @@ void Index::add_reversed_to_word(
     const size_t &local_word_count, PathsMapping &paths_mapping) {
 
   if (on_disk_id * REVERSED_ENTRY_SIZE + REVERSED_ENTRY_SIZE > reversed_size) {
-    log::error("Index: Reversed out of range. Index corrupted."); // index most
+    Log::error("Index: Reversed out of range. Index corrupted."); // index most
                                                                   // likely
                                                                   // corrupted.
   }
@@ -55,7 +55,7 @@ void Index::add_reversed_to_word(
         {current_additional,
          {}}); // create an empty additional_free for the first one.
     if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
-      log::error("Index: path_ids_from_word_id: to search word id would be at "
+      Log::error("Index: path_ids_from_word_id: to search word id would be at "
                  "nonexisting location. Index most likely corrupt. Exiting");
     }
     AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
@@ -73,7 +73,7 @@ void Index::add_reversed_to_word(
           // load the new additional block
           current_additional = disk_additional->ids.additional[0];
           if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
-            log::error(
+            Log::error(
                 "Index: path_ids_from_word_id: to search word id would be at "
                 "nonexisting location. Index most likely corrupt. Exiting");
           }
@@ -309,7 +309,7 @@ void Index::add_new_word(index_combine_data &index_to_add,
     new_word.content += (char)(word_length + 30);
   }
   for (const char c : index_to_add.words_and_reversed[local_word_count].word) {
-    new_word.content += c - 'a';
+    new_word.content += c;
   }
   // update new needed size
   words_new_needed_size += word_length + 1;
@@ -543,11 +543,11 @@ void Index::write_to_transaction(std::vector<Transaction> &transactions,
     }
   }
   if (ec)
-    log::error("Index: Write to Transaction Failed. Exiting");
+    Log::error("Index: Write to Transaction Failed. Exiting");
 }
 
 int Index::merge(index_combine_data &index_to_add) {
-  log::write(2, "indexer: add: adding to existing index.");
+  Log::write(2, "indexer: add: adding to existing index.");
   std::error_code ec;
   map();
 
@@ -652,7 +652,7 @@ int Index::merge(index_combine_data &index_to_add) {
         }
         on_disk_count += next_path_end;
       } else {
-        log::error("Index: Combine: invalid path content length. Aborting. "
+        Log::error("Index: Combine: invalid path content length. Aborting. "
                    "The Index could be corrupted.");
       }
       ++on_disk_id;
@@ -660,7 +660,7 @@ int Index::merge(index_combine_data &index_to_add) {
     } else {
       // Abort. A corrupted index would mess things up. If the corruption
       // could not get detected or fixed before here it is most likely broken.
-      log::error("Index: Combine: invalid path content length indicator. "
+      Log::error("Index: Combine: invalid path content length indicator. "
                  "Aborting. The Index could be corrupted.");
     }
   }
@@ -771,7 +771,7 @@ int Index::merge(index_combine_data &index_to_add) {
     // location to the start of that char.
     if (disk_first_char < local_first_char) {
       if (words_f[local_first_char - 'a'].location < words_size) {
-        log::write(1, "Index: Merge: Skipping using Words_f Table");
+        Log::write(1, "Index: Merge: Skipping using Words_f Table");
         on_disk_count = words_f[local_first_char - 'a'].location;
         on_disk_id = words_f[local_first_char - 'a'].id;
         disk_first_char = local_first_char;
@@ -782,7 +782,7 @@ int Index::merge(index_combine_data &index_to_add) {
           break;
         }
         // This should not happen. Index is corrupted.
-        log::error("Index: Combine: Words_f char value is higher than words "
+        Log::error("Index: Combine: Words_f char value is higher than words "
                    "index size. This means the index is corrupted. Reset the "
                    "index and report this problem.");
       }
@@ -797,13 +797,13 @@ int Index::merge(index_combine_data &index_to_add) {
             words_size + 1) { // 0-30 is reserved. if it is higher it is for
       // seperator. If the seperator here is 0-30 the index
       // is corrupted.
-      log::error(
+      Log::error(
           "Index: Combine: word seperator is invalid. This means the index is "
           "most likely corrupted. Stopping to protect the index.");
     }
-    if (disk_first_char - 'a' <
+    if (disk_first_char <
         mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
-      disk_first_char = mmap_words[on_disk_count + 1] + 'a';
+      disk_first_char = mmap_words[on_disk_count + 1];
     }
     if (word_seperator ==
         255) { // This means the word is larger than 255 bytes. We need to count
@@ -814,11 +814,11 @@ int Index::merge(index_combine_data &index_to_add) {
       for (size_t i = 1; mmap_words[on_disk_count + i] < 31; ++i) {
         ++word_disk_seperator;
         if (words_size <= on_disk_count + i) {
-          log::error("Index: Combine: Index ends before the next word "
+          Log::error("Index: Combine: Index ends before the next word "
                      "seperator appeared.");
         }
         if (word_seperator < 255) {
-          log::error("Index: Combine: Word seperator is smaller then the "
+          Log::error("Index: Combine: Word seperator is smaller then the "
                      "expected 255+. Index most likely corrupt.");
         }
       }
@@ -830,13 +830,12 @@ int Index::merge(index_combine_data &index_to_add) {
       // If current chars are the same + word on disk length same as on local
       // length and last char add to existing word
       if ((int)mmap_words[on_disk_count + 1 + i] ==
-          (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
-                'a')) {
+          (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 &&
             word_seperator - 30 == local_word_length) {
           // add to existing
-          log::write(2, "Index: Merge: Found existing word");
+          Log::write(2, "Index: Merge: Found existing word");
           add_reversed_to_word(index_to_add, on_disk_count, transactions,
                                additional_new_needed_size,
                                reversed_new_needed_size, on_disk_id,
@@ -862,7 +861,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // means we need to insert before
         if (i == local_word_length - 1) {
           // insert new
-          log::write(1, "Index: Merge: Add new Word");
+          Log::write(1, "Index: Merge: Add new Word");
           add_new_word(index_to_add, on_disk_count, transactions,
                        words_insertions, reversed_insertions,
                        additional_new_needed_size, words_new_needed_size,
@@ -887,7 +886,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // length. means we need to skip this word.
         if (i == word_seperator - 31) {
           // skip
-          log::write(1, "Index: Merge: Skip Word on Disk");
+          Log::write(1, "Index: Merge: Skip Word on Disk");
           on_disk_count +=
               word_seperator -
               29; // 29 because its length of word + then the next seperator
@@ -898,10 +897,9 @@ int Index::merge(index_combine_data &index_to_add) {
 
       // If disk char > local char
       if ((int)mmap_words[on_disk_count + 1 + i] >
-          (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
-                'a')) {
+          (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
         // insert new
-        log::write(1, "Index: Merge: Add new Word");
+        Log::write(1, "Index: Merge: Add new Word");
         add_new_word(index_to_add, on_disk_count, transactions,
                      words_insertions, reversed_insertions,
                      additional_new_needed_size, words_new_needed_size,
@@ -924,10 +922,9 @@ int Index::merge(index_combine_data &index_to_add) {
 
       // If disk char < local char
       if ((int)mmap_words[on_disk_count + 1 + i] <
-          (int)(index_to_add.words_and_reversed[local_word_count].word[i] -
-                'a')) {
+          (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
         // skip
-        log::write(1, "Index: Merge: Skip Word on Disk");
+        Log::write(1, "Index: Merge: Skip Word on Disk");
         on_disk_count +=
             word_seperator -
             29; // 29 because its length of word + then the next seperator
@@ -952,7 +949,7 @@ int Index::merge(index_combine_data &index_to_add) {
     // on_disk_count it doesnt matter because when insertions are
     // processed it will add all the newly added word count to the
     // insertion location.
-    log::write(2, "Index: Merge: Adding a new word at the end");
+    Log::write(2, "Index: Merge: Adding a new word at the end");
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
                  reversed_insertions, additional_new_needed_size,
                  words_new_needed_size, reversed_new_needed_size, on_disk_id,
@@ -961,7 +958,7 @@ int Index::merge(index_combine_data &index_to_add) {
                     'a') +
                    1] += local_word_length + 1;
     ++words_F_ID_change
-        [(index_to_add.words_and_reversed[local_word_count].word[0] - 'a') + 1];
+        [(index_to_add.words_and_reversed[local_word_count].word[0]) + 1];
   }
 
   // calculate the new words f values and create a transaction to update
@@ -989,11 +986,11 @@ int Index::merge(index_combine_data &index_to_add) {
   // finish the Transaction List and then write it to disk. First add a
   // resize Transaction for words, reversed and additional at the start of
   // the List.
-  log::write(2, "Index: Creating resize transaction for words with size: " +
+  Log::write(2, "Index: Creating resize transaction for words with size: " +
                     std::to_string(words_size + words_new_needed_size));
-  log::write(2, "Index: Creating resize transaction for reversed with size: " +
+  Log::write(2, "Index: Creating resize transaction for reversed with size: " +
                     std::to_string(reversed_size + reversed_new_needed_size));
-  log::write(2,
+  Log::write(2,
              "Index: Creating resize transaction for additional with size: " +
                  std::to_string(additional_size + additional_new_needed_size));
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,

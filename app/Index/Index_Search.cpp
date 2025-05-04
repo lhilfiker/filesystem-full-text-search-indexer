@@ -10,7 +10,7 @@
 std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
   std::vector<PATH_ID_TYPE> path_ids;
   if ((word_id * REVERSED_ENTRY_SIZE) + REVERSED_ENTRY_SIZE > reversed_size) {
-    log::error("Index: path_ids_from_word_id: to search word id would be at "
+    Log::error("Index: path_ids_from_word_id: to search word id would be at "
                "nonexisting location. Index most likely corrupt. Exiting");
   }
   // load the reversed block into memory.
@@ -28,7 +28,7 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
   }
   if ((disk_reversed->ids.additional[0] * ADDITIONAL_ENTRY_SIZE) >
       additional_size) {
-    log::error("Index: path_ids_from_word_id: Additional block would be at non "
+    Log::error("Index: path_ids_from_word_id: Additional block would be at non "
                "existing location. Exiting");
   }
   AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
@@ -47,7 +47,7 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
         // load the new additional block
         current_additional = disk_additional->ids.additional[0];
         if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
-          log::error("Index: path_ids_from_word_id: Additional block would be "
+          Log::error("Index: path_ids_from_word_id: Additional block would be "
                      "at non existing location. Exiting");
         }
         disk_additional = reinterpret_cast<AdditionalBlock *>(
@@ -115,7 +115,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
     // location to the start of that char.
     if (disk_first_char < local_first_char) {
       if (words_f[local_first_char - 'a'].location < words_size) {
-        log::write(1, "Index: Search: Skipping using Words_f Table");
+        Log::write(1, "Index: Search: Skipping using Words_f Table");
         on_disk_count = words_f[local_first_char - 'a'].location;
         on_disk_id = words_f[local_first_char - 'a'].id;
         disk_first_char = local_first_char;
@@ -127,7 +127,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
           break;
         }
         // This should not happen. Index is corrupted.
-        log::error("Index: Search: Words_f char value is higher than words "
+        Log::error("Index: Search: Words_f char value is higher than words "
                    "index size. This means the index is corrupted. Reset the "
                    "index and report this problem.");
       }
@@ -142,13 +142,13 @@ Index::search_word_list(std::vector<std::string> &search_words,
             words_size + 1) { // 0-30 is reserved. if it is higher it is for
       // seperator. If the seperator here is 0-30 the index
       // is corrupted.
-      log::error(
+      Log::error(
           "Index: Search: word seperator is invalid. This means the index is "
           "most likely corrupted. Stopping to protect the index.");
     }
-    if (disk_first_char - 'a' <
+    if (disk_first_char <
         mmap_words[on_disk_count + 1]) { // + 1 because of the word seperator
-      disk_first_char = mmap_words[on_disk_count + 1] + 'a';
+      disk_first_char = mmap_words[on_disk_count + 1];
     }
     if (word_seperator ==
         255) { // This means the word is larger than 255 bytes. We need to count
@@ -159,11 +159,11 @@ Index::search_word_list(std::vector<std::string> &search_words,
       for (int i = 1; mmap_words[on_disk_count + i] < 31; ++i) {
         ++word_disk_seperator;
         if (words_size <= on_disk_count + i) {
-          log::error("Index: Search: Index ends before the next word "
+          Log::error("Index: Search: Index ends before the next word "
                      "seperator appeared.");
         }
         if (word_seperator < 255) {
-          log::error("Index: Search: Word seperator is smaller then the "
+          Log::error("Index: Search: Word seperator is smaller then the "
                      "expected 255+. Index most likely corrupt.");
         }
       }
@@ -174,7 +174,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
     for (int i = 0; i < word_seperator - 30; ++i) {
 
       if ((int)mmap_words[on_disk_count + 1 + i] ==
-          (int)(search_words[local_word_count][i] - 'a')) {
+          (int)(search_words[local_word_count][i])) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 &&
             word_seperator - 30 == local_word_length) {
@@ -227,7 +227,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
       // If disk char > local char
       if ((int)mmap_words[on_disk_count + 1 + i] >
-          (int)(search_words[local_word_count][i] - 'a')) {
+          (int)(search_words[local_word_count][i])) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
         }
@@ -243,7 +243,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
       // If disk char < local char
       if ((int)mmap_words[on_disk_count + 1 + i] <
-          (int)(search_words[local_word_count][i] - 'a')) {
+          (int)(search_words[local_word_count][i])) {
         if (!exact_match && i >= min_char_for_match) {
           result_word_ids.push_back(on_disk_id);
         }
@@ -305,7 +305,7 @@ Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
   uint64_t path_count = 1; // on-disk path ids are indexed from 1.
   uint64_t local_count = 0;
   if (paths_size < 2) { // shouldn't happen. invalid. index corrupt.
-    log::error("Index: Search: id_to_path_string: Error. Paths index invalid. "
+    Log::error("Index: Search: id_to_path_string: Error. Paths index invalid. "
                "Index most likely corrupt.");
   }
   for (size_t i = 0; i < paths_size;) {
@@ -316,7 +316,7 @@ Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
     if (path_count == sorted_path_ids[local_count].path_id) {
       if (paths_size < i + path_length->offset) { // shouldn't happen.
                                                   // invalid. index corrupt.
-        log::error(
+        Log::error(
             "Index: Search: id_to_path_string: Error. Paths index invalid. "
             "Index most likely corrupt.");
       }
