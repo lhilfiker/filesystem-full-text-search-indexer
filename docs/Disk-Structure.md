@@ -40,7 +40,7 @@ Most sizes can be increased or decreased to allow for larger indexes or to optim
   ```
 - **Details**:
   - Length byte encodes word length as normal number. It i by default 1 byte but can be increased to 2 or 4 in index_config (WORD_SEPERATOR_SIZE)
-  - One byte per character(letter 'a' encoded as standart unsigned char(Extended ASCII))
+  - One byte per character(letter 'a' encoded as standard unsigned char(Extended ASCII))
   - Alphabetically sorted for binary search
   - Words are linked to reversed based on ID. The first word is linked to reversed ID0. The fifth to ID4.
   - WordsID or on Disk ID start from 0 and are only actually used on disk in words_f.
