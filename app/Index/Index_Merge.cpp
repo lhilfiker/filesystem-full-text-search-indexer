@@ -939,7 +939,7 @@ int Index::merge(index_combine_data &index_to_add) {
                     'a') +
                    1] += local_word_length + WORD_SEPERATOR_SIZE;
     ++words_F_ID_change
-        [(index_to_add.words_and_reversed[local_word_count].word[0]) + 1];
+        [(index_to_add.words_and_reversed[local_word_count].word[0] - 'a') + 1];
   }
 
   // calculate the new words f values and create a transaction to update
