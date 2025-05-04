@@ -3,6 +3,9 @@
 ## Overview
 The index uses multiple specialized files to optimize search performance while maintaining a small disk footprint. The default storage location is `.local/share/filesystem-full-text-search-indexer/`.
 
+## Configuration
+Most sizes can be increased or decreased to allow for larger indexes or to optimize for disk space. E.g the PathID byte amount, AdditionalID Byte amount, Words_f IDBlock can all be increased or decreased. This can only be set at compile time for now.
+
 ## Index Files
 
 ### 1. Path Index (`paths.index`)
@@ -53,7 +56,7 @@ The index uses multiple specialized files to optimize search performance while m
   ```
 - **Details**:
   - 26 entries (a-z)
-  - Each entry is an 8-byte uin64_t and a 4 byte uint32_t. total 12 bytes per letter.
+  - Each entry is an 8-byte uin64_t and a 4 byte uint32_t(This can be changed by editing index_config.h WORDS_F_LOCATION_SIZE to either 2,4 or 8 bytes(uint16t,uint32t,uint64t) ). total 12(or more) bytes per letter.
   - Points to first occurrence in words.index as a byte location.(e.g the words with letter 'b' begin t byte 300.) and it's ID. ID is needed to then access its reversed or additional.
   - Enables quick letter-based searches
   - If one entry doesn't have a word connected yet we set its location to the value of the next entry that has one or the end of the file location.
@@ -61,27 +64,29 @@ The index uses multiple specialized files to optimize search performance while m
 
 ### 5. Reversed Index (`reversed.index`)
 - **Purpose**: Maps words to containing documents
-- **Format**: Fixed 10-byte blocks
+- **Format**: Fixed 12-byte blocks 
   ```
   Block structure:
-  [2-byte path_id][2-byte path_id][2-byte path_id][2-byte path_id][2-byte additional_id]
+  [2-byte path_id][2-byte path_id][2-byte path_id][2-byte path_id][4-byte additional_id]
   ```
 - **Details**:
-  - Each block stores up to 4 path IDs
+  - Each block stores up to 4 path IDs (or more, this can be set in index_config.h(REVERSED_PATH_LINKS_AMOUNT))
   - Additional_id links to overflow storage
   - Exists for each word. Position is always relative to word id.
-  - Block position = `(word_id × 10) - 10`
-  - Path ID size configurable in future versions(currently only 2 bytes = 65535 possible paths)
+  - Block position = `(word_id × 12) - 12`
+  - Path ID size can be increased to 4 or even 8 bytes length. This can be set in index_config.h when compiling. (PATH_ID_LINK_SIZE)
+  - Additional ID size can also be increased/decreased to 2/4/8 bytes. This can be set in index_config.h when compiling. (ADDITIONAL_ID_LINK_SIZE)
 
 ### 6. Additional Index (`additional.index`)
 - **Purpose**: Overflow storage for popular words
-- **Format**: Fixed 50-byte blocks. Additional ID starts from 1. 1 is the block form byte 1-50.
+- **Format**: Fixed 52-byte blocks. Additional ID starts from 1. 1 is the block from byte 0-51.
   ```
   Block structure:
-  [24 × 2-byte path_ids][2-byte next_block_id]
+  [24 × 2-byte path_ids][4-byte next_block_id]
   ```
 - **Details**:
-  - Stores 24 path IDs per block
+  - Stores 24 path IDs per block (or more, can be configured in index_config ADDITIONAL_PATH_LINKS_AMOUNT at compile time )
+  - Additional ID size can also be increased/decreased to 2/4/8 bytes. This can be set in index_config.h when compiling. (ADDITIONAL_ID_LINK_SIZE)
   - Chainable via next_block_id
   - Used when words appear in >4 documents
   
