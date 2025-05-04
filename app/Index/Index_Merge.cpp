@@ -1,6 +1,5 @@
-#include "functions.h"
-#include "index_config.h"
-#include "lib/mio.hpp"
+#include "../Logging/logging.h"
+#include "index.h"
 #include <array>
 #include <cstring>
 #include <filesystem>

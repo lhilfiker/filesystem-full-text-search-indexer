@@ -1,5 +1,6 @@
-#include "functions.h"
-#include "lib/mio.hpp"
+#include "indexer.h"
+#include "../Helper/helper.h"
+#include "../Logging/logging.h"
 #include <chrono>
 #include <filesystem>
 #include <future>
@@ -35,7 +36,7 @@ void indexer::save_config(const bool config_scan_dot_paths,
   }
   scan_dot_paths = config_scan_dot_paths;
   path_to_scan = config_path_to_scan;
-  log::write(1, "indexer: save_config: saved config successfully.");
+  Log::write(1, "indexer: save_config: saved config successfully.");
   config_loaded = true;
   return;
 }
@@ -95,7 +96,7 @@ indexer::get_words_text(const std::filesystem::path &path) {
   }
 
   if (ec) {
-    log::write(3, "indexerer: get_words: error reading / normalizing file.");
+    Log::write(3, "indexerer: get_words: error reading / normalizing file.");
   }
   return words_return;
 }
@@ -113,10 +114,10 @@ indexer::get_words(const std::filesystem::path &path) {
 LocalIndex
 indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
   std::error_code ec;
-  log::write(1, "indexer: thread_task: new task started.");
+  Log::write(1, "indexer: thread_task: new task started.");
   LocalIndex task_index;
   for (const std::filesystem::path &path : paths_to_index) {
-    log::write(1, "indexer: indexing path: " + path.string());
+    Log::write(1, "indexer: indexing path: " + path.string());
     PATH_ID_TYPE path_id = task_index.add_path(path);
     std::unordered_set<std::string> words_to_add = get_words(path);
     task_index.add_words(words_to_add, path_id);
@@ -147,7 +148,7 @@ int indexer::start_from() {
   }
   std::error_code ec;
   LocalIndex index;
-  log::write(2, "indexer: starting scan from last successful scan.");
+  Log::write(2, "indexer: starting scan from last successful scan.");
   std::vector<std::vector<std::filesystem::path>> queue(threads_to_use);
   std::vector<std::filesystem::path> too_big_files;
   size_t current_thread_filesize = 0;
@@ -176,7 +177,7 @@ int indexer::start_from() {
       if (ec)
         continue;
       if (filesize > thread_max_filesize) {
-        log::write(1,
+        Log::write(1,
                    "indexer: file too big. marking it for later proccessing");
         too_big_files.push_back(dir_entry.path());
         continue;
@@ -190,7 +191,7 @@ int indexer::start_from() {
         current_thread_filesize += filesize;
         ++paths_count;
 
-        log::write(1, "indexer(single threaded): indexing path: " +
+        Log::write(1, "indexer(single threaded): indexing path: " +
                           dir_entry.path().string());
         PATH_ID_TYPE path_id = index.add_path(dir_entry.path());
         std::unordered_set<std::string> words_to_add =
@@ -206,11 +207,11 @@ int indexer::start_from() {
         for (threads_jobs &job : async_awaits) {
           if (job.future.wait_for(std::chrono::nanoseconds(0)) ==
               std::future_status::ready) {
-            log::write(1, "indexer: task done. combining.");
+            Log::write(1, "indexer: task done. combining.");
             LocalIndex task_result = job.future.get();
             index.combine(task_result);
             if (index.size() >= local_index_memory) {
-              log::write(2, "indexer: exceeded local index memory limit. "
+              Log::write(2, "indexer: exceeded local index memory limit. "
                             "writing to disk.");
               index.add_to_disk();
             }
@@ -233,7 +234,7 @@ int indexer::start_from() {
             needs_a_queue = true;
             break;
           }; // if no availible queues, no adding.
-          log::write(1,
+          Log::write(1,
                      "indexer: not used up threads slot. creating a new one.");
           async_awaits.emplace_back(threads_jobs{
               std::async(std::launch::async,
@@ -285,11 +286,11 @@ int indexer::start_from() {
         for (threads_jobs &job : async_awaits) {
           if (job.future.wait_for(std::chrono::nanoseconds(0)) ==
               std::future_status::ready) {
-            log::write(1, "indexer: task done. combining.");
+            Log::write(1, "indexer: task done. combining.");
             LocalIndex task_result = job.future.get();
             index.combine(task_result);
             if (index.size() >= local_index_memory) {
-              log::write(2, "indexer: exceeded local index memory limit. "
+              Log::write(2, "indexer: exceeded local index memory limit. "
                             "writing to disk.");
               index.add_to_disk();
             }
@@ -314,7 +315,7 @@ int indexer::start_from() {
               all_done = true;
             break;
           }
-          log::write(1,
+          Log::write(1,
                      "indexer: not used up threads slot. creating a new one.");
           async_awaits.emplace_back(threads_jobs{
               std::async(std::launch::async,
@@ -332,20 +333,20 @@ int indexer::start_from() {
     paths_size += current_thread_filesize;
   }
 
-  log::write(2, "indexer: start_from: sorting local index.");
+  Log::write(2, "indexer: start_from: sorting local index.");
   index.sort();
   if (ec) {
-    log::write(4, "indexer: start_from: error.");
+    Log::write(4, "indexer: start_from: error.");
     return 1;
   }
-  log::write(2, "done.");
-  log::write(2, "total size in MB: " + std::to_string(index.size() / 1000000));
-  log::write(2, "total indexed files: " + std::to_string(paths_count));
-  log::write(2, "total indexed file size in MB: " +
+  Log::write(2, "done.");
+  Log::write(2, "total size in MB: " + std::to_string(index.size() / 1000000));
+  Log::write(2, "total indexed files: " + std::to_string(paths_count));
+  Log::write(2, "total indexed file size in MB: " +
                     std::to_string(paths_size / 1000000));
-  log::write(2, "files too big to be indexed: " +
+  Log::write(2, "files too big to be indexed: " +
                     std::to_string(too_big_files.size()));
-  log::write(2, "writting to disk");
+  Log::write(2, "writing to disk");
   index.add_to_disk();
   return 0;
 }

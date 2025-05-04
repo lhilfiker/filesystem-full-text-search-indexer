@@ -1,4 +1,6 @@
-#include "functions.h"
+#include "localindex.h"
+#include "../Index/index.h"
+#include "../Logging/logging.h"
 #include <algorithm>
 #include <string>
 #include <unordered_set>
@@ -87,7 +89,7 @@ void LocalIndex::add_to_disk() {
 }
 
 void LocalIndex::combine(LocalIndex &to_combine_index) {
-  log::write(1, "LocalIndex: combine: start");
+  Log::write(1, "LocalIndex: combine: start");
   // if empty just add directly
   if (paths_size == 0 && words_size == 0 && reversed_size == 0 &&
       path_word_count_size == 0) {
@@ -98,7 +100,7 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
     reversed_size = to_combine_index.reversed_size;
     path_word_count = to_combine_index.path_word_count;
     path_word_count_size = to_combine_index.path_word_count_size;
-    log::write(1, "copied as empty");
+    Log::write(1, "copied as empty");
     return;
   }
 
