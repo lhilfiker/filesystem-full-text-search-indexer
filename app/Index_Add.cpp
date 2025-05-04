@@ -8,7 +8,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   std::error_code ec;
   log::write(2, "Index: add: first time write.");
   // paths
-  uint64_t file_location = 0;
+  size_t file_location = 0;
   // resize files to make enough space to write all the data
   paths_size_buffer = (index_to_add.paths.size() * 2) + index_to_add.paths_size;
   paths_count_size_buffer = index_to_add.paths.size() * 4;
@@ -18,28 +18,39 @@ int Index::add_new(index_combine_data &index_to_add) {
   // bytes turn out to be too small. maybe automatically resize if running out
   // of space?
   words_f_size_buffer =
-      26 * 12; // uint64_t stored as 8 bytes(disk location)) + uint32_t stored
-               // as 4 bytes(disk id) for each letter in the alphabet.
-  reversed_size_buffer = index_to_add.words_and_reversed.size() *
-                         10; // each word id has a 10 byte block.
+      26 *
+      (8 + WORDS_F_LOCATION_SIZE); // uint64_t stored as 8 bytes(disk location))
+                                   // + PATH_ID_TYPE stored as 4 bytes(disk id)
+                                   // for each letter in the alphabet.
+
+  reversed_size_buffer =
+      index_to_add.words_and_reversed.size() * REVERSED_ENTRY_SIZE;
   additional_size_buffer = 0;
   for (const words_reversed &additional_reversed_counter :
        index_to_add.words_and_reversed) {
-    if (additional_reversed_counter.reversed.size() < 5)
-      continue; // if under 4 words, no additional is requiered.
+    if (additional_reversed_counter.reversed.size() <=
+        REVERSED_PATH_LINKS_AMOUNT) {
+      continue; // if it fits in only a reverse nlock no additional is
+                // requiered.
+    }
     additional_size_buffer +=
-        (additional_reversed_counter.reversed.size() + 19) / 24;
+        (additional_reversed_counter.reversed.size() -
+         REVERSED_PATH_LINKS_AMOUNT + ADDITIONAL_PATH_LINKS_AMOUNT - 1) /
+        ADDITIONAL_PATH_LINKS_AMOUNT; // celling divsion to round up to
+                                      // the next big number.
   }
-  additional_size_buffer *= 50;
+  additional_size_buffer *=
+      ADDITIONAL_ENTRY_SIZE; // amount of additionals times the bytes per
+                             // additional
 
   // resize
   unmap();
-  resize(index_path / "paths.index", paths_size_buffer);
-  resize(index_path / "paths_count.index", paths_count_size_buffer);
-  resize(index_path / "words.index", words_size_buffer);
-  resize(index_path / "words_f.index", words_f_size_buffer);
-  resize(index_path / "reversed.index", reversed_size_buffer);
-  resize(index_path / "additional.index", additional_size_buffer);
+  resize(CONFIG_INDEX_PATH / "paths.index", paths_size_buffer);
+  resize(CONFIG_INDEX_PATH / "paths_count.index", paths_count_size_buffer);
+  resize(CONFIG_INDEX_PATH / "words.index", words_size_buffer);
+  resize(CONFIG_INDEX_PATH / "words_f.index", words_f_size_buffer);
+  resize(CONFIG_INDEX_PATH / "reversed.index", reversed_size_buffer);
+  resize(CONFIG_INDEX_PATH / "additional.index", additional_size_buffer);
   map();
 
   // write all paths to disk with a offset in beetween.
@@ -80,7 +91,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   std::vector<WordsFValue> words_f(26);
   char current_char = '0';
   file_location = 0;
-  uint32_t on_disk_id = 0;
+  size_t on_disk_id = 0;
 
   for (const words_reversed &word : index_to_add.words_and_reversed) {
     // check if the first char is different from the last. if so, save the
@@ -113,7 +124,7 @@ int Index::add_new(index_combine_data &index_to_add) {
   log::write(2, "indexer: add: words written");
 
   // write words_f
-  std::vector<int> to_set;
+  std::vector<uint32_t> to_set;
   // check words_f. If any character is 0, set it to the value of the next non
   // 0 word. This can happen if no word with a specific letter occured. We set
   // it to the next char start.
@@ -138,8 +149,9 @@ int Index::add_new(index_combine_data &index_to_add) {
 
   file_location = 0;
   for (const WordsFValue &word_f : words_f) {
-    std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0], 12);
-    file_location += 12;
+    std::memcpy(&mmap_words_f[file_location], &word_f.bytes[0],
+                (8 + WORDS_F_LOCATION_SIZE));
+    file_location += (8 + WORDS_F_LOCATION_SIZE);
   }
 
   words_f_size = file_location;
@@ -152,11 +164,12 @@ int Index::add_new(index_combine_data &index_to_add) {
   for (const words_reversed &reversed : index_to_add.words_and_reversed) {
     // check if we need only a reversed block or also additionals.
     ReversedBlock current_ReversedBlock{};
-    if (reversed.reversed.size() <= 4) {
+    if (reversed.reversed.size() <= REVERSED_PATH_LINKS_AMOUNT) {
       // we just need a reversed so we will write that.
       size_t i = 0;
-      for (const uint32_t &r_id : reversed.reversed) {
-        current_ReversedBlock.ids[i] = r_id + 1; // paths are indexed from 1
+      for (const PATH_ID_TYPE &r_id : reversed.reversed) {
+        current_ReversedBlock.ids.path[i] =
+            r_id + 1; // paths are indexed from 1
         ++i;
       }
     } else {
@@ -165,19 +178,23 @@ int Index::add_new(index_combine_data &index_to_add) {
       size_t additional_i = 0;
       size_t reversed_i = 0;
       AdditionalBlock additional{};
-      for (const uint32_t &path_id : reversed.reversed) {
-        if (reversed_i < 4) {
-          current_ReversedBlock.ids[reversed_i] = path_id + 1;
+      for (const PATH_ID_TYPE &path_id : reversed.reversed) {
+        if (reversed_i < REVERSED_PATH_LINKS_AMOUNT) {
+          current_ReversedBlock.ids.path[reversed_i] = path_id + 1;
           ++reversed_i;
           continue;
         }
-        if (reversed_i == 4) {
-          current_ReversedBlock.ids[4] = additional_id;
+        if (reversed_i == REVERSED_PATH_LINKS_AMOUNT) {
+          current_ReversedBlock.ids.additional[0] = additional_id;
           ++reversed_i;
         }
-        if (additional_i == 24) { // the next additional id field.
-          additional.ids[24] = additional_id + 1;
+        if (additional_i ==
+            ADDITIONAL_PATH_LINKS_AMOUNT) { // the next additional id
+                                            // field.
+          additional.ids.additional[0] = additional_id + 1;
           additional_i = 0;
+
+          uint16_t byte_counter = 0;
           for (const char &byte : additional.bytes) {
             mmap_additional[additional_file_location] = byte;
             ++additional_file_location;
@@ -185,7 +202,7 @@ int Index::add_new(index_combine_data &index_to_add) {
           ++additional_id;
           additional = {};
         }
-        additional.ids[additional_i] = path_id + 1;
+        additional.ids.path[additional_i] = path_id + 1;
         ++additional_i;
       }
       if (additional_i != 0) {
@@ -198,7 +215,7 @@ int Index::add_new(index_combine_data &index_to_add) {
     }
 
     // write reversed block
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < REVERSED_ENTRY_SIZE; ++i) {
       mmap_reversed[file_location] = current_ReversedBlock.bytes[i];
       ++file_location;
     }

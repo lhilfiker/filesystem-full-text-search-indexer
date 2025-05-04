@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "index_config.h"
 #include "lib/mio.hpp"
 #include <array>
 #include <cstring>
@@ -7,56 +8,57 @@
 #include <string>
 #include <vector>
 
-std::vector<uint64_t> Index::path_ids_from_word_id(uint64_t word_id) {
-  std::vector<uint64_t> path_ids;
-  if ((word_id * 10) + 10 > reversed_size) {
+std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
+  std::vector<PATH_ID_TYPE> path_ids;
+  if ((word_id * REVERSED_ENTRY_SIZE) + REVERSED_ENTRY_SIZE > reversed_size) {
     log::error("Index: path_ids_from_word_id: to search word id would be at "
                "nonexisting location. Index most likely corrupt. Exiting");
   }
   // load the reversed block into memory.
-  ReversedBlock *disk_reversed =
-      reinterpret_cast<ReversedBlock *>(&mmap_reversed[word_id * 10]);
-  for (int i = 0; i < 4; ++i) {
-    if (disk_reversed->ids[i] != 0) {
-      path_ids.push_back(disk_reversed->ids[i]);
+  ReversedBlock *disk_reversed = reinterpret_cast<ReversedBlock *>(
+      &mmap_reversed[word_id * REVERSED_ENTRY_SIZE]);
+  for (int i = 0; i < REVERSED_PATH_LINKS_AMOUNT; ++i) {
+    if (disk_reversed->ids.path[i] != 0) {
+      path_ids.push_back(disk_reversed->ids.path[i]);
     }
   }
 
-  if (disk_reversed->ids[4] == 0) {
+  if (disk_reversed->ids.additional[0] == 0) {
     // if no additional is linked we return here.
     return path_ids;
   }
-  if ((disk_reversed->ids[4] * 50) > additional_size) {
-    log::error("Index: path_ids_from_word_id: to search word id would be at "
-               "nonexisting location. Index most likely corrupt. Exiting");
+  if ((disk_reversed->ids.additional[0] * ADDITIONAL_ENTRY_SIZE) >
+      additional_size) {
+    log::error("Index: path_ids_from_word_id: Additional block would be at non "
+               "existing location. Exiting");
   }
   AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
-      &mmap_additional[(disk_reversed->ids[4] - 1) * 50]);
+      &mmap_additional[(disk_reversed->ids.additional[0] - 1) *
+                       ADDITIONAL_ENTRY_SIZE]);
 
   // load the current additional block. -1 because additional IDs start at 1.
   int i = 0;
-  size_t current_additional = disk_reversed->ids[4];
+  size_t current_additional = disk_reversed->ids.additional[0];
   while (true) { // it will break when no new additional is linked
-    if (i == 24) {
-      if (disk_additional->ids[24] == 0) {
+    if (i == ADDITIONAL_PATH_LINKS_AMOUNT) {
+      if (disk_additional->ids.additional[0] == 0) {
         // no additionals are left.
         break;
       } else {
         // load the new additional block
-        current_additional = disk_additional->ids[24];
-        if ((current_additional * 50) > additional_size) {
-          log::error(
-              "Index: path_ids_from_word_id: to search word id would be at "
-              "nonexisting location. Index most likely corrupt. Exiting");
+        current_additional = disk_additional->ids.additional[0];
+        if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
+          log::error("Index: path_ids_from_word_id: Additional block would be "
+                     "at non existing location. Exiting");
         }
         disk_additional = reinterpret_cast<AdditionalBlock *>(
-            &mmap_additional[(current_additional - 1) * 50]);
+            &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
         i = 0;
       }
     }
-    if (disk_additional->ids[i] != 0) {
+    if (disk_additional->ids.path[i] != 0) {
       // save path id
-      path_ids.push_back(disk_additional->ids[i]);
+      path_ids.push_back(disk_additional->ids.path[i]);
     }
 
     ++i;
@@ -90,7 +92,9 @@ Index::search_word_list(std::vector<std::string> &search_words,
   // copy words_f into memory
   std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
-    std::memcpy(&words_f[i].bytes[0], &mmap_words_f[i * 12], 12);
+    std::memcpy(&words_f[i].bytes[0],
+                &mmap_words_f[i * (8 + WORDS_F_LOCATION_SIZE)],
+                (8 + WORDS_F_LOCATION_SIZE));
   }
 
   // local index words needs to have atleast 1 value. Is checked by LocalIndex
@@ -260,7 +264,7 @@ Index::search_word_list(std::vector<std::string> &search_words,
   // Now we need to read all reversed and additionals and put it into a list of
   // path_id count.
   // we will later combine them but it's easier like this.
-  std::vector<uint64_t> path_ids;
+  std::vector<PATH_ID_TYPE> path_ids;
   std::vector<uint32_t> counts;
   if (result_word_ids.size() == 0)
     return results;
@@ -285,13 +289,13 @@ Index::search_word_list(std::vector<std::string> &search_words,
 }
 
 // return a unordered map of ID and path string.
-std::unordered_map<uint64_t, std::string>
+std::unordered_map<PATH_ID_TYPE, std::string>
 Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
   if (is_mapped == false) {
     map();
   }
 
-  std::unordered_map<uint64_t, std::string> results;
+  std::unordered_map<PATH_ID_TYPE, std::string> results;
   if (path_ids.size() == 0) {
     return results;
   }

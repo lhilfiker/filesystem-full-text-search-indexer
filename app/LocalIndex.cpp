@@ -27,8 +27,8 @@ void LocalIndex::clear() {
   return;
 }
 
-uint32_t LocalIndex::add_path(const std::string &path_to_insert) {
-  uint32_t id = 0;
+PATH_ID_TYPE LocalIndex::add_path(const std::string &path_to_insert) {
+  PATH_ID_TYPE id = 0;
   for (const std::string &path : paths) {
     if (path == path_to_insert) {
       return id;
@@ -43,8 +43,8 @@ uint32_t LocalIndex::add_path(const std::string &path_to_insert) {
 }
 
 void LocalIndex::add_words(std::unordered_set<std::string> &words_to_insert,
-                           uint32_t path_id) {
-  uint32_t word_count = 0;
+                           PATH_ID_TYPE path_id) {
+  uint64_t word_count = 0;
   for (words_reversed &word_r : words_and_reversed) {
     if (words_to_insert.erase(word_r.word) == 1) {
       word_r.reversed.insert(path_id);
@@ -102,8 +102,8 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
     return;
   }
 
-  std::vector<uint32_t> paths_id;
-  size_t paths_last = paths.size();
+  std::vector<PATH_ID_TYPE> paths_id;
+  PATH_ID_TYPE paths_last = paths.size();
   size_t i = 0;
 
   for (const std::string &path_to_insert : to_combine_index.paths) {
@@ -138,7 +138,7 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
       // if found add converted path ids
       if (words_and_reversed[local_counter].word ==
           to_combine_index.words_and_reversed[to_combine_counter].word) {
-        for (const uint32_t &remote_id :
+        for (const PATH_ID_TYPE &remote_id :
              to_combine_index.words_and_reversed[to_combine_counter].reversed) {
           words_and_reversed[local_counter].reversed.insert(
               paths_id[remote_id]);
@@ -153,8 +153,8 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
       // if it wasn't found and we went passed it, add a new word.
       if (words_and_reversed[local_counter].word >
           to_combine_index.words_and_reversed[to_combine_counter].word) {
-        std::unordered_set<uint32_t> to_add_ids;
-        for (const uint32_t &remote_id :
+        std::unordered_set<PATH_ID_TYPE> to_add_ids;
+        for (const PATH_ID_TYPE &remote_id :
              to_combine_index.words_and_reversed[to_combine_counter].reversed) {
           to_add_ids.insert(paths_id[remote_id]);
           reversed_size += sizeof(paths_id[remote_id]);
@@ -180,8 +180,8 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
 
     // add missing
     while (to_combine_counter < to_combine_count) {
-      std::unordered_set<uint32_t> to_add_ids;
-      for (const uint32_t &remote_id :
+      std::unordered_set<PATH_ID_TYPE> to_add_ids;
+      for (const PATH_ID_TYPE &remote_id :
            to_combine_index.words_and_reversed[to_combine_counter].reversed) {
         to_add_ids.insert(paths_id[remote_id]);
         reversed_size += sizeof(paths_id[remote_id]);

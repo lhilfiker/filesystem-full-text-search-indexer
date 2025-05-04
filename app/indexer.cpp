@@ -117,7 +117,7 @@ indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
   LocalIndex task_index;
   for (const std::filesystem::path &path : paths_to_index) {
     log::write(1, "indexer: indexing path: " + path.string());
-    uint32_t path_id = task_index.add_path(path);
+    PATH_ID_TYPE path_id = task_index.add_path(path);
     std::unordered_set<std::string> words_to_add = get_words(path);
     task_index.add_words(words_to_add, path_id);
     if (ec) {
@@ -192,7 +192,7 @@ int indexer::start_from() {
 
         log::write(1, "indexer(single threaded): indexing path: " +
                           dir_entry.path().string());
-        uint32_t path_id = index.add_path(dir_entry.path());
+        PATH_ID_TYPE path_id = index.add_path(dir_entry.path());
         std::unordered_set<std::string> words_to_add =
             get_words(dir_entry.path());
         index.add_words(words_to_add, path_id);

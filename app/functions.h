@@ -2,6 +2,7 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#include "index_config.h"
 #include "lib/mio.hpp"
 #include <array>
 #include <filesystem>
@@ -11,9 +12,47 @@
 #include <unordered_set>
 #include <vector>
 
+// First define the size based on the path ID type
+#if PATH_ID_LINK_SIZE == 2
+#define PATH_ID_TYPE uint16_t
+#elif PATH_ID_LINK_SIZE == 4
+#define PATH_ID_TYPE uint32_t
+#elif PATH_ID_LINK_SIZE == 8
+#define PATH_ID_TYPE uint64_t
+#else
+#error "PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+
+// Define the additional ID type
+#if ADDITIONAL_ID_LINK_SIZE == 2
+#define ADDITIONAL_ID_TYPE uint16_t
+#elif ADDITIONAL_ID_LINK_SIZE == 4
+#define ADDITIONAL_ID_TYPE uint32_t
+#elif ADDITIONAL_ID_LINK_SIZE == 8
+#define ADDITIONAL_ID_TYPE uint64_t
+#else
+#error "ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+
+// Define the Words_f Location type
+#if WORDS_F_LOCATION_SIZE == 2
+#define WORDS_F_LOCATION_TYPE uint16_t
+#elif WORDS_F_LOCATION_SIZE == 4
+#define WORDS_F_LOCATION_TYPE uint32_t
+#elif WORDS_F_LOCATION_SIZE == 8
+#define WORDS_F_LOCATION_TYPE uint64_t
+#else
+#error "WORDS_F_LOCATION_SIZE must be 2, 4, or 8"
+#endif
+
+#define REVERSED_ENTRY_SIZE                                                    \
+  (REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE + ADDITIONAL_ID_LINK_SIZE)
+#define ADDITIONAL_ENTRY_SIZE                                                  \
+  (ADDITIONAL_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE + ADDITIONAL_ID_LINK_SIZE)
+
 struct words_reversed {
   std::string word;
-  std::unordered_set<uint32_t> reversed;
+  std::unordered_set<PATH_ID_TYPE> reversed;
 
   bool operator<(const words_reversed &other) const {
     return word < other.word;
@@ -21,7 +60,7 @@ struct words_reversed {
 };
 
 struct search_path_ids_return {
-  uint64_t path_id;
+  PATH_ID_TYPE path_id;
   uint32_t count;
 
   bool operator<(const search_path_ids_return &other) const {
@@ -54,9 +93,9 @@ public:
   LocalIndex();
   size_t size();
   void clear();
-  uint32_t add_path(const std::string &path_to_insert);
+  PATH_ID_TYPE add_path(const std::string &path_to_insert);
   void add_words(std::unordered_set<std::string> &words_to_insert,
-                 uint32_t path_id);
+                 PATH_ID_TYPE path_id);
   void sort();
   void add_to_disk();
   void combine(LocalIndex &to_combine_index);
@@ -161,8 +200,8 @@ struct Transaction {
   std::string content; // For move operations this will be 8 bytes always and it
                        // is a uint64_t and signals the byte shift.
 };
-#pragma pack(push, 1)
 
+#pragma pack(push, 1)
 union InsertionHeader {
   struct {
     uint64_t location;
@@ -178,47 +217,98 @@ struct Insertion {
 };
 
 struct PathsMapping {
-  std::unordered_map<uint16_t, uint16_t> by_local;
-  std::unordered_map<uint16_t, uint16_t> by_disk;
+  std::unordered_map<PATH_ID_TYPE, PATH_ID_TYPE> by_local;
+  std::unordered_map<PATH_ID_TYPE, PATH_ID_TYPE> by_disk;
 };
 
 #pragma pack(push, 1)
-
 union WordsFValue {
   struct {
     uint64_t location;
-    uint32_t id;
+    WORDS_F_LOCATION_TYPE id;
   };
-  unsigned char bytes[12];
+  unsigned char bytes[8 + WORDS_F_LOCATION_SIZE];
 };
 #pragma pack(pop)
 
+// ReversedBlock with depending on compiletime config different sizes.
 #pragma pack(push, 1)
 
 union ReversedBlock {
-  uint16_t ids[5];
-  unsigned char bytes[10];
+  struct {
+    PATH_ID_TYPE path[REVERSED_PATH_LINKS_AMOUNT];
+    ADDITIONAL_ID_TYPE additional[1];
+  } ids;
+  unsigned char bytes[(REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
+                      ADDITIONAL_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-
 union AdditionalBlock {
-  uint16_t ids[25];
-  unsigned char bytes[50];
+  struct {
+    PATH_ID_TYPE path[ADDITIONAL_PATH_LINKS_AMOUNT];
+    ADDITIONAL_ID_TYPE additional[1];
+  } ids;
+  unsigned char bytes[(ADDITIONAL_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
+                      ADDITIONAL_ID_LINK_SIZE];
 };
 #pragma pack(pop)
 
+// Path Offsets
 #pragma pack(push, 1)
-
 union PathOffset {
   uint16_t offset;
   unsigned char bytes[2];
 };
 #pragma pack(pop)
 
+// PathIDOffset with depending on compiletime config different sizes.
 #pragma pack(push, 1)
 
+#if PATH_ID_LINK_SIZE == 2
+union PathIDOffset {
+  uint16_t offset;
+  unsigned char bytes[2];
+};
+#elif PATH_ID_LINK_SIZE == 4
+union PathIDOffset {
+  uint32_t offset;
+  unsigned char bytes[4];
+};
+#elif PATH_ID_LINK_SIZE == 8
+union PathIDOffset {
+  uint64_t offset;
+  unsigned char bytes[8];
+};
+#else
+#error "PATH_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+
+#if ADDITIONAL_ID_LINK_SIZE == 2
+union AdditionalOffset {
+  uint16_t offset;
+  unsigned char bytes[2];
+};
+#elif ADDITIONAL_ID_LINK_SIZE == 4
+union AdditionalOffset {
+  uint32_t offset;
+  unsigned char bytes[4];
+};
+#elif ADDITIONAL_ID_LINK_SIZE == 8
+union AdditionalOffset {
+  uint64_t offset;
+  unsigned char bytes[8];
+};
+#else
+#error "ADDITIONAL_ID_LINK_SIZE must be 2, 4, or 8"
+#endif
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 union PathsCountItem {
   uint32_t num;
   unsigned char bytes[4];
@@ -226,7 +316,6 @@ union PathsCountItem {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-
 union MoveOperationContent {
   uint64_t num;
   unsigned char bytes[8];
@@ -236,10 +325,9 @@ union MoveOperationContent {
 class Index {
 private:
   static bool is_config_loaded;
+  static bool initialized;
   static bool is_mapped;
   static bool first_time;
-  static int64_t buffer_size;
-  static std::filesystem::path index_path;
   static int64_t paths_size;
   static int64_t paths_size_buffer;
   static int64_t paths_count_size;
@@ -259,6 +347,9 @@ private:
   static mio::mmap_sink mmap_reversed;
   static mio::mmap_sink mmap_additional;
 
+  // Config Values
+  static std::filesystem::path CONFIG_INDEX_PATH;
+
 private:
   static void check_files();
   static int map();
@@ -272,7 +363,7 @@ private:
                                    std::vector<Transaction> &transactions,
                                    size_t &additional_new_needed_size,
                                    size_t &reversed_new_needed_size,
-                                   uint32_t &on_disk_id,
+                                   uint64_t &on_disk_id,
                                    const size_t &local_word_count,
                                    PathsMapping &paths_mapping);
   static void add_new_word(index_combine_data &index_to_add,
@@ -283,7 +374,7 @@ private:
                            size_t &additional_new_needed_size,
                            size_t &words_new_needed_size,
                            size_t &reversed_new_needed_size,
-                           uint32_t &on_disk_id, const size_t &local_word_count,
+                           uint64_t &on_disk_id, const size_t &local_word_count,
                            PathsMapping &paths_mapping);
   static void insertion_to_transactions(
       std::vector<Transaction> &transactions,
@@ -295,11 +386,10 @@ private:
                                    size_t &transaction_file_location);
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
-  static std::vector<uint64_t> path_ids_from_word_id(uint64_t word_id);
+  static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
 
 public:
-  static void save_config(const std::filesystem::path &config_index_path,
-                          const int64_t config_buffer_size);
+  static void save_config(const std::filesystem::path &index_path);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
@@ -307,7 +397,7 @@ public:
   static std::vector<search_path_ids_return>
   search_word_list(std::vector<std::string> &search_words, bool exact_match,
                    int min_char_for_match);
-  static std::unordered_map<uint64_t, std::string>
+  static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
 };
 

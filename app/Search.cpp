@@ -50,7 +50,7 @@ void Search::search() {
       search_words, config_exact_match, config_min_char_for_match);
 
   // get the paths string from path ids.
-  std::unordered_map<uint64_t, std::string> path_string =
+  std::unordered_map<PATH_ID_TYPE, std::string> path_string =
       Index::id_to_path_string(path_ids_count);
 
   // sort path id and count to display from most to least
