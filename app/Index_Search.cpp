@@ -29,8 +29,8 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
   }
   if ((disk_reversed->ids.additional[0] * ADDITIONAL_ENTRY_SIZE) >
       additional_size) {
-    log::error("Index: path_ids_from_word_id: to search word id would be at "
-               "nonexisting location. Index most likely corrupt. Exiting");
+    log::error("Index: path_ids_from_word_id: Additional block would be at non "
+               "existing location. Exiting");
   }
   AdditionalBlock *disk_additional = reinterpret_cast<AdditionalBlock *>(
       &mmap_additional[(disk_reversed->ids.additional[0] - 1) *
@@ -48,9 +48,8 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
         // load the new additional block
         current_additional = disk_additional->ids.additional[0];
         if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
-          log::error(
-              "Index: path_ids_from_word_id: to search word id would be at "
-              "nonexisting location. Index most likely corrupt. Exiting");
+          log::error("Index: path_ids_from_word_id: Additional block would be "
+                     "at non existing location. Exiting");
         }
         disk_additional = reinterpret_cast<AdditionalBlock *>(
             &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
