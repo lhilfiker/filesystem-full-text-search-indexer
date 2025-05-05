@@ -285,6 +285,12 @@ int Index::uninitialize() {
 
 int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
+  if (!initialized || lock_status() <= 0) {
+    Log::write(3, "Index: Can not add because index is not initialized or "
+                  "Index is locked and read-only most likely due to another "
+                  "process doing a merge or first time add.");
+    return 1;
+  }
   if (first_time) {
     first_time = false;
     std::ofstream{CONFIG_INDEX_PATH /
