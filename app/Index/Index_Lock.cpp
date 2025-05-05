@@ -5,7 +5,9 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <signal.h>
 #include <string>
+#include <unistd.h>
 
 bool Index::index_lock = false;
 // This will indicate if the index is locked, either by our proccess or another
@@ -31,7 +33,37 @@ int Index::lock_status() {
 
   // read the lock file and compare it to current pid.
 
+  pid_t pid = getpid(); // current pid
+
+  std::ifstream lock_file(CONFIG_INDEX_PATH / "index.lock");
+  if (!lock_file) {
+    return -1; // Failed to open file
+  }
+
+  pid_t lockfile_pid;
+  lock_file >> lockfile_pid;
+  if (lockfile_pid == pid) {
+    // our own pid's lockfile
+    read_only = false;
+    index_lock = true;
+    return 2;
+  }
+
   // check if the pid is still running, if not delete file.
+  if (kill(lockfile_pid, 0) == 0) {
+    // kill 0 doesn't actually kill the proccess, it just checks if the pid
+    // exists. If it returns 0 the pid exists
+    read_only = true;
+    index_lock = true;
+    return 0;
+
+  } else {
+    // we can remove the lock file
+    std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
+    read_only = true;
+    index_lock = false;
+    return 1;
+  }
 
   return 0;
 }
