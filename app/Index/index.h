@@ -38,6 +38,9 @@ private:
   static mio::mmap_sink mmap_reversed;
   static mio::mmap_sink mmap_additional;
 
+  static bool index_lock;
+  static bool read_only;
+
   // Config Values
   static std::filesystem::path CONFIG_INDEX_PATH;
 
@@ -90,6 +93,10 @@ public:
                    int min_char_for_match);
   static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
+
+  static int lock_status();
+  static bool lock();
+  static bool unlock();
 };
 
 #endif
