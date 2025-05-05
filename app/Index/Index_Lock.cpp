@@ -69,9 +69,35 @@ int Index::lock_status() {
 }
 
 bool Index::lock() {
+  Log::write(1, "Index: lock: trying to acquire lock");
   if (lock_status() <= 0) {
     // not initialized or locked by other proccess.
+    Log::write(2,
+               "Index: lock: Index not initialized or locked by other program");
+
     return false;
+  } else if (lock_status() == 2) {
+    Log::write(1, "Index: lock: we already locked it.");
+    return true; // already locked.
+  } else {
+    pid_t pid = getpid(); // current pid
+    std::ofstream lock_file(CONFIG_INDEX_PATH / "index.lock");
+    if (!lock_file) {
+      Log::write(1, "Index: lock: error creating lock file. Permission error?");
+      return false; // Failed to create file
+    }
+    lock_file << pid;
+    lock_file.close();
+    if (lock_status() == 2) {
+      Log::write(1, "Index: lock: successfully acquired the lock.");
+
+      return true; // lock aquired.
+    } else {
+      Log::write(1, "Index: lock: created lock file but didn't get "
+                    "confirmation. did not acquire lock.");
+
+      return false; // some kind of error happend.
+    }
   }
 }
 
