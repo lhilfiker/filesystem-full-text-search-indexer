@@ -101,4 +101,29 @@ bool Index::lock() {
   }
 }
 
-bool Index::unlock() {}
+bool Index::unlock() {
+  Log::write(1, "Index: unlock: trying to unlock");
+  if (lock_status() <= 0) {
+    // not initialized or locked by other proccess.
+    Log::write(
+        2, "Index: unlock: Index not initialized or locked by other program");
+
+    return false;
+  } else if (lock_status() == 1) {
+    Log::write(1, "Index: unlock: we don't have an active lock.");
+    return true; // not locked.
+  } else {
+    std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
+    Log::write(1, "Index: unlock: removed lock file.");
+    if (lock_status() == 1) {
+      return true;
+    } else {
+      Log::write(
+          1,
+          "Index: unlock: removed but still have the lock. Permission Error?");
+
+      return false;
+    }
+  }
+  return false;
+}
