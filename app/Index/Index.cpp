@@ -222,6 +222,7 @@ int Index::initialize() {
   }
   is_mapped = false;
   std::error_code ec;
+  lock_status();
   unmap();       // unmap anyway incase they are already mapped.
   check_files(); // check if index files exist and create them.
   map();         // ignore error here as it might fail if file size is 0.
@@ -291,6 +292,12 @@ int Index::add(index_combine_data &index_to_add) {
                   "process doing a merge or first time add.");
     return 1;
   }
+  if (!lock()) {
+    // Acquire lock
+    Log::write(3, "Index: Can not add because acquiring lock failed. Check "
+                  "previous logs");
+    return 1; // failed to acquire lock.
+  }
   if (first_time) {
     first_time = false;
     std::ofstream{CONFIG_INDEX_PATH /
@@ -306,9 +313,11 @@ int Index::add(index_combine_data &index_to_add) {
                  "files will be deleted on startup.");
     }
   } else {
-    if (merge(index_to_add) == 1)
+    if (merge(index_to_add) == 1) {
       return 1;
-    return execute_transactions();
+    }
+    execute_transactions();
+    unlock(); // unlock after done
   }
   return 0;
 }
