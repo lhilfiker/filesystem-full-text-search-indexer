@@ -151,6 +151,9 @@ bool Index::health_status() {
   // because a first time add or transaction execution is in progress.
   // This will just check for a Transaction file or first time add file to
   // exist.
+  if (lock_status() == -1) {
+    return false;
+  }
 
   if (std::filesystem::exists(CONFIG_INDEX_PATH / "firsttimewrite.info") ||
       std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
