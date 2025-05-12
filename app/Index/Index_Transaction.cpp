@@ -39,7 +39,7 @@ int Index::write_transaction_file(const std::filesystem::path &transaction_path,
   // only move and backup transactions
   for (const auto &tx : move_transactions) {
     recalculated_size += 27; // Header size
-    if (tx.header.operation_type != 3 && tx.header.operation_type != 3) {
+    if (tx.header.operation_type != 3) {
       recalculated_size += 8; // Move operations need 8 bytes
     }
   }
