@@ -349,6 +349,7 @@ int Index::add(index_combine_data &index_to_add) {
                                           // is successfully done.
     if (add_new(index_to_add) == 0) {
       std::filesystem::remove(CONFIG_INDEX_PATH / "firsttimewrite.info");
+      unlock(false); // unlock after done
       return 0;
     } else {
       // if an error occured exit.
@@ -357,6 +358,7 @@ int Index::add(index_combine_data &index_to_add) {
     }
   } else {
     if (merge(index_to_add) == 1) {
+      unlock(false); // unlock after done
       return 1;
     }
     execute_transactions();
