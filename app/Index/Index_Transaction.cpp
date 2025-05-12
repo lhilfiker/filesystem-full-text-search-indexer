@@ -12,6 +12,22 @@ int Index::write_transaction_file(const std::filesystem::path &transaction_path,
                                   std::vector<Transaction> &transactions) {
   // writes the Transactionf file and does some extra checks
   std::error_code ec;
+  if (!lock()) {
+    Log::write(
+        3, "Index: write transaction file: coult not confirm lock, exiting.");
+    return 1;
+  }
+
+  // we remove all backups files because we will write now a new transaction
+  // file.
+  std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
+  if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction" /
+                                     "backups")) {
+    Log::write(1,
+               "Index: intitialize: creating transactions backups directory.");
+    std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
+                                        "backups");
+  }
 
   size_t recalculated_size = 0;
   for (const auto &tx : transactions) {
