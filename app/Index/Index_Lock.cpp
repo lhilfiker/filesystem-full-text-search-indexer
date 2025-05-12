@@ -70,13 +70,14 @@ int Index::lock_status() {
 
 bool Index::lock() {
   Log::write(1, "Index: lock: trying to acquire lock");
-  if (lock_status() <= 0) {
+  int lock_status_cached = lock_status();
+  if (lock_status_cached <= 0) {
     // not initialized or locked by other proccess.
     Log::write(2,
                "Index: lock: Index not initialized or locked by other program");
 
     return false;
-  } else if (lock_status() == 2) {
+  } else if (lock_status_cached == 2) {
     Log::write(1, "Index: lock: we already locked it.");
     return true; // already locked.
   } else {
@@ -103,13 +104,14 @@ bool Index::lock() {
 
 bool Index::unlock() {
   Log::write(1, "Index: unlock: trying to unlock");
-  if (lock_status() <= 0) {
+  int lock_status_cached = lock_status();
+  if (lock_status_cached <= 0) {
     // not initialized or locked by other proccess.
     Log::write(
         2, "Index: unlock: Index not initialized or locked by other program");
 
     return false;
-  } else if (lock_status() == 1) {
+  } else if (lock_status_cached == 1) {
     Log::write(1, "Index: unlock: we don't have an active lock.");
     return true; // not locked.
   } else {

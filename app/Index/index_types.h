@@ -63,7 +63,8 @@
 
 #pragma pack(push, 1)
 union TransactionHeader {
-  struct {
+  struct
+   {
     uint8_t status;     // 0 = no status, 1 = started, 2 = completed
     uint8_t index_type; // paths = 0, words = 1, words_f = 2, reversed = 3,
                         // additional = 4, paths_count = 5
