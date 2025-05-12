@@ -20,6 +20,17 @@ int Index::execute_transactions() {
                         std::filesystem::file_size(CONFIG_INDEX_PATH /
      "transaction" / "transaction.list") / 27) + " potential transactions");
   */
+  if (ec) {
+    Log::write(3, "Transaction Execution failed, could not map file.");
+    return 1;
+  }
+
+  // Try checking acquiring lock file.
+  if (!lock()) {
+    // locking failed.
+    Log::write(3, "Transaction Execution failed, could not lock index.");
+    return 1;
+  }
   while (transaction_current_location + 27 <
          std::filesystem::file_size(
              CONFIG_INDEX_PATH / "transaction" /
@@ -306,6 +317,13 @@ int Index::execute_transactions() {
   std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
   std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
                                       "backups");
+  // unlock index
+  if (!unlock()) {
+    // unlocking failed.
+    Log::write(3, "Transaction Execution failed, could not unlock index. "
+                  "Excution finished successfully.");
+    return 1;
+  }
   Log::write(2, "Index: Transaction: Execution finished.");
   return 0;
 }
