@@ -318,7 +318,7 @@ int Index::add(index_combine_data &index_to_add) {
       return 1;
     }
     execute_transactions();
-    unlock(); // unlock after done
   }
+  unlock(); // unlock after done
   return 0;
 }
