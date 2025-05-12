@@ -223,6 +223,7 @@ int Index::initialize() {
   is_mapped = false;
   std::error_code ec;
   lock_status();
+  // just to update internal state
   unmap();       // unmap anyway incase they are already mapped.
   check_files(); // check if index files exist and create them.
   map();         // ignore error here as it might fail if file size is 0.

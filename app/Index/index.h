@@ -82,6 +82,10 @@ private:
   static int execute_transactions();
   static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
   static void lock_update_sizes();
+  static int
+  write_transaction_file(const std::filesystem::path &transaction_path,
+                         std::vector<Transaction> &move_transactions,
+                         std::vector<Transaction> &transactions);
 
 public:
   static void save_config(const std::filesystem::path &index_path);

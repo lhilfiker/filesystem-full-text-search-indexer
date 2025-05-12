@@ -1,9 +1,61 @@
 #include "../Logging/logging.h"
 #include "index.h"
+#include "index_types.h"
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
+
+int Index::write_transaction_file(const std::filesystem::path &transaction_path,
+                                  std::vector<Transaction> &move_transactions,
+                                  std::vector<Transaction> &transactions) {
+  // writes the Transactionf file and does some extra checks
+  std::error_code ec;
+
+  size_t recalculated_size = 0;
+  for (const auto &tx : transactions) {
+    recalculated_size += 27; // Header size
+    if (tx.header.operation_type != 2 && tx.header.operation_type != 3) {
+      recalculated_size += tx.header.content_length;
+    }
+  }
+  // only move and backup transactions
+  for (const auto &tx : move_transactions) {
+    recalculated_size += 27; // Header size
+    if (tx.header.operation_type != 3 && tx.header.operation_type != 3) {
+      recalculated_size += 8; // Move operations need 8 bytes
+    }
+  }
+
+  // just create an empty file which we then resize to the required size
+  // and fill with mmap to keep consistency with the other file operations
+  // on disks.
+  std::ofstream{transaction_path};
+  resize(transaction_path, recalculated_size);
+
+  mio::mmap_sink mmap_transactions;
+  mmap_transactions = mio::make_mmap_sink((transaction_path).string(), 0,
+                                          mio::map_entire_file, ec);
+
+  size_t transaction_file_location = 0;
+  // First write the resize and move operations, then the writes so we can do
+  // writes without syncing to disk everytime speeding it up
+  write_to_transaction(move_transactions, mmap_transactions,
+                       transaction_file_location);
+  write_to_transaction(transactions, mmap_transactions,
+                       transaction_file_location);
+
+  // Transaction List written. unmap and free memory.
+  mmap_transactions.sync(ec);
+  // mark first as started to signal that writing was successful.
+  mmap_transactions[0] = 1; // first item status to 1
+  mmap_transactions.sync(ec);
+  mmap_transactions.unmap();
+  if (ec)
+    return 1;
+  return 0;
+}
 
 int Index::execute_transactions() {
   Log::write(2, "Index: Transaction: Beginning execution of transaction list");
