@@ -1,3 +1,4 @@
+#include "../Helper/helper.h"
 #include "../Logging/logging.h"
 #include "index.h"
 #include "index_types.h"
@@ -26,6 +27,7 @@ int Index::lock_status() {
     return -1;
   }
   if (!std::filesystem::exists(CONFIG_INDEX_PATH / "index.lock")) {
+    lock_update_sizes();
     index_lock = false;
     read_only = true;
     return 1;
@@ -44,6 +46,7 @@ int Index::lock_status() {
   lock_file >> lockfile_pid;
   if (lockfile_pid == pid) {
     // our own pid's lockfile
+    lock_update_sizes();
     read_only = false;
     index_lock = true;
     return 2;
@@ -53,6 +56,7 @@ int Index::lock_status() {
   if (kill(lockfile_pid, 0) == 0) {
     // kill 0 doesn't actually kill the proccess, it just checks if the pid
     // exists. If it returns 0 the pid exists
+    lock_update_sizes();
     read_only = true;
     index_lock = true;
     return 0;
@@ -60,12 +64,23 @@ int Index::lock_status() {
   } else {
     // we can remove the lock file
     std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
+    lock_update_sizes();
     read_only = true;
     index_lock = false;
     return 1;
   }
 
   return 0;
+}
+
+void Index::lock_update_sizes() {
+  // In case changes occured we update file sizes before returning lock status.
+  paths_size = Helper::file_size(CONFIG_INDEX_PATH / "paths.index");
+  paths_count_size = Helper::file_size(CONFIG_INDEX_PATH / "paths_count.index");
+  words_size = Helper::file_size(CONFIG_INDEX_PATH / "words.index");
+  words_f_size = Helper::file_size(CONFIG_INDEX_PATH / "words_f.index");
+  reversed_size = Helper::file_size(CONFIG_INDEX_PATH / "reversed.index");
+  additional_size = Helper::file_size(CONFIG_INDEX_PATH / "additional.index");
 }
 
 bool Index::lock() {
