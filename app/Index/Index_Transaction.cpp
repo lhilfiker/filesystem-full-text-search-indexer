@@ -12,7 +12,7 @@ int Index::write_transaction_file(const std::filesystem::path &transaction_path,
                                   std::vector<Transaction> &transactions) {
   // writes the Transactionf file and does some extra checks
   std::error_code ec;
-  if (!lock()) {
+  if (!lock(false)) {
     Log::write(
         3, "Index: write transaction file: coult not confirm lock, exiting.");
     return 1;
@@ -94,7 +94,7 @@ int Index::execute_transactions() {
   }
 
   // Try checking acquiring lock file.
-  if (!lock()) {
+  if (!lock(false)) {
     // locking failed.
     Log::write(3, "Transaction Execution failed, could not lock index.");
     return 1;
@@ -386,7 +386,7 @@ int Index::execute_transactions() {
   std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
                                       "backups");
   // unlock index
-  if (!unlock()) {
+  if (!unlock(false)) {
     // unlocking failed.
     Log::write(3, "Transaction Execution failed, could not unlock index. "
                   "Excution finished successfully.");

@@ -17,6 +17,7 @@ class Index {
 private:
   static bool is_config_loaded;
   static bool initialized;
+  static bool readonly_initialized;
   static bool is_mapped;
   static bool first_time;
   static int64_t paths_size;
@@ -99,9 +100,9 @@ public:
   static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
 
-  static int lock_status();
-  static bool lock();
-  static bool unlock();
+  static int lock_status(bool initialize);
+  static bool lock(bool initialize);
+  static bool unlock(bool initialize);
   static bool health_status();
 };
 

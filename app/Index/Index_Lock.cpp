@@ -17,11 +17,11 @@ bool Index::read_only = true;
 // This indicates if the index is readonly or not. It is readonly if the index
 // is not locked or when index is locked but not by us.
 
-int Index::lock_status() {
+int Index::lock_status(bool initialize) {
   // This will check for the presence of the lock file.
   // return values are -1 for not initialized, 0 for locked but readonly, 1 for
   // unlocked and readonly and 2 for locked and not read-only
-  if (!initialized) {
+  if (!initialized && !initialize) {
     index_lock = false;
     read_only = true;
     return -1;
@@ -81,11 +81,15 @@ void Index::lock_update_sizes() {
   words_f_size = Helper::file_size(CONFIG_INDEX_PATH / "words_f.index");
   reversed_size = Helper::file_size(CONFIG_INDEX_PATH / "reversed.index");
   additional_size = Helper::file_size(CONFIG_INDEX_PATH / "additional.index");
+
+  // unmap and remap
+  unmap();
+  map();
 }
 
-bool Index::lock() {
+bool Index::lock(bool initialize) {
   Log::write(1, "Index: lock: trying to acquire lock");
-  int lock_status_cached = lock_status();
+  int lock_status_cached = lock_status(initialize);
   if (lock_status_cached <= 0) {
     // not initialized or locked by other proccess.
     Log::write(2,
@@ -104,7 +108,7 @@ bool Index::lock() {
     }
     lock_file << pid;
     lock_file.close();
-    if (lock_status() == 2) {
+    if (lock_status(initialize) == 2) {
       Log::write(1, "Index: lock: successfully acquired the lock.");
 
       return true; // lock aquired.
@@ -117,9 +121,9 @@ bool Index::lock() {
   }
 }
 
-bool Index::unlock() {
+bool Index::unlock(bool initialize) {
   Log::write(1, "Index: unlock: trying to unlock");
-  int lock_status_cached = lock_status();
+  int lock_status_cached = lock_status(initialize);
   if (lock_status_cached <= 0) {
     // not initialized or locked by other proccess.
     Log::write(
@@ -132,7 +136,7 @@ bool Index::unlock() {
   } else {
     std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
     Log::write(1, "Index: unlock: removed lock file.");
-    if (lock_status() == 1) {
+    if (lock_status(initialize) == 1) {
       return true;
     } else {
       Log::write(
@@ -151,7 +155,7 @@ bool Index::health_status() {
   // because a first time add or transaction execution is in progress.
   // This will just check for a Transaction file or first time add file to
   // exist.
-  if (lock_status() == -1) {
+  if (lock_status(false) == -1) {
     return false;
   }
 
