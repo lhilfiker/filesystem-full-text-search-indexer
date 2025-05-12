@@ -129,3 +129,19 @@ bool Index::unlock() {
   }
   return false;
 }
+
+bool Index::health_status() {
+  // This will return wether or not the index is healthy. Meaning if it's
+  // healthy you can search the Index. If it's not healthy you can't search it
+  // because a first time add or transaction execution is in progress.
+  // This will just check for a Transaction file or first time add file to
+  // exist.
+
+  if (std::filesystem::exists(CONFIG_INDEX_PATH / "firsttimewrite.info") ||
+      std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
+                              "transaction.list")) {
+    return false;
+  } else {
+    return true;
+  }
+}

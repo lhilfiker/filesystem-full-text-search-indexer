@@ -97,6 +97,7 @@ public:
   static int lock_status();
   static bool lock();
   static bool unlock();
+  static bool health_status();
 };
 
 #endif
