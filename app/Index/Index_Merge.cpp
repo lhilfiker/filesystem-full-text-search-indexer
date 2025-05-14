@@ -549,7 +549,7 @@ void Index::write_to_transaction(std::vector<Transaction> &transactions,
 }
 
 int Index::merge(index_combine_data &index_to_add) {
-  Log::write(2, "indexer: add: adding to existing index.");
+  Log::write(1, "indexer: add: adding to existing index.");
   std::error_code ec;
   map();
 
@@ -816,7 +816,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
           // add to existing
-          Log::write(2, "Index: Merge: Found existing word");
+          Log::write(1, "Index: Merge: Found existing word");
           add_reversed_to_word(index_to_add, on_disk_count, transactions,
                                additional_new_needed_size,
                                reversed_new_needed_size, on_disk_id,
@@ -930,7 +930,7 @@ int Index::merge(index_combine_data &index_to_add) {
     // on_disk_count it doesnt matter because when insertions are
     // processed it will add all the newly added word count to the
     // insertion location.
-    Log::write(2, "Index: Merge: Adding a new word at the end");
+    Log::write(1, "Index: Merge: Adding a new word at the end");
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
                  reversed_insertions, additional_new_needed_size,
                  words_new_needed_size, reversed_new_needed_size, on_disk_id,
@@ -967,11 +967,11 @@ int Index::merge(index_combine_data &index_to_add) {
   // finish the Transaction List and then write it to disk. First add a
   // resize Transaction for words, reversed and additional at the start of
   // the List.
-  Log::write(2, "Index: Creating resize transaction for words with size: " +
+  Log::write(1, "Index: Creating resize transaction for words with size: " +
                     std::to_string(words_size + words_new_needed_size));
-  Log::write(2, "Index: Creating resize transaction for reversed with size: " +
+  Log::write(1, "Index: Creating resize transaction for reversed with size: " +
                     std::to_string(reversed_size + reversed_new_needed_size));
-  Log::write(2,
+  Log::write(1,
              "Index: Creating resize transaction for additional with size: " +
                  std::to_string(additional_size + additional_new_needed_size));
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
