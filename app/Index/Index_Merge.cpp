@@ -549,7 +549,7 @@ void Index::write_to_transaction(std::vector<Transaction> &transactions,
 }
 
 int Index::merge(index_combine_data &index_to_add) {
-  Log::write(2, "indexer: add: adding to existing index.");
+  Log::write(1, "indexer: add: adding to existing index.");
   std::error_code ec;
   map();
 
@@ -816,7 +816,7 @@ int Index::merge(index_combine_data &index_to_add) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
           // add to existing
-          Log::write(2, "Index: Merge: Found existing word");
+          Log::write(1, "Index: Merge: Found existing word");
           add_reversed_to_word(index_to_add, on_disk_count, transactions,
                                additional_new_needed_size,
                                reversed_new_needed_size, on_disk_id,
@@ -930,7 +930,7 @@ int Index::merge(index_combine_data &index_to_add) {
     // on_disk_count it doesnt matter because when insertions are
     // processed it will add all the newly added word count to the
     // insertion location.
-    Log::write(2, "Index: Merge: Adding a new word at the end");
+    Log::write(1, "Index: Merge: Adding a new word at the end");
     add_new_word(index_to_add, on_disk_count, transactions, words_insertions,
                  reversed_insertions, additional_new_needed_size,
                  words_new_needed_size, reversed_new_needed_size, on_disk_id,
@@ -967,11 +967,11 @@ int Index::merge(index_combine_data &index_to_add) {
   // finish the Transaction List and then write it to disk. First add a
   // resize Transaction for words, reversed and additional at the start of
   // the List.
-  Log::write(2, "Index: Creating resize transaction for words with size: " +
+  Log::write(1, "Index: Creating resize transaction for words with size: " +
                     std::to_string(words_size + words_new_needed_size));
-  Log::write(2, "Index: Creating resize transaction for reversed with size: " +
+  Log::write(1, "Index: Creating resize transaction for reversed with size: " +
                     std::to_string(reversed_size + reversed_new_needed_size));
-  Log::write(2,
+  Log::write(1,
              "Index: Creating resize transaction for additional with size: " +
                  std::to_string(additional_size + additional_new_needed_size));
   Transaction resize_words{0, 1, 0, 0, 2, words_size + words_new_needed_size,
@@ -1001,45 +1001,12 @@ int Index::merge(index_combine_data &index_to_add) {
   std::filesystem::path transaction_path =
       CONFIG_INDEX_PATH / "transaction" / "transaction.list";
 
-  size_t recalculated_size = 0;
-  for (const auto &tx : transactions) {
-    recalculated_size += 27; // Header size
-    if (tx.header.operation_type != 2 && tx.header.operation_type != 3) {
-      recalculated_size += tx.header.content_length;
-    }
+  if (write_transaction_file(transaction_path, move_transactions,
+                             transactions) == 1) {
+    Log::write(
+        3, "Index: Merge: error writing transaction file. Check logs above");
+    // no return here so we can cleanup and later return
   }
-  // only move and backup transactions
-  for (const auto &tx : move_transactions) {
-    recalculated_size += 27; // Header size
-    if (tx.header.operation_type != 3 && tx.header.operation_type != 3) {
-      recalculated_size += 8; // Move operations need 8 bytes
-    }
-  }
-
-  // just create an empty file which we then resize to the required size
-  // and fill with mmap to keep consistency with the other file operations
-  // on disks.
-  std::ofstream{transaction_path};
-  resize(transaction_path, recalculated_size);
-
-  mio::mmap_sink mmap_transactions;
-  mmap_transactions = mio::make_mmap_sink((transaction_path).string(), 0,
-                                          mio::map_entire_file, ec);
-
-  size_t transaction_file_location = 0;
-  // First write the resize and move operations, then the writes so we can do
-  // writes without syncing to disk everytime speeding it up
-  write_to_transaction(move_transactions, mmap_transactions,
-                       transaction_file_location);
-  write_to_transaction(transactions, mmap_transactions,
-                       transaction_file_location);
-
-  // Transaction List written. unmap and free memory.
-  mmap_transactions.sync(ec);
-  // mark first as started to signal that writing was successful.
-  mmap_transactions[0] = 1; // first item status to 1
-  mmap_transactions.sync(ec);
-  mmap_transactions.unmap();
 
   transactions.clear();
   index_to_add.paths.clear();

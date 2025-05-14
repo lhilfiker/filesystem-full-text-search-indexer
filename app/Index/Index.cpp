@@ -8,6 +8,7 @@
 
 bool Index::is_config_loaded = false;
 bool Index::initialized = false;
+bool Index::readonly_initialized = true;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
 int64_t Index::paths_size = 0;
@@ -32,8 +33,10 @@ mio::mmap_sink Index::mmap_additional;
 // Config Values, they will be set once and never again while the index is
 // initialized
 std::filesystem::path Index::CONFIG_INDEX_PATH;
+uint16_t Index::CONFIG_LOCK_ACQUISITION_TIMEOUT = 30;
 
-void Index::save_config(const std::filesystem::path &index_path) {
+void Index::save_config(const std::filesystem::path &index_path,
+                        const uint16_t lock_aquisition_timeout) {
   if (initialized) {
     Log::write(3, "Index: save_config: Index was already initialzed, can not "
                   "save config. Try to uninitialize first.");
@@ -41,6 +44,10 @@ void Index::save_config(const std::filesystem::path &index_path) {
   CONFIG_INDEX_PATH =
       index_path; // Index path validation happens in check_files
 
+  CONFIG_LOCK_ACQUISITION_TIMEOUT = 30; // set to default
+  if (lock_aquisition_timeout >= 0 && lock_aquisition_timeout <= 30000) {
+    CONFIG_LOCK_ACQUISITION_TIMEOUT = lock_aquisition_timeout;
+  }
   is_config_loaded = true;
   Log::write(1, "Index: save_config: saved config successfully.");
   return;
@@ -149,24 +156,38 @@ void Index::check_files() {
   Log::write(1, "Index: check_files: checking files.");
   std::error_code ec;
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH)) {
+    if (readonly_initialized) {
+      Log::error(
+          "Index: check_files: Can not continue, Index is readonly initialized "
+          "but needs writeable action to even be readnly. Exiting");
+    }
     Log::write(1, "Index: check_files: creating index directory.");
     std::filesystem::create_directories(CONFIG_INDEX_PATH);
   }
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction")) {
-    Log::write(1, "Index: check_files: creating transaction directory.");
-    std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction");
+    if (readonly_initialized) {
+      Log::write(1, "Index: check_files: creating transaction directory.");
+      std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction");
+    }
   }
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction" /
                                      "backups")) {
-    Log::write(1,
-               "Index: check_files: creating transaction backups directory.");
-    std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
-                                        "backups");
+    if (readonly_initialized) {
+      Log::write(1,
+                 "Index: check_files: creating transaction backups directory.");
+      std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
+                                          "backups");
+    }
   }
 
   if (std::filesystem::exists(CONFIG_INDEX_PATH / "firsttimewrite.info")) {
     // If this is still here it means that the first time write failed. delete
     // all index files.
+    if (readonly_initialized) {
+      Log::error(
+          "Index: check_files: Can not continue, Index is readonly initialized "
+          "but needs writeable action to even be readnly. Exiting");
+    }
     Log::write(2, "Index: check_files: First time write didn't complete last "
                   "time. Index possibly corrupt. Deleting to start fresh.");
     std::filesystem::remove(CONFIG_INDEX_PATH / "paths.index");
@@ -194,6 +215,11 @@ void Index::check_files() {
       // Additional size can be 0 if there aren't any words with more than 4
       // linked paths.
   ) {
+    if (readonly_initialized) {
+      Log::error(
+          "Index: check_files: Can not continue, Index is readonly initialized "
+          "but needs writeable action to even be readnly. Exiting");
+    }
     first_time = true;
     Log::write(
         1,
@@ -222,6 +248,12 @@ int Index::initialize() {
   }
   is_mapped = false;
   std::error_code ec;
+  readonly_initialized = true;
+  unlock(true); // to remove potential leftover lock.
+  if (lock_status(true) == 1) {
+    readonly_initialized = false;
+  }
+  // just to update internal state
   unmap();       // unmap anyway incase they are already mapped.
   check_files(); // check if index files exist and create them.
   map();         // ignore error here as it might fail if file size is 0.
@@ -242,25 +274,28 @@ int Index::initialize() {
   is_mapped = true;
 
   // check if transaction file exists
-  if (std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
-                              "transaction.list")) {
-    Log::write(2, "Index: a transaction file still exists. Checking if Index "
-                  "needs to be repaired.");
-    if (execute_transactions() == 1) {
-      Log::error(
-          "Index: while checking transaction file an error occured. Exiting.");
+  if (readonly_initialized) {
+    if (std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
+                                "transaction.list")) {
+      Log::write(2, "Index: a transaction file still exists. Checking if Index "
+                    "needs to be repaired.");
+      if (execute_transactions() == 1) {
+        Log::error("Index: while checking transaction file an error occured. "
+                   "Exiting.");
+      }
+      Log::write(
+          2,
+          "Index: transaction file successfully checked. Finishing startup.");
     }
-    Log::write(
-        2, "Index: transaction file successfully checked. Finishing startup.");
-  }
-  // removing all backups because they are not needed anymore.
-  std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
-  if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction" /
-                                     "backups")) {
-    Log::write(1,
-               "Index: intitialize: creating transactions backups directory.");
-    std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
-                                        "backups");
+    // removing all backups because they are not needed anymore.
+    std::filesystem::remove_all(CONFIG_INDEX_PATH / "transaction" / "backups");
+    if (!std::filesystem::is_directory(CONFIG_INDEX_PATH / "transaction" /
+                                       "backups")) {
+      Log::write(
+          1, "Index: intitialize: creating transactions backups directory.");
+      std::filesystem::create_directories(CONFIG_INDEX_PATH / "transaction" /
+                                          "backups");
+    }
   }
 
   initialized = true;
@@ -279,20 +314,48 @@ int Index::uninitialize() {
     Log::write(4, "Index: uninitialize: could not unmap.");
     return 1;
   }
+  unlock(true);
   initialized = false;
+  readonly_initialized = true;
   return 0;
 }
 
 int Index::add(index_combine_data &index_to_add) {
   std::error_code ec;
+  if (!initialized || lock_status(false) <= 0) {
+    Log::write(3, "Index: Can not add because index is not initialized or "
+                  "Index is locked and read-only most likely due to another "
+                  "process doing a merge or first time add.");
+    return 1;
+  }
+  if (readonly_initialized) {
+    // if it is readonly initialized we will try to reinitialize and continue;
+    initialize();
+    if (readonly_initialized || !initialized) {
+      // if it is still readonly we return
+      Log::write(
+          3, "Index: could not initialize wihtout becomign readonly, this "
+             "means some initialization were not completed and manipulating "
+             "the index now could result in Data loss, this is most likely "
+             "because another process is writing to it right now.");
+      return 1;
+    }
+  }
+  if (!lock(false)) {
+    // Acquire lock
+    Log::write(3, "Index: Can not add because acquiring lock failed. Check "
+                  "previous logs");
+    return 1; // failed to acquire lock.
+  }
   if (first_time) {
     first_time = false;
     std::ofstream{CONFIG_INDEX_PATH /
                   "firsttimewrite.info"}; // add file to signal firsttimewrite
-                                          // is in progress. Delete after it is
-                                          // successfully done.
+                                          // is in progress. Delete after it
+                                          // is successfully done.
     if (add_new(index_to_add) == 0) {
       std::filesystem::remove(CONFIG_INDEX_PATH / "firsttimewrite.info");
+      unlock(false); // unlock after done
       return 0;
     } else {
       // if an error occured exit.
@@ -300,9 +363,12 @@ int Index::add(index_combine_data &index_to_add) {
                  "files will be deleted on startup.");
     }
   } else {
-    if (merge(index_to_add) == 1)
+    if (merge(index_to_add) == 1) {
+      unlock(false); // unlock after done
       return 1;
-    return execute_transactions();
+    }
+    execute_transactions();
   }
+  unlock(false); // unlock after done
   return 0;
 }

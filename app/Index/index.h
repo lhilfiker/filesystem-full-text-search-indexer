@@ -17,6 +17,7 @@ class Index {
 private:
   static bool is_config_loaded;
   static bool initialized;
+  static bool readonly_initialized;
   static bool is_mapped;
   static bool first_time;
   static int64_t paths_size;
@@ -38,8 +39,12 @@ private:
   static mio::mmap_sink mmap_reversed;
   static mio::mmap_sink mmap_additional;
 
+  static bool index_lock;
+  static bool read_only;
+
   // Config Values
   static std::filesystem::path CONFIG_INDEX_PATH;
+  static uint16_t CONFIG_LOCK_ACQUISITION_TIMEOUT;
 
 private:
   static void check_files();
@@ -78,9 +83,15 @@ private:
   static int merge(index_combine_data &index_to_add);
   static int execute_transactions();
   static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
+  static void lock_update_sizes();
+  static int
+  write_transaction_file(const std::filesystem::path &transaction_path,
+                         std::vector<Transaction> &move_transactions,
+                         std::vector<Transaction> &transactions);
 
 public:
-  static void save_config(const std::filesystem::path &index_path);
+  static void save_config(const std::filesystem::path &index_path,
+                          const uint16_t lock_aquisition_timeout);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
@@ -90,6 +101,11 @@ public:
                    int min_char_for_match);
   static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
+
+  static int lock_status(bool initialize);
+  static bool lock(bool initialize);
+  static bool unlock(bool initialize);
+  static bool health_status();
 };
 
 #endif

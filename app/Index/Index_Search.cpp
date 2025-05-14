@@ -76,11 +76,16 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
 std::vector<search_path_ids_return>
 Index::search_word_list(std::vector<std::string> &search_words,
                         bool exact_match, int min_char_for_match) {
+  std::vector<uint64_t> result_word_ids;
+  std::vector<search_path_ids_return> results;
+  if (!initialized || !health_status()) {
+    Log::write(3, "Index is not initialized or it's not readable(e.g because a "
+                  "Transaction Execution is in progress)");
+    return results;
+  }
   if (is_mapped == false) {
     map();
   }
-  std::vector<uint64_t> result_word_ids;
-  std::vector<search_path_ids_return> results;
 
   if (search_words.size() == 0) {
     return results;
@@ -265,11 +270,16 @@ Index::search_word_list(std::vector<std::string> &search_words,
 // return a unordered map of ID and path string.
 std::unordered_map<PATH_ID_TYPE, std::string>
 Index::id_to_path_string(std::vector<search_path_ids_return> path_ids) {
+  std::unordered_map<PATH_ID_TYPE, std::string> results;
+  if (!initialized || !health_status()) {
+    Log::write(3, "Index is not initialized or it's not readable(e.g because a "
+                  "Transaction Execution is in progress)");
+    return results;
+  }
   if (is_mapped == false) {
     map();
   }
 
-  std::unordered_map<PATH_ID_TYPE, std::string> results;
   if (path_ids.size() == 0) {
     return results;
   }
