@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 bool Index::index_lock = false;
-// This will indicate if the index is locked, either by our proccess or another
+// This will indicate if the index is locked, either by our process or another
 // one.
 bool Index::read_only = true;
 // This indicates if the index is readonly or not. It is readonly if the index
