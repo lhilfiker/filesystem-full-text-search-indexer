@@ -69,7 +69,12 @@ int Index::lock_status(bool initialize) {
       index_lock = false;
       return 1;
     }
-
+    if (initialize) {
+      // If this was for initialization we do not retrey because this would
+      // block up read only actions even if no action is performed on changing
+      // the index.
+      break;
+    }
     // sleep for 1 second to allow the other program to unlock
     Log::write(1, "Index: lock: could not lock this time because another "
                   "program is holding the lock. Waiting one second to try "
