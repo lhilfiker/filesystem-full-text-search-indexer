@@ -33,7 +33,7 @@ mio::mmap_sink Index::mmap_additional;
 // Config Values, they will be set once and never again while the index is
 // initialized
 std::filesystem::path Index::CONFIG_INDEX_PATH;
-uint16_t Index::CONFIG_LOCK_ACQUISTION_TIMEOUT = 30;
+uint16_t Index::CONFIG_LOCK_ACQUISITION_TIMEOUT = 30;
 
 void Index::save_config(const std::filesystem::path &index_path,
                         const uint16_t lock_aquisition_timeout) {
@@ -44,9 +44,9 @@ void Index::save_config(const std::filesystem::path &index_path,
   CONFIG_INDEX_PATH =
       index_path; // Index path validation happens in check_files
 
-  CONFIG_LOCK_ACQUISTION_TIMEOUT = 30; // set to default
+  CONFIG_LOCK_ACQUISITION_TIMEOUT = 30; // set to default
   if (lock_aquisition_timeout >= 0 && lock_aquisition_timeout <= 30000) {
-    CONFIG_LOCK_ACQUISTION_TIMEOUT = lock_aquisition_timeout;
+    CONFIG_LOCK_ACQUISITION_TIMEOUT = lock_aquisition_timeout;
   }
   is_config_loaded = true;
   Log::write(1, "Index: save_config: saved config successfully.");

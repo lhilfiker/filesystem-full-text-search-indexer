@@ -34,7 +34,7 @@ int Index::lock_status(bool initialize) {
   pid_t pid = getpid(); // current pid
 
   // check if the pid is still running, if not delete file.
-  for (uint16_t i = 0; i < CONFIG_LOCK_ACQUISTION_TIMEOUT; ++i) {
+  for (uint16_t i = 0; i < CONFIG_LOCK_ACQUISITION_TIMEOUT; ++i) {
     // check every second until config ran out.
 
     // check if a lock file exists
