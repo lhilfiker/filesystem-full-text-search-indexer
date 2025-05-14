@@ -16,7 +16,7 @@ The Index Locking system provides file-based inter-process locking to prevent da
 ```cpp
 int Index::lock_status(bool initialize)
 ```
-Returns the current lock state. If `initialize` is false, retries based on configured timeout. If true it skips the check to see if the Index is initialized and does not retry until availible. Do not use this for anything other than initialization.
+Returns the current lock state. If `initialize` is false, retries based on configured timeout. If true it skips the check to see if the Index is initialized and does not retry until available. Do not use this for anything other than initialization.
 
 ### Acquire Lock
 ```cpp
