@@ -3,11 +3,13 @@
 #include "index.h"
 #include "index_types.h"
 #include <array>
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <signal.h>
 #include <string>
+#include <thread>
 #include <unistd.h>
 
 bool Index::index_lock = false;
@@ -26,49 +28,57 @@ int Index::lock_status(bool initialize) {
     read_only = true;
     return -1;
   }
-  if (!std::filesystem::exists(CONFIG_INDEX_PATH / "index.lock")) {
-    lock_update_sizes();
-    index_lock = false;
-    read_only = true;
-    return 1;
-  }
 
   // read the lock file and compare it to current pid.
 
   pid_t pid = getpid(); // current pid
 
-  std::ifstream lock_file(CONFIG_INDEX_PATH / "index.lock");
-  if (!lock_file) {
-    return -1; // Failed to open file
-  }
-
-  pid_t lockfile_pid;
-  lock_file >> lockfile_pid;
-  if (lockfile_pid == pid) {
-    // our own pid's lockfile
-    lock_update_sizes();
-    read_only = false;
-    index_lock = true;
-    return 2;
-  }
-
   // check if the pid is still running, if not delete file.
-  if (kill(lockfile_pid, 0) == 0) {
-    // kill 0 doesn't actually kill the proccess, it just checks if the pid
-    // exists. If it returns 0 the pid exists
-    lock_update_sizes();
-    read_only = true;
-    index_lock = true;
-    return 0;
+  for (uint16_t i = 0; i < CONFIG_LOCK_ACQUISTION_TIMEOUT; ++i) {
+    // check every second until config ran out.
 
-  } else {
-    // we can remove the lock file
-    std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
-    lock_update_sizes();
-    read_only = true;
-    index_lock = false;
-    return 1;
+    // check if a lock file exists
+    if (!std::filesystem::exists(CONFIG_INDEX_PATH / "index.lock")) {
+      lock_update_sizes();
+      index_lock = false;
+      read_only = true;
+      return 1;
+    }
+    // try reading it.
+    std::ifstream lock_file(CONFIG_INDEX_PATH / "index.lock");
+    if (!lock_file) {
+      return -1; // Failed to open file
+    }
+    // compare it to ours.
+    pid_t lockfile_pid;
+    lock_file >> lockfile_pid;
+    if (lockfile_pid == pid) {
+      // our own pid's lockfile
+      lock_update_sizes();
+      read_only = false;
+      index_lock = true;
+      return 2;
+    }
+    if (kill(lockfile_pid, 0) != 0) {
+      // kill 0 doesn't actually kill the proccess, it just checks if the pid
+      // exists. If it returns 0 the pid exists
+      // we can remove the lock file
+      std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
+      lock_update_sizes();
+      read_only = true;
+      index_lock = false;
+      return 1;
+    }
+
+    // sleep for 1 second to allow the other program to unlock
+    std::this_thread::sleep_for(std::chrono::seconds(
+        1)); // to not utilize 100% cpu in the main process.
   }
+  // no lock file release.
+  lock_update_sizes();
+  read_only = true;
+  index_lock = true;
+  return 0;
 
   return 0;
 }

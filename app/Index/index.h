@@ -44,6 +44,7 @@ private:
 
   // Config Values
   static std::filesystem::path CONFIG_INDEX_PATH;
+  static uint16_t CONFIG_LOCK_ACQUISTION_TIMEOUT;
 
 private:
   static void check_files();
@@ -89,7 +90,8 @@ private:
                          std::vector<Transaction> &transactions);
 
 public:
-  static void save_config(const std::filesystem::path &index_path);
+  static void save_config(const std::filesystem::path &index_path,
+                          const uint16_t lock_aquisition_timeout);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
