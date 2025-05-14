@@ -71,6 +71,9 @@ int Index::lock_status(bool initialize) {
     }
 
     // sleep for 1 second to allow the other program to unlock
+    Log::write(1, "Index: lock: could not lock this time because another "
+                  "program is holding the lock. Waiting one second to try "
+                  "again until configured amount of retries.");
     std::this_thread::sleep_for(std::chrono::seconds(
         1)); // to not utilize 100% cpu in the main process.
   }
