@@ -14,7 +14,7 @@ int Index::write_transaction_file(const std::filesystem::path &transaction_path,
   std::error_code ec;
   if (!lock(false)) {
     Log::write(
-        3, "Index: write transaction file: coult not confirm lock, exiting.");
+        3, "Index: write transaction file: could not confirm lock, exiting.");
     return 1;
   }
 
