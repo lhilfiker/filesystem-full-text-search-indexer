@@ -163,6 +163,10 @@ void LocalIndex::combine(LocalIndex &to_combine_index, const bool adding) {
     to_combine_index.sort();
   }
 
+  sorted = false; // currently set to false again so it will resort, this is
+                  // because we push back and making it more efficent will be a
+                  // bigger refactoring
+
   size_t words_reversed_count = words_and_reversed.size();
   size_t to_combine_count = to_combine_index.words_and_reversed.size();
   if (to_combine_index.words_and_reversed.empty())
