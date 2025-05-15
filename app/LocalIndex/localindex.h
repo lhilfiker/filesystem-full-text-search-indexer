@@ -28,7 +28,7 @@ public:
   LocalIndex();
   size_t size();
   void clear();
-  PATH_ID_TYPE add_path(const std::string &path_to_insert);
+  PATH_ID_TYPE add_path(const std::string &path_to_insert, const bool adding);
   void add_words(std::unordered_set<std::string> &words_to_insert,
                  PATH_ID_TYPE path_id);
   void sort();

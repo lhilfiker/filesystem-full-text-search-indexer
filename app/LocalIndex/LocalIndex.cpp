@@ -29,13 +29,19 @@ void LocalIndex::clear() {
   return;
 }
 
-PATH_ID_TYPE LocalIndex::add_path(const std::string &path_to_insert) {
+PATH_ID_TYPE LocalIndex::add_path(const std::string &path_to_insert,
+                                  const bool adding) {
   PATH_ID_TYPE id = 0;
-  for (const std::string &path : paths) {
-    if (path == path_to_insert) {
-      return id;
+  if (!adding) {
+    for (const std::string &path : paths) {
+      if (path == path_to_insert) {
+        return id;
+      }
+      ++id;
     }
-    ++id;
+  } else {
+    id = paths.size();
+    // If it's adding it will always be new paths so we don't even need to check
   }
   paths.push_back(path_to_insert);
   paths_size += path_to_insert.length();
