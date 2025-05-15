@@ -100,7 +100,7 @@ void LocalIndex::add_to_disk() {
   return;
 }
 
-void LocalIndex::combine(LocalIndex &to_combine_index) {
+void LocalIndex::combine(LocalIndex &to_combine_index, const bool adding) {
   Log::write(1, "LocalIndex: combine: start");
   // if empty just add directly
   if (paths_size == 0 && words_size == 0 && reversed_size == 0 &&
@@ -122,12 +122,23 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
   size_t i = 0;
 
   for (const std::string &path_to_insert : to_combine_index.paths) {
-    if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert);
-        loc != std::end(paths)) {
-      size_t it = std::distance(paths.begin(), loc);
-      paths_id.push_back(static_cast<uint32_t>(it));
-      path_word_count[it] = to_combine_index.path_word_count[i];
+    if (!adding) {
+      if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert);
+          loc != std::end(paths)) {
+        size_t it = std::distance(paths.begin(), loc);
+        paths_id.push_back(static_cast<uint32_t>(it));
+        path_word_count[it] = to_combine_index.path_word_count[i];
+      } else {
+        paths.push_back(path_to_insert);
+        paths_size += path_to_insert.length();
+        paths_id.push_back(paths_last);
+        path_word_count.push_back(to_combine_index.path_word_count[i]);
+        path_word_count_size += sizeof(to_combine_index.path_word_count[i]);
+        ++paths_last;
+      }
     } else {
+      // if adding is true all paths are unique so we skip this to speed up the
+      // combine
       paths.push_back(path_to_insert);
       paths_size += path_to_insert.length();
       paths_id.push_back(paths_last);
