@@ -23,17 +23,18 @@ private:
   size_t reversed_size;
   std::vector<uint32_t> path_word_count;
   size_t path_word_count_size;
+  bool sorted;
 
 public:
   LocalIndex();
   size_t size();
   void clear();
-  PATH_ID_TYPE add_path(const std::string &path_to_insert);
+  PATH_ID_TYPE add_path(const std::string &path_to_insert, const bool adding);
   void add_words(std::unordered_set<std::string> &words_to_insert,
                  PATH_ID_TYPE path_id);
   void sort();
   void add_to_disk();
-  void combine(LocalIndex &to_combine_index);
+  void combine(LocalIndex &to_combine_index, const bool adding);
 
   friend void combine(LocalIndex &to_combine_index);
 };

@@ -11,6 +11,7 @@ LocalIndex::LocalIndex() {
   words_size = 0;
   reversed_size = 0;
   path_word_count_size = 0;
+  sorted = false;
 }
 
 size_t LocalIndex::size() {
@@ -29,13 +30,19 @@ void LocalIndex::clear() {
   return;
 }
 
-PATH_ID_TYPE LocalIndex::add_path(const std::string &path_to_insert) {
+PATH_ID_TYPE LocalIndex::add_path(const std::string &path_to_insert,
+                                  const bool adding) {
   PATH_ID_TYPE id = 0;
-  for (const std::string &path : paths) {
-    if (path == path_to_insert) {
-      return id;
+  if (!adding) {
+    for (const std::string &path : paths) {
+      if (path == path_to_insert) {
+        return id;
+      }
+      ++id;
     }
-    ++id;
+  } else {
+    id = paths.size();
+    // If it's adding it will always be new paths so we don't even need to check
   }
   paths.push_back(path_to_insert);
   paths_size += path_to_insert.length();
@@ -64,11 +71,13 @@ void LocalIndex::add_words(std::unordered_set<std::string> &words_to_insert,
   }
   path_word_count_size += sizeof(word_count) - sizeof(path_word_count[path_id]);
   path_word_count[path_id] = word_count;
+  sorted = false;
   return;
 }
 
 void LocalIndex::sort() {
   std::sort(words_and_reversed.begin(), words_and_reversed.end());
+  sorted = true;
   return;
 }
 
@@ -83,13 +92,22 @@ void LocalIndex::add_to_disk() {
                                   words_and_reversed,
                                   words_size,
                                   reversed_size};
+  if (!sorted) {
+    sort();
+  }
   Index::add(index_to_add);
   clear();
   return;
 }
 
-void LocalIndex::combine(LocalIndex &to_combine_index) {
+void LocalIndex::combine(LocalIndex &to_combine_index, const bool adding) {
   Log::write(1, "LocalIndex: combine: start");
+  if (to_combine_index.paths_size == 0 ||
+      to_combine_index.path_word_count_size == 0 ||
+      to_combine_index.reversed_size == 0 || to_combine_index.words_size == 0) {
+    // Do not combine an empty index
+    return;
+  }
   // if empty just add directly
   if (paths_size == 0 && words_size == 0 && reversed_size == 0 &&
       path_word_count_size == 0) {
@@ -101,6 +119,7 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
     path_word_count = to_combine_index.path_word_count;
     path_word_count_size = to_combine_index.path_word_count_size;
     Log::write(1, "copied as empty");
+    sorted = to_combine_index.sorted;
     return;
   }
 
@@ -109,12 +128,23 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
   size_t i = 0;
 
   for (const std::string &path_to_insert : to_combine_index.paths) {
-    if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert);
-        loc != std::end(paths)) {
-      size_t it = std::distance(paths.begin(), loc);
-      paths_id.push_back(static_cast<uint32_t>(it));
-      path_word_count[it] = to_combine_index.path_word_count[i];
+    if (!adding) {
+      if (auto loc = std::find(paths.begin(), paths.end(), path_to_insert);
+          loc != std::end(paths)) {
+        size_t it = std::distance(paths.begin(), loc);
+        paths_id.push_back(static_cast<uint32_t>(it));
+        path_word_count[it] = to_combine_index.path_word_count[i];
+      } else {
+        paths.push_back(path_to_insert);
+        paths_size += path_to_insert.length();
+        paths_id.push_back(paths_last);
+        path_word_count.push_back(to_combine_index.path_word_count[i]);
+        path_word_count_size += sizeof(to_combine_index.path_word_count[i]);
+        ++paths_last;
+      }
     } else {
+      // if adding is true all paths are unique so we skip this to speed up the
+      // combine
       paths.push_back(path_to_insert);
       paths_size += path_to_insert.length();
       paths_id.push_back(paths_last);
@@ -126,8 +156,16 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
   }
 
   // sort to compare them by the alphabet.
-  sort();
-  to_combine_index.sort();
+  if (!sorted) {
+    sort();
+  }
+  if (!to_combine_index.sorted) {
+    to_combine_index.sort();
+  }
+
+  sorted = false; // currently set to false again so it will resort, this is
+                  // because we push back and making it more efficent will be a
+                  // bigger refactoring
 
   size_t words_reversed_count = words_and_reversed.size();
   size_t to_combine_count = to_combine_index.words_and_reversed.size();
