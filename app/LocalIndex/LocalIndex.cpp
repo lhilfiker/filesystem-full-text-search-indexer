@@ -11,7 +11,7 @@ LocalIndex::LocalIndex() {
   words_size = 0;
   reversed_size = 0;
   path_word_count_size = 0;
-  sorted = true;
+  sorted = false;
 }
 
 size_t LocalIndex::size() {
@@ -102,6 +102,12 @@ void LocalIndex::add_to_disk() {
 
 void LocalIndex::combine(LocalIndex &to_combine_index, const bool adding) {
   Log::write(1, "LocalIndex: combine: start");
+  if (to_combine_index.paths_size == 0 ||
+      to_combine_index.path_word_count_size == 0 ||
+      to_combine_index.reversed_size == 0 || to_combine_index.words_size == 0) {
+    // Do not combine an empty index
+    return;
+  }
   // if empty just add directly
   if (paths_size == 0 && words_size == 0 && reversed_size == 0 &&
       path_word_count_size == 0) {
