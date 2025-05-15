@@ -11,6 +11,7 @@ LocalIndex::LocalIndex() {
   words_size = 0;
   reversed_size = 0;
   path_word_count_size = 0;
+  sorted = true;
 }
 
 size_t LocalIndex::size() {
@@ -70,11 +71,13 @@ void LocalIndex::add_words(std::unordered_set<std::string> &words_to_insert,
   }
   path_word_count_size += sizeof(word_count) - sizeof(path_word_count[path_id]);
   path_word_count[path_id] = word_count;
+  sorted = false;
   return;
 }
 
 void LocalIndex::sort() {
   std::sort(words_and_reversed.begin(), words_and_reversed.end());
+  sorted = true;
   return;
 }
 
@@ -89,6 +92,9 @@ void LocalIndex::add_to_disk() {
                                   words_and_reversed,
                                   words_size,
                                   reversed_size};
+  if (!sorted) {
+    sort();
+  }
   Index::add(index_to_add);
   clear();
   return;
@@ -107,6 +113,7 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
     path_word_count = to_combine_index.path_word_count;
     path_word_count_size = to_combine_index.path_word_count_size;
     Log::write(1, "copied as empty");
+    sorted = to_combine_index.sorted;
     return;
   }
 
@@ -132,8 +139,12 @@ void LocalIndex::combine(LocalIndex &to_combine_index) {
   }
 
   // sort to compare them by the alphabet.
-  sort();
-  to_combine_index.sort();
+  if (!sorted) {
+    sort();
+  }
+  if (!to_combine_index.sorted) {
+    to_combine_index.sort();
+  }
 
   size_t words_reversed_count = words_and_reversed.size();
   size_t to_combine_count = to_combine_index.words_and_reversed.size();

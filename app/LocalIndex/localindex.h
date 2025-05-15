@@ -23,6 +23,7 @@ private:
   size_t reversed_size;
   std::vector<uint32_t> path_word_count;
   size_t path_word_count_size;
+  bool sorted;
 
 public:
   LocalIndex();
