@@ -209,7 +209,7 @@ int indexer::start_from() {
               std::future_status::ready) {
             Log::write(1, "indexer: task done. combining.");
             LocalIndex task_result = job.future.get();
-            index.combine(task_result);
+            index.combine(task_result, true);
             if (index.size() >= local_index_memory) {
               Log::write(2, "indexer: exceeded local index memory limit. "
                             "writing to disk.");
@@ -288,7 +288,7 @@ int indexer::start_from() {
               std::future_status::ready) {
             Log::write(1, "indexer: task done. combining.");
             LocalIndex task_result = job.future.get();
-            index.combine(task_result);
+            index.combine(task_result, true);
             if (index.size() >= local_index_memory) {
               Log::write(2, "indexer: exceeded local index memory limit. "
                             "writing to disk.");
