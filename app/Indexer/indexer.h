@@ -25,7 +25,7 @@ private:
 private:
   static bool extension_allowed(const std::filesystem::path &path);
   static std::unordered_set<std::string>
-  get_words_text(const std::filesystem::path &path);
+  get_words_utf8(const std::filesystem::path &path);
   static std::unordered_set<std::string>
   get_words(const std::filesystem::path &path);
   static LocalIndex
