@@ -252,7 +252,11 @@ int Index::initialize() {
   unlock(true); // to remove potential leftover lock.
   if (lock_status(true) == 1) {
     readonly_initialized = false;
-    lock(true); // lock file because of check index and transaction execution.
+    if (!lock(true)) {
+      // lock failed, readonly initializing
+      unlock(true);
+      readonly_initialized = true;
+    } // lock file because of check index and transaction execution.
   }
   // just to update internal state
   unmap();       // unmap anyway incase they are already mapped.
