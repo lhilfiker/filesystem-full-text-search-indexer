@@ -379,7 +379,7 @@ int indexer::start_from() {
         loc -= 255;
       }
       Log::write(1, "indexer(single threaded Large File adding): batch " +
-                        std::to_string(i) + " of " +
+                        std::to_string(i + 1) + " of " +
                         std::to_string(batches_needed) + " completed.");
     }
     paths_size += filesize;
