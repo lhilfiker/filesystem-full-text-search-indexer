@@ -48,7 +48,8 @@ bool indexer::extension_allowed(const std::filesystem::path &path) {
 }
 
 std::unordered_set<std::string>
-indexer::get_words_utf8(const std::filesystem::path &path) {
+indexer::get_words_utf8(const std::filesystem::path &path,
+                        const size_t start_loc, const size_t end_loc) {
   // This will need to be redone.
   // It needs to consider Character encoding and proper error handling.
 
@@ -102,11 +103,12 @@ indexer::get_words_utf8(const std::filesystem::path &path) {
 }
 
 std::unordered_set<std::string>
-indexer::get_words(const std::filesystem::path &path) {
+indexer::get_words(const std::filesystem::path &path, const size_t start_loc,
+                   const size_t end_loc) {
   std::string extension = Helper::file_extension(path);
 
   if (extension == ".txt")
-    return get_words_utf8(path);
+    return get_words_utf8(path, start_loc, end_loc);
 
   return std::unordered_set<std::string>{};
 }
