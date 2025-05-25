@@ -369,6 +369,7 @@ int indexer::start_from() {
       std::unordered_set<std::string> words_to_add =
           get_words(path_file, loc, loc + (filesize / batches_needed));
       index.add_words(words_to_add, path_id);
+      index.add_to_disk();
 
       loc += filesize / batches_needed;
       if (filesize / batches_needed >= 255) {
@@ -380,7 +381,6 @@ int indexer::start_from() {
                         std::to_string(i) + " of " +
                         std::to_string(batches_needed) + " completed.");
     }
-    index.add_to_disk();
     paths_size += filesize;
     ++paths_count;
   }
