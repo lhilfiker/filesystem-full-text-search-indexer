@@ -13,7 +13,7 @@ bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
 std::filesystem::path indexer::path_to_scan;
 int indexer::threads_to_use = 1;
-size_t indexer::local_index_memory = 5000000;
+size_t indexer::local_index_memory = 50000;
 
 void indexer::save_config(const bool config_scan_dot_paths,
                           const std::filesystem::path &config_path_to_scan,
@@ -30,8 +30,7 @@ void indexer::save_config(const bool config_scan_dot_paths,
   if (ec) {
     threads_to_use = 1;
   }
-  if (config_local_index_memory >
-      5000000) { // ignore larger memory as most modern system will handle that
+  if (config_local_index_memory > 50000) { // do not allow smaller memory.
     local_index_memory = config_local_index_memory;
   }
   scan_dot_paths = config_scan_dot_paths;
@@ -48,14 +47,22 @@ bool indexer::extension_allowed(const std::filesystem::path &path) {
 }
 
 std::unordered_set<std::string>
-indexer::get_words_text(const std::filesystem::path &path) {
+indexer::get_words_utf8(const std::filesystem::path &path,
+                        const size_t start_loc, const size_t end_loc) {
   // This will need to be redone.
   // It needs to consider Character encoding and proper error handling.
 
   std::error_code ec;
-  mio::mmap_source file;
   std::unordered_set<std::string> words_return{};
-  file.map(path.string(), ec);
+  mio::mmap_source file;
+  bool end_file = false;
+  if (end_loc < std::filesystem::file_size(path) - 1 && end_loc != 0) {
+    // to allow the end loc to be greater than file size and not throw an error.
+    file.map(path.string(), start_loc, end_loc - start_loc, ec);
+  } else {
+    file.map(path.string(), start_loc, mio::map_entire_file, ec);
+    end_file = true;
+  }
   std::string current_word = "";
   if (!ec) {
     for (char c : file) {
@@ -71,28 +78,32 @@ indexer::get_words_text(const std::filesystem::path &path) {
       }
     }
   }
-  if (current_word.length() > 3 && current_word.length() < 20) {
-    // stem word
+  if (end_file && current_word.length() > 3 && current_word.length() < 20) {
+    // stem word only if its until the last, if not it means we are batching
+    // because the file is too large and we don't want to add incomplete words.
     words_return.insert(current_word);
   }
   file.unmap();
   // file name
-  current_word.clear();
-  for (char c : path.filename().string()) {
-    Helper::convert_char(c);
-    if (c == '!') {
-      if (current_word.length() > 4 && current_word.length() < 15) {
-        // stem word
-        words_return.insert(current_word);
+  if (end_file) { // only add filename when doing until end of file(always true
+                  // if smaller than local index size)
+    current_word.clear();
+    for (char c : path.filename().string()) {
+      Helper::convert_char(c);
+      if (c == '!') {
+        if (current_word.length() > 4 && current_word.length() < 15) {
+          // stem word
+          words_return.insert(current_word);
+        }
+        current_word.clear();
+      } else {
+        current_word.push_back(c);
       }
-      current_word.clear();
-    } else {
-      current_word.push_back(c);
     }
-  }
-  if (current_word.length() > 3 && current_word.length() < 20) {
-    // stem word
-    words_return.insert(current_word);
+    if (current_word.length() > 3 && current_word.length() < 20) {
+      // stem word
+      words_return.insert(current_word);
+    }
   }
 
   if (ec) {
@@ -102,11 +113,12 @@ indexer::get_words_text(const std::filesystem::path &path) {
 }
 
 std::unordered_set<std::string>
-indexer::get_words(const std::filesystem::path &path) {
+indexer::get_words(const std::filesystem::path &path, const size_t start_loc,
+                   const size_t end_loc) {
   std::string extension = Helper::file_extension(path);
 
   if (extension == ".txt")
-    return get_words_text(path);
+    return get_words_utf8(path, start_loc, end_loc);
 
   return std::unordered_set<std::string>{};
 }
@@ -119,7 +131,7 @@ indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
   for (const std::filesystem::path &path : paths_to_index) {
     Log::write(1, "indexer: indexing path: " + path.string());
     PATH_ID_TYPE path_id = task_index.add_path(path, true);
-    std::unordered_set<std::string> words_to_add = get_words(path);
+    std::unordered_set<std::string> words_to_add = get_words(path, 0, 0);
     task_index.add_words(words_to_add, path_id);
     if (ec) {
     }
@@ -195,7 +207,7 @@ int indexer::start_from() {
                           dir_entry.path().string());
         PATH_ID_TYPE path_id = index.add_path(dir_entry.path(), true);
         std::unordered_set<std::string> words_to_add =
-            get_words(dir_entry.path());
+            get_words(dir_entry.path(), 0, 0);
         index.add_words(words_to_add, path_id);
         if (ec) {
         }
@@ -331,6 +343,47 @@ int indexer::start_from() {
   }
   if (threads_to_use == 1) {
     paths_size += current_thread_filesize;
+  }
+
+  // All files that weren't too large have gotten indexed. Now we do one by one
+  // in the main thread the files that were too large.
+  for (std::filesystem::path &path_file : too_big_files) {
+    Log::write(1, "indexer(single threaded Large File adding): indexing path "
+                  "in multiple batches: " +
+                      path_file.string());
+    size_t filesize = std::filesystem::file_size(path_file);
+    int batches_needed =
+        (filesize + (local_index_memory - 255) - 1) /
+        (local_index_memory -
+         255); // how many times we need to do a merge. we do -255 on index
+               // memory limit so we make sure that we can start 255 bytes
+               // before the last batch ended to make sure we don't miss any
+               // words. This 255 bytes value will only work for when
+               // WORD_SEPARATOR_SIZE is 1. e.g 2 and it would be too large and
+               // potentionally already over the limit again.
+    size_t loc = 0; // location
+
+    PATH_ID_TYPE path_id = index.add_path(path_file, true);
+
+    for (int i = 0; i < batches_needed; ++i) {
+      std::unordered_set<std::string> words_to_add =
+          get_words(path_file, loc, loc + (filesize / batches_needed));
+      index.add_words(words_to_add, path_id);
+      index.add_to_disk();
+      path_id = index.add_path(path_file, true);
+
+      loc += filesize / batches_needed;
+      if (filesize / batches_needed >= 255) {
+        // If the batch increase is more than 255 we do minus 255 to make sure
+        // we don't miss a word.
+        loc -= 255;
+      }
+      Log::write(1, "indexer(single threaded Large File adding): batch " +
+                        std::to_string(i + 1) + " of " +
+                        std::to_string(batches_needed) + " completed.");
+    }
+    paths_size += filesize;
+    ++paths_count;
   }
 
   Log::write(2, "indexer: start_from: sorting local index.");

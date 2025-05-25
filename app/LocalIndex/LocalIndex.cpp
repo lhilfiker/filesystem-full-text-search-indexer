@@ -85,6 +85,9 @@ void LocalIndex::add_to_disk() {
   if (paths_size == 0 || path_word_count_size == 0 || reversed_size == 0 ||
       words_size == 0)
     return; // do not try to add if we don't have anything to add.
+  if (!sorted) {
+    sort();
+  }
   index_combine_data index_to_add{paths,
                                   paths_size,
                                   path_word_count,
@@ -92,9 +95,7 @@ void LocalIndex::add_to_disk() {
                                   words_and_reversed,
                                   words_size,
                                   reversed_size};
-  if (!sorted) {
-    sort();
-  }
+
   Index::add(index_to_add);
   clear();
   return;
