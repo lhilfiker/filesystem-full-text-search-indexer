@@ -53,9 +53,16 @@ indexer::get_words_utf8(const std::filesystem::path &path,
   // It needs to consider Character encoding and proper error handling.
 
   std::error_code ec;
-  mio::mmap_source file;
   std::unordered_set<std::string> words_return{};
-  file.map(path.string(), ec);
+  mio::mmap_source file;
+  bool end_file = false;
+  if (end_loc < std::filesystem::file_size(path) && end_loc != 0) {
+    // to allow the end loc to be greater than file size and not throw an error.
+    file.map(path.string(), start_loc, end_loc - start_loc, ec);
+  } else {
+    file.map(path.string(), start_loc, mio::map_entire_file, ec);
+    end_file = true;
+  }
   std::string current_word = "";
   if (!ec) {
     for (char c : file) {
@@ -71,28 +78,32 @@ indexer::get_words_utf8(const std::filesystem::path &path,
       }
     }
   }
-  if (current_word.length() > 3 && current_word.length() < 20) {
-    // stem word
+  if (end_file && current_word.length() > 3 && current_word.length() < 20) {
+    // stem word only if its until the last, if not it means we are batching
+    // because the file is too large and we don't want to add incomplete words.
     words_return.insert(current_word);
   }
   file.unmap();
   // file name
-  current_word.clear();
-  for (char c : path.filename().string()) {
-    Helper::convert_char(c);
-    if (c == '!') {
-      if (current_word.length() > 4 && current_word.length() < 15) {
-        // stem word
-        words_return.insert(current_word);
+  if (end_file) { // only add filename when doing until end of file(always true
+                  // if smaller than local index size)
+    current_word.clear();
+    for (char c : path.filename().string()) {
+      Helper::convert_char(c);
+      if (c == '!') {
+        if (current_word.length() > 4 && current_word.length() < 15) {
+          // stem word
+          words_return.insert(current_word);
+        }
+        current_word.clear();
+      } else {
+        current_word.push_back(c);
       }
-      current_word.clear();
-    } else {
-      current_word.push_back(c);
     }
-  }
-  if (current_word.length() > 3 && current_word.length() < 20) {
-    // stem word
-    words_return.insert(current_word);
+    if (current_word.length() > 3 && current_word.length() < 20) {
+      // stem word
+      words_return.insert(current_word);
+    }
   }
 
   if (ec) {
@@ -120,7 +131,7 @@ indexer::thread_task(const std::vector<std::filesystem::path> paths_to_index) {
   for (const std::filesystem::path &path : paths_to_index) {
     Log::write(1, "indexer: indexing path: " + path.string());
     PATH_ID_TYPE path_id = task_index.add_path(path, true);
-    std::unordered_set<std::string> words_to_add = get_words(path);
+    std::unordered_set<std::string> words_to_add = get_words(path, 0, 0);
     task_index.add_words(words_to_add, path_id);
     if (ec) {
     }
@@ -196,7 +207,7 @@ int indexer::start_from() {
                           dir_entry.path().string());
         PATH_ID_TYPE path_id = index.add_path(dir_entry.path(), true);
         std::unordered_set<std::string> words_to_add =
-            get_words(dir_entry.path());
+            get_words(dir_entry.path(), 0, 0);
         index.add_words(words_to_add, path_id);
         if (ec) {
         }
