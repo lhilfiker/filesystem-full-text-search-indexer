@@ -370,6 +370,7 @@ int indexer::start_from() {
           get_words(path_file, loc, loc + (filesize / batches_needed));
       index.add_words(words_to_add, path_id);
       index.add_to_disk();
+      path_id = index.add_path(path_file, true);
 
       loc += filesize / batches_needed;
       if (filesize / batches_needed >= 255) {
