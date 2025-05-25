@@ -56,7 +56,7 @@ indexer::get_words_utf8(const std::filesystem::path &path,
   std::unordered_set<std::string> words_return{};
   mio::mmap_source file;
   bool end_file = false;
-  if (end_loc < std::filesystem::file_size(path) && end_loc != 0) {
+  if (end_loc < std::filesystem::file_size(path) - 1 && end_loc != 0) {
     // to allow the end loc to be greater than file size and not throw an error.
     file.map(path.string(), start_loc, end_loc - start_loc, ec);
   } else {
