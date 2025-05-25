@@ -343,18 +343,29 @@ int indexer::start_from() {
                       path_file.string());
     size_t filesize = std::filesystem::file_size(path_file);
     int batches_needed =
-        (filesize + local_index_memory - 1) /
-        local_index_memory; // how many times we need to do a merge.
-    size_t loc = 0;         // location
+        (filesize + (local_index_memory - 255) - 1) /
+        (local_index_memory -
+         255); // how many times we need to do a merge. we do -255 on index
+               // memory limit so we make sure that we can start 255 bytes
+               // before the last batch ended to make sure we don't miss any
+               // words. This 255 bytes value will only work for when
+               // WORD_SEPARATOR_SIZE is 1. e.g 2 and it would be too large and
+               // potentionally already over the limit again.
+    size_t loc = 0; // location
 
     PATH_ID_TYPE path_id = index.add_path(path_file, true);
 
     for (int i = 0; i < batches_needed; ++i) {
       std::unordered_set<std::string> words_to_add =
-          get_words(path_file, loc, loc + (fileisize / batches_needed));
+          get_words(path_file, loc, loc + (filesize / batches_needed));
       index.add_words(words_to_add, path_id);
 
       loc += filesize / batches_needed;
+      if (filesize / batches_needed >= 255) {
+        // If the batch increase is more than 255 we do minus 255 to make sure
+        // we don't miss a word.
+        loc -= 255;
+      }
       Log::write(1, "indexer(single threaded Large File adding): batch " +
                         std::to_string(i) + " of " +
                         std::to_string(batches_needed) + " completed.");
