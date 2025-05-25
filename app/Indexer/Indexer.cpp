@@ -13,7 +13,7 @@ bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
 std::filesystem::path indexer::path_to_scan;
 int indexer::threads_to_use = 1;
-size_t indexer::local_index_memory = 5000000;
+size_t indexer::local_index_memory = 50000;
 
 void indexer::save_config(const bool config_scan_dot_paths,
                           const std::filesystem::path &config_path_to_scan,
@@ -30,8 +30,7 @@ void indexer::save_config(const bool config_scan_dot_paths,
   if (ec) {
     threads_to_use = 1;
   }
-  if (config_local_index_memory >
-      5000000) { // ignore larger memory as most modern system will handle that
+  if (config_local_index_memory > 50000) { // do not allow smaller memory.
     local_index_memory = config_local_index_memory;
   }
   scan_dot_paths = config_scan_dot_paths;
