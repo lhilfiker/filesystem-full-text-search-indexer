@@ -333,6 +333,35 @@ int indexer::start_from() {
     paths_size += current_thread_filesize;
   }
 
+  // All files that weren't too large have gotten indexed. Now we do one by one
+  // in the main thread the files that were too large.
+  for (std::filesystem::path &path_file : too_big_files) {
+    Log::write(1, "indexer(single threaded Large File adding): indexing path "
+                  "in multiple batches: " +
+                      path_file.string());
+    size_t filesize = std::filesystem::file_size(path_file);
+    int batches_needed =
+        (filesize + local_index_memory - 1) /
+        local_index_memory; // how many times we need to do a merge.
+    size_t loc = 0;         // location
+
+    PATH_ID_TYPE path_id = index.add_path(path_file, true);
+
+    for (int i = 0; i < batches_needed; ++i) {
+      std::unordered_set<std::string> words_to_add =
+          get_words(path_file, loc, loc + (fileisize / batches_needed));
+      index.add_words(words_to_add, path_id);
+
+      loc += filesize / batches_needed;
+      Log::write(1, "indexer(single threaded Large File adding): batch " +
+                        std::to_string(i) + " of " +
+                        std::to_string(batches_needed) + " completed.");
+    }
+    index.add_to_disk();
+    paths_size += filesize;
+    ++paths_count;
+  }
+
   Log::write(2, "indexer: start_from: sorting local index.");
   index.sort();
   if (ec) {
