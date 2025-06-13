@@ -95,7 +95,7 @@ public:
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
-  static int add(index_combine_data &index_to_add);
+  static int add(index_combine_data &index_to_add, int merge_id);
   static std::vector<search_path_ids_return>
   search_word_list(std::vector<std::string> &search_words, bool exact_match,
                    int min_char_for_match);
