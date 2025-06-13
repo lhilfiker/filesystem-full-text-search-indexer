@@ -81,7 +81,7 @@ void LocalIndex::sort() {
   return;
 }
 
-void LocalIndex::add_to_disk() {
+void LocalIndex::add_to_disk(int merge_id) {
   if (paths_size == 0 || path_word_count_size == 0 || reversed_size == 0 ||
       words_size == 0)
     return; // do not try to add if we don't have anything to add.
@@ -96,7 +96,7 @@ void LocalIndex::add_to_disk() {
                                   words_size,
                                   reversed_size};
 
-  Index::add(index_to_add);
+  Index::add(index_to_add, merge_id);
   clear();
   return;
 }

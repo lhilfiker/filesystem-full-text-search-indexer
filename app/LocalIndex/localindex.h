@@ -33,7 +33,7 @@ public:
   void add_words(std::unordered_set<std::string> &words_to_insert,
                  PATH_ID_TYPE path_id);
   void sort();
-  void add_to_disk();
+  void add_to_disk(int merge_id);
   void combine(LocalIndex &to_combine_index, const bool adding);
 
   friend void combine(LocalIndex &to_combine_index);

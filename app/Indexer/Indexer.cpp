@@ -4,6 +4,7 @@
 #include <chrono>
 #include <filesystem>
 #include <future>
+#include <random>
 #include <string>
 #include <thread>
 #include <unordered_set>
@@ -161,6 +162,15 @@ int indexer::start_from() {
   std::error_code ec;
   LocalIndex index;
   Log::write(2, "indexer: starting scan from last successful scan.");
+
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_int_distribution<std::mt19937::result_type> rnd_merge_id(00000,
+                                                                        99999);
+  int merge_id = rnd_merge_id(rng);
+  // we generate a random number beetween 00000-99999. This will be used as the
+  // merge id. Transaction file, mtime update file will be refrenced with this.
+
   std::vector<std::vector<std::filesystem::path>> queue(threads_to_use);
   std::vector<std::filesystem::path> too_big_files;
   size_t current_thread_filesize = 0;
@@ -369,7 +379,7 @@ int indexer::start_from() {
       std::unordered_set<std::string> words_to_add =
           get_words(path_file, loc, loc + (filesize / batches_needed));
       index.add_words(words_to_add, path_id);
-      index.add_to_disk();
+      index.add_to_disk(merge_id);
       path_id = index.add_path(path_file, true);
 
       loc += filesize / batches_needed;
@@ -400,6 +410,6 @@ int indexer::start_from() {
   Log::write(2, "files too big to be indexed: " +
                     std::to_string(too_big_files.size()));
   Log::write(2, "writing to disk");
-  index.add_to_disk();
+  index.add_to_disk(merge_id);
   return 0;
 }
