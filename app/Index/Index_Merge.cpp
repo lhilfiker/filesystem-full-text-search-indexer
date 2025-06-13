@@ -518,7 +518,9 @@ void Index::insertion_to_transactions(
   to_insertions.clear();
 }
 
-int Index::merge(index_combine_data &index_to_add) {
+int Index::merge(index_combine_data &index_to_add, int merge_id) {
+  // index_to_add is a LocalIndex. merge id is the id for the whole merge
+  // operation and to refrence transaction file, mtime update file, etc..
   Log::write(1, "indexer: add: adding to existing index.");
   std::error_code ec;
   map();
@@ -968,8 +970,9 @@ int Index::merge(index_combine_data &index_to_add) {
   // transaction.list Backups are saved in indexpath / transaction /
   // backups / backupid.backup
 
-  std::filesystem::path transaction_path =
-      CONFIG_INDEX_PATH / "transaction" / "transaction.list";
+  std::filesystem::path transaction_path = CONFIG_INDEX_PATH / "transaction" /
+                                           "transaction-" /
+                                           std::to_string(merge_id) / ".list";
 
   if (write_transaction_file(transaction_path, move_transactions,
                              transactions) == 1) {
