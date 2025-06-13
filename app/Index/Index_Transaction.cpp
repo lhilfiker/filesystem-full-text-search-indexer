@@ -7,6 +7,36 @@
 #include <fstream>
 #include <string>
 
+void Index::write_to_transaction(std::vector<Transaction> &transactions,
+                                 mio::mmap_sink &mmap_transactions,
+                                 size_t &transaction_file_location) {
+  std::error_code ec;
+  for (size_t i = 0; i < transactions.size(); ++i) {
+    // copy the header first. Then check the operation type and then copy
+    // the content if needed.
+    std::memcpy(&mmap_transactions[transaction_file_location],
+                &transactions[i].header.bytes[0], 27);
+    transaction_file_location += 27;
+    if (transactions[i].header.operation_type != 2 &&
+        transactions[i].header.operation_type != 3) { // resize or backup
+      if (transactions[i].header.operation_type == 0) {
+        // For move operations content is 8 bytes long as a uint64_t to
+        // represent the byte shift. content length is used for end pos.
+        std::memcpy(&mmap_transactions[transaction_file_location],
+                    &transactions[i].content[0], 8);
+        transaction_file_location += 8;
+      } else {
+        std::memcpy(&mmap_transactions[transaction_file_location],
+                    &transactions[i].content[0],
+                    transactions[i].header.content_length);
+        transaction_file_location += transactions[i].header.content_length;
+      }
+    }
+  }
+  if (ec)
+    Log::error("Index: Write to Transaction Failed. Exiting");
+}
+
 int Index::write_transaction_file(const std::filesystem::path &transaction_path,
                                   std::vector<Transaction> &move_transactions,
                                   std::vector<Transaction> &transactions) {
