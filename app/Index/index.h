@@ -80,7 +80,7 @@ private:
   static void write_to_transaction(std::vector<Transaction> &transactions,
                                    mio::mmap_sink &mmap_transactions,
                                    size_t &transaction_file_location);
-  static int merge(index_combine_data &index_to_add);
+  static int merge(index_combine_data &index_to_add, int merge_id);
   static int execute_transactions();
   static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
   static void lock_update_sizes();
@@ -95,7 +95,7 @@ public:
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
-  static int add(index_combine_data &index_to_add);
+  static int add(index_combine_data &index_to_add, int merge_id);
   static std::vector<search_path_ids_return>
   search_word_list(std::vector<std::string> &search_words, bool exact_match,
                    int min_char_for_match);

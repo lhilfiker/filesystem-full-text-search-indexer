@@ -325,7 +325,7 @@ int Index::uninitialize() {
   return 0;
 }
 
-int Index::add(index_combine_data &index_to_add) {
+int Index::add(index_combine_data &index_to_add, int merge_id) {
   std::error_code ec;
   if (!initialized || lock_status(false) <= 0) {
     Log::write(3, "Index: Can not add because index is not initialized or "
@@ -368,7 +368,7 @@ int Index::add(index_combine_data &index_to_add) {
                  "files will be deleted on startup.");
     }
   } else {
-    if (merge(index_to_add) == 1) {
+    if (merge(index_to_add, merge_id) == 1) {
       unlock(false); // unlock after done
       return 1;
     }
