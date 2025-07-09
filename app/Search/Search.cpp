@@ -8,13 +8,20 @@
 #include <unordered_map>
 
 // Default values
-bool Search::config_exact_match = true;
+bool Search::config_exact_match =
+    false; // If true, this will make each word regardless of "" in the search
+           // query be an exact match.
 uint8_t Search::config_min_char_for_match = 4;
 
 // To overwrite them
 void Search::save_config(bool exact_match, uint8_t min_char_for_match) {
   config_exact_match = exact_match;
   config_min_char_for_match = min_char_for_match;
+}
+
+void Search::query_search(std::string query) {
+  // We get a full search string query which we will first translate so we can
+  // understand and then run searches on the index and then process them again.
 }
 
 void Search::search() {
