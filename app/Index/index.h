@@ -97,8 +97,8 @@ public:
   static int uninitialize();
   static int add(index_combine_data &index_to_add);
   static std::vector<search_path_ids_return>
-  search_word_list(std::vector<std::string> &search_words, bool exact_match,
-                   int min_char_for_match);
+  search_word_list(std::vector<std::string> &search_words,
+                   std::vector<bool> exact_match, int min_char_for_match);
   static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
 
