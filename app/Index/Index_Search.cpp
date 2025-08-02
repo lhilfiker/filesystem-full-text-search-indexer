@@ -73,7 +73,7 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
 // ap and it encounters apple. If false it would count that as a match.
 // min_char_for_match will also count words if the first x chars are the same,
 // only if exact_match is false.
-std::vector<search_path_ids_return>
+std::vector<search_path_ids_count_return>
 Index::search_word_list(std::vector<std::string> &search_words,
                         std::vector<bool> exact_match, int min_char_for_match) {
   std::vector<std::vector<uint64_t>> result_word_ids(
@@ -81,7 +81,8 @@ Index::search_word_list(std::vector<std::string> &search_words,
           .size()); // because of exact match some words may have multiple
                     // word ids connected. and to keep it connected to the
                     // search words for later processing we need to do this.
-  std::vector<search_path_ids_return> results;
+  std::vector<search_path_ids_count_return> results(search_words.size());
+
   if (!initialized || !health_status()) {
     Log::write(3, "Index is not initialized or it's not readable(e.g because a "
                   "Transaction Execution is in progress)");
@@ -250,26 +251,26 @@ Index::search_word_list(std::vector<std::string> &search_words,
   // Now we need to read all reversed and additionals and put it into a list of
   // path_id count.
   // we will later combine them but it's easier like this.
-  std::vector<PATH_ID_TYPE> path_ids;
-  std::vector<uint32_t> counts;
+
   if (result_word_ids.size() == 0)
     return results;
   for (size_t i = 0; i < result_word_ids.size(); ++i) {
-    for (const int &path_id : path_ids_from_word_id(result_word_ids[i])) {
-      // potential future performance improvments
-      if (auto it = std::find(path_ids.begin(), path_ids.end(), path_id);
-          it == path_ids.end()) {
-        path_ids.push_back(path_id);
-        counts.push_back(1);
-      } else {
-        ++counts[it - path_ids.begin()]; // increase count of the element
+    if (result_word_ids[i].size() == 0)
+      continue;
+    for (int j = 0; j < result_word_ids[i].size(); ++j) {
+      for (const int &path_id : path_ids_from_word_id(result_word_ids[i][j])) {
+        // potential future performance improvments
+        if (auto it = std::find(results[i].path_id.begin(),
+                                results[i].path_id.end(), path_id);
+            it == results[i].path_id.end()) {
+          results[i].path_id.push_back(path_id);
+          results[i].count.push_back(1);
+        } else {
+          ++results[i].count[it - results[i].path_id.begin()]; // increase count
+                                                               // of the element
+        }
       }
     }
-  }
-  // convert into struct and return.
-  results.reserve(path_ids.size());
-  for (size_t i = 0; i < path_ids.size(); ++i) {
-    results.push_back({path_ids[i], counts[i]});
   }
   return results;
 }
