@@ -75,7 +75,8 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
 // only if exact_match is false.
 std::vector<search_path_ids_count_return>
 Index::search_word_list(std::vector<std::string> &search_words,
-                        std::vector<bool> exact_match, int min_char_for_match) {
+                        std::vector<bool> &exact_match,
+                        int min_char_for_match) {
   std::vector<std::vector<uint64_t>> result_word_ids(
       search_words
           .size()); // because of exact match some words may have multiple

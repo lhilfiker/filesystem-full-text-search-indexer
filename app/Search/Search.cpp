@@ -1,6 +1,7 @@
 #include "search.h"
 #include "../Helper/helper.h"
 #include "../Index/index.h"
+#include "../Index/index_types.h"
 #include "iostream"
 #include "string"
 #include <cstdint>
@@ -20,8 +21,19 @@ void Search::save_config(bool exact_match, uint8_t min_char_for_match) {
 }
 
 void Search::query_search(std::string query) {
-  // We get a full search string query which we will first translate so we can
-  // understand and then run searches on the index and then process them again.
+  // We get a full search string query which we will first run queries on the
+  // index on all words and then process it according to the query.
+
+  std::vector<std::string> search_words;
+  std::vector<bool> exact_match;
+
+  // run search on index, we need to sort it first so we can connect each words
+  // to it's path ids.
+  std::sort(search_words.begin(), search_words.end());
+
+  std::vector<search_path_ids_count_return> word_search_results =
+      Index::search_word_list(search_words, exact_match,
+                              config_min_char_for_match);
 }
 
 void Search::search() {
