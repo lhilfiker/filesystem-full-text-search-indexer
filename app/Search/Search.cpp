@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 // Default values
@@ -85,7 +86,7 @@ void Search::query_search(const std::string &query) {
   std::vector<search_path_ids_count_return> word_search_results =
       Index::search_word_list(search_words, config_min_char_for_match);
 
-  std::vector<PATH_ID_TYPE> query_sub_result_table;
+  std::vector<std::unordered_set<PATH_ID_TYPE>> query_sub_result_table;
 
   std::vector<std::pair<uint8_t, uint32_t>> query_processing_table;
   // first is the type:
@@ -107,6 +108,114 @@ void Search::query_search(const std::string &query) {
       // we need to process all entries in the processing table unril we reach
       // the earliest '(', then we process all and remove them and just add a 1
       // for query sub result.
+      if (query_processing_table.size() == 0)
+        return;
+      uint32_t opening_sub_query = 0;
+      for (int j = query_processing_table.size() - 1; j == 0; --j) {
+        if (query_processing_table[j].first == 0) {
+          opening_sub_query = j;
+          break;
+        }
+      }
+
+      std::unordered_set<PATH_ID_TYPE> temp_comparision;
+      uint32_t sub_query_counter = 0;
+      int current_operator = 0;
+      for (int j = opening_sub_query; j == query_processing_table.size(); j++) {
+        if (sub_query_counter == 0 ||
+            query_processing_table[j] ==
+                std::make_pair<uint8_t, uint32_t>(
+                    3, 0)) { // first ones or OR operator, we will just add them
+                             // to the temp comparision table
+          switch (query_processing_table[j].first) {
+          case 1:
+
+            temp_comparision.insert(
+                query_sub_result_table[query_processing_table[j].second]
+                    .begin(),
+                query_sub_result_table[query_processing_table[j].second].end());
+            // copy it because it's first in here.
+            break;
+          case 2:
+            for (int k = 0;
+                 k < word_search_results[query_processing_table[j].second]
+                         .path_id.size();
+                 ++k) {
+              temp_comparision.insert(
+                  word_search_results[query_processing_table[j].second]
+                      .path_id[k]);
+              // insert all because it's first.
+            }
+            break;
+          case 3:
+            continue;
+            // first item is a operator which is invalid so we just ignore it.
+          default:
+            break;
+          }
+          current_operator = 0;
+        }
+        if (query_processing_table[j].first == 3) { // sub queries
+          current_operator = query_processing_table[j].second;
+        }
+        if (query_processing_table[j].first == 1) {
+          if (current_operator == 0) { // OR
+            temp_comparision.insert(
+                query_sub_result_table[query_processing_table[j].second]
+                    .begin(),
+                query_sub_result_table[query_processing_table[j].second].end());
+          }
+          if (current_operator == 1) { // AND
+            std::unordered_set<PATH_ID_TYPE> intersection;
+            for (const auto &element : temp_comparision) {
+              if (query_sub_result_table[query_processing_table[j].second]
+                      .count(element)) {
+                intersection.insert(element);
+              }
+            }
+            temp_comparision = intersection;
+          }
+          if (current_operator == 2) { // NOT
+            for (const auto &element :
+                 query_sub_result_table[query_processing_table[j].second]) {
+              temp_comparision.erase(element);
+            }
+          }
+          current_operator = 0;
+        }
+        if (query_processing_table[j].first == 2) { // words
+          if (current_operator == 0) {
+            for (const auto &element :
+                 word_search_results[query_processing_table[j].second]
+                     .path_id) {
+              temp_comparision.insert(element);
+            }
+          }
+          if (current_operator == 1) {
+            std::unordered_set<PATH_ID_TYPE> intersection;
+            for (const auto &element :
+                 word_search_results[query_processing_table[j].second].path_id)
+              if (temp_comparision.count(element)) {
+                intersection.insert(element);
+              }
+            temp_comparision = intersection;
+          }
+          if (current_operator == 2) {
+            for (const auto &element :
+                 word_search_results[query_processing_table[j].second]
+                     .path_id) {
+              temp_comparision.erase(element);
+            }
+          }
+
+          current_operator = 0;
+        }
+
+        ++sub_query_counter;
+      }
+
+      // delete all processed queries.
+
       continue;
     }
     if (query[i] == '"') {
