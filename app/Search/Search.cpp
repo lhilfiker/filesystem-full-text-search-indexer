@@ -27,8 +27,7 @@ void Search::query_search(const std::string &query) {
     return;
   }
 
-  std::vector<std::string> search_words;
-  std::vector<bool> exact_match;
+  std::vector<std::pair<std::string, bool>> search_words;
 
   std::string current_word = "";
   bool exact_match_query = false;
@@ -36,8 +35,7 @@ void Search::query_search(const std::string &query) {
     if (c == '"') {
       if (exact_match_query) {
         if (current_word.length() > 3 && current_word.length() < 254) {
-          search_words.push_back(current_word);
-          exact_match.push_back(true);
+          search_words.emplace_back(current_word, true);
           current_word.clear();
           exact_match_query = false;
         }
@@ -47,22 +45,21 @@ void Search::query_search(const std::string &query) {
     }
     if (Helper::convert_char(c); c == '!') {
       if (current_word.length() > 3 && current_word.length() < 254) {
-        search_words.push_back(current_word);
         if (config_exact_match) {
-          exact_match.push_back(true);
+          search_words.emplace_back(current_word, true);
+
         } else {
-          exact_match.push_back(false);
+          search_words.emplace_back(current_word, false);
         }
         current_word.clear();
       }
     }
   }
   if (current_word.length() > 3 && current_word.length() < 254) {
-    search_words.push_back(current_word);
     if (config_exact_match) {
-      exact_match.push_back(true);
+      search_words.emplace_back(current_word, true);
     } else {
-      exact_match.push_back(false);
+      search_words.emplace_back(current_word, false);
     }
     current_word.clear();
   }
@@ -72,8 +69,9 @@ void Search::query_search(const std::string &query) {
   std::sort(search_words.begin(), search_words.end());
 
   std::vector<search_path_ids_count_return> word_search_results =
-      Index::search_word_list(search_words, exact_match,
-                              config_min_char_for_match);
+      Index::search_word_list(search_words, config_min_char_for_match);
+
+  std::vector<PATH_ID_TYPE> query_sub_result_table;
 }
 
 void Search::search() {
