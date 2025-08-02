@@ -114,7 +114,7 @@ void Search::query_search(const std::string &query) {
       if (query_processing_table.size() == 0)
         return;
       uint32_t opening_sub_query = 0;
-      for (int j = query_processing_table.size() - 1; j != 0; --j) {
+      for (int j = query_processing_table.size() - 1; j >= 0; --j) {
         if (query_processing_table[j].first == 0) {
           opening_sub_query = j;
           break;
