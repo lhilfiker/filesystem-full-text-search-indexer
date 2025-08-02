@@ -48,14 +48,22 @@ void Search::query_search(const std::string &query) {
     if (Helper::convert_char(c); c == '!') {
       if (current_word.length() > 3 && current_word.length() < 254) {
         search_words.push_back(current_word);
-        exact_match.push_back(false);
+        if (config_exact_match) {
+          exact_match.push_back(true);
+        } else {
+          exact_match.push_back(false);
+        }
         current_word.clear();
       }
     }
   }
   if (current_word.length() > 3 && current_word.length() < 254) {
     search_words.push_back(current_word);
-    exact_match.push_back(false);
+    if (config_exact_match) {
+      exact_match.push_back(true);
+    } else {
+      exact_match.push_back(false);
+    }
     current_word.clear();
   }
 
