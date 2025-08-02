@@ -20,12 +20,44 @@ void Search::save_config(bool exact_match, uint8_t min_char_for_match) {
   config_min_char_for_match = min_char_for_match;
 }
 
-void Search::query_search(std::string query) {
+void Search::query_search(const std::string &query) {
   // We get a full search string query which we will first run queries on the
   // index on all words and then process it according to the query.
+  if (query.length() == 0) {
+    return;
+  }
 
   std::vector<std::string> search_words;
   std::vector<bool> exact_match;
+
+  std::string current_word = "";
+  bool exact_match_query = false;
+  for (char c : query) {
+    if (c == '"') {
+      if (exact_match_query) {
+        if (current_word.length() > 3 && current_word.length() < 254) {
+          search_words.push_back(current_word);
+          exact_match.push_back(true);
+          current_word.clear();
+          exact_match_query = false;
+        }
+      } else {
+        exact_match_query = true;
+      }
+    }
+    if (Helper::convert_char(c); c == '!') {
+      if (current_word.length() > 3 && current_word.length() < 254) {
+        search_words.push_back(current_word);
+        exact_match.push_back(false);
+        current_word.clear();
+      }
+    }
+  }
+  if (current_word.length() > 3 && current_word.length() < 254) {
+    search_words.push_back(current_word);
+    exact_match.push_back(false);
+    current_word.clear();
+  }
 
   // run search on index, we need to sort it first so we can connect each words
   // to it's path ids.

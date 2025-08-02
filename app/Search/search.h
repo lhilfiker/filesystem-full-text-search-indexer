@@ -19,7 +19,7 @@ private:
 
 public:
   static void save_config(bool exact_match, uint8_t min_char_for_match);
-  static void query_search(std::string query);
+  static void query_search(const std::string &query);
   static void search();
 };
 
