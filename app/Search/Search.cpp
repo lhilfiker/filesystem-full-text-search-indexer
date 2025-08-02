@@ -28,6 +28,9 @@ void Search::query_search(const std::string &query) {
   if (query.length() == 0) {
     return;
   }
+  if (query[0] != '(' || query[query.size() - 1] != ')') {
+    return; // it needs to begin and end with it.
+  }
 
   std::vector<std::pair<std::string, bool>> search_words;
 
