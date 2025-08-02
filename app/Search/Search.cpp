@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 // Default values
 bool Search::config_exact_match =
@@ -29,12 +30,14 @@ void Search::query_search(const std::string &query) {
 
   std::vector<std::pair<std::string, bool>> search_words;
 
+  // extract all words from the query only respecting exact match and add them
+  // to search_words.
   std::string current_word = "";
   bool exact_match_query = false;
   for (char c : query) {
     if (c == '"') {
       if (exact_match_query) {
-        if (current_word.length() > 3 && current_word.length() < 254) {
+        if (current_word.length() > 2 && current_word.length() < 254) {
           search_words.emplace_back(current_word, true);
           current_word.clear();
           exact_match_query = false;
@@ -45,6 +48,11 @@ void Search::query_search(const std::string &query) {
     }
     if (Helper::convert_char(c); c == '!') {
       if (current_word.length() > 3 && current_word.length() < 254) {
+        if (current_word == "AND" || current_word == "OR" ||
+            current_word == "NOT") {
+          current_word.clear();
+          continue;
+        }
         if (config_exact_match) {
           search_words.emplace_back(current_word, true);
 
@@ -53,25 +61,90 @@ void Search::query_search(const std::string &query) {
         }
         current_word.clear();
       }
+    } else {
+      current_word += c;
     }
   }
   if (current_word.length() > 3 && current_word.length() < 254) {
-    if (config_exact_match) {
+    if (current_word == "AND" || current_word == "OR" ||
+        current_word == "NOT") {
+    } else if (config_exact_match) {
       search_words.emplace_back(current_word, true);
     } else {
       search_words.emplace_back(current_word, false);
     }
-    current_word.clear();
   }
 
   // run search on index, we need to sort it first so we can connect each words
-  // to it's path ids.
+  // to it's path ids. we also remove all duplicates (only if also exact match
+  // is the same)
   std::sort(search_words.begin(), search_words.end());
+  auto last = std::unique(search_words.begin(), search_words.end());
+  search_words.erase(last, search_words.end());
 
   std::vector<search_path_ids_count_return> word_search_results =
       Index::search_word_list(search_words, config_min_char_for_match);
 
   std::vector<PATH_ID_TYPE> query_sub_result_table;
+
+  std::vector<std::pair<uint8_t, uint32_t>> query_processing_table;
+  // first is the type:
+  // 0 = (
+  // 1 = query_sub_block // this points to query_sub_result_table entry
+  // 2 = word id // this points to word_search_result entry for the
+  // corresponding word.
+  // 3 = operator (second is 0 = OR, 1 = AND, 2 = NOT)
+  // second is either position (for 0) or the iterator
+
+  current_word.clear();
+  exact_match_query = false;
+  for (int i = 0; i < query.length(); ++i) {
+    if (query[i] == '(') {
+      query_processing_table.emplace_back(0, i);
+      continue;
+    }
+    if (query[i] == ')') {
+      // we need to process all entries in the processing table unril we reach
+      // the earliest '(', then we process all and remove them and just add a 1
+      // for query sub result.
+      continue;
+    }
+    if (query[i] == '"') {
+      if (exact_match_query) {
+        if (current_word.length() > 2 && current_word.length() < 254) {
+          auto it = std::find(search_words.begin(), search_words.end(),
+                              std::make_pair(current_word, true));
+          if (it != search_words.end()) {
+            query_processing_table.emplace_back(2, it - search_words.begin());
+          }
+          current_word.clear();
+        }
+      } else {
+        exact_match_query = true;
+        continue;
+      }
+    }
+    if (query[i] == ' ') {
+      if (current_word == "AND" || current_word == "OR" ||
+          current_word == "NOT") {
+        query_processing_table.emplace_back(
+            3, current_word == "AND" ? 1 : (current_word == "OR" ? 0 : 2));
+      }
+      if (current_word.length() > 3 && current_word.length() < 254) {
+        auto it = std::find(search_words.begin(), search_words.end(),
+                            std::make_pair(current_word, false));
+        if (it != search_words.end()) {
+          query_processing_table.emplace_back(2, it - search_words.begin());
+        }
+        current_word.clear();
+      }
+      continue;
+    }
+    char c = query[i];
+    if (Helper::convert_char(c); c != '!') {
+      current_word += c;
+    }
+  }
 }
 
 void Search::search() {
