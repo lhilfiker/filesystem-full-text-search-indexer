@@ -260,6 +260,11 @@ void Search::query_search(const std::string &query) {
       current_word += c;
     }
   }
+  // Now we have only one query sub block linked to the processing table. This
+  // is the final result.
+
+  // TODO: get all counts from search results for future ranking,  delete sub
+  // results after copying final one. return result.
 }
 
 void Search::search() {
