@@ -111,7 +111,7 @@ void Search::query_search(const std::string &query) {
       if (query_processing_table.size() == 0)
         return;
       uint32_t opening_sub_query = 0;
-      for (int j = query_processing_table.size() - 1; j == 0; --j) {
+      for (int j = query_processing_table.size() - 1; j != 0; --j) {
         if (query_processing_table[j].first == 0) {
           opening_sub_query = j;
           break;
@@ -121,7 +121,7 @@ void Search::query_search(const std::string &query) {
       std::unordered_set<PATH_ID_TYPE> temp_comparision;
       uint32_t sub_query_counter = 0;
       int current_operator = 0;
-      for (int j = opening_sub_query; j == query_processing_table.size(); j++) {
+      for (int j = opening_sub_query; j < query_processing_table.size(); j++) {
         if (sub_query_counter == 0 ||
             query_processing_table[j] ==
                 std::make_pair<uint8_t, uint32_t>(
@@ -214,8 +214,14 @@ void Search::query_search(const std::string &query) {
         ++sub_query_counter;
       }
 
-      // delete all processed queries.
+      // delete and just add a sub result query.
+      query_processing_table.erase(query_processing_table.begin() +
+                                       opening_sub_query,
+                                   query_processing_table.end());
+      query_processing_table.push_back(
+          std::make_pair(1, query_sub_result_table.size()));
 
+      query_sub_result_table.push_back(temp_comparision);
       continue;
     }
     if (query[i] == '"') {
