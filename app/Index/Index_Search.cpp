@@ -114,6 +114,9 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
   size_t on_disk_id = 0;
   size_t local_word_count = 0;
   size_t local_word_length = search_words[0].first.length();
+  size_t last_match_on_disk_count = 0;
+  size_t last_match_on_disk_id = 0;
+
   char disk_first_char = 'a';
   char local_first_char = search_words[0].first[0];
 
@@ -176,6 +179,18 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
               search_words.size()) { // if not more words to compare quit.
             break;
           }
+
+          if (search_words[local_word_count].first ==
+              search_words[local_word_count - 1].first) {
+            // If the current and next word are the same (e.g one is direct
+            // match, the other not), we will need to move on disk count back.
+            on_disk_count = last_match_on_disk_count;
+            on_disk_id = last_match_on_disk_id;
+          } else {
+            last_match_on_disk_count = on_disk_count;
+            last_match_on_disk_id = on_disk_id;
+          }
+
           local_word_length = search_words[local_word_count].first.length();
           on_disk_count +=
               word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
@@ -198,6 +213,18 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
               search_words.size()) { // if not more words to compare quit.
             break;
           }
+
+          if (search_words[local_word_count].first ==
+              search_words[local_word_count - 1].first) {
+            // If the current and next word are the same (e.g one is direct
+            // match, the other not), we will need to move on disk count back.
+            on_disk_count = last_match_on_disk_count;
+            on_disk_id = last_match_on_disk_id;
+          } else {
+            last_match_on_disk_count = on_disk_count;
+            last_match_on_disk_id = on_disk_id;
+          }
+
           local_word_length = search_words[local_word_count].first.length();
           local_first_char = search_words[local_word_count].first[0];
           break;
@@ -228,6 +255,18 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
             search_words.size()) { // if not more words to compare quit.
           break;
         }
+
+        if (search_words[local_word_count].first ==
+            search_words[local_word_count - 1].first) {
+          // If the current and next word are the same (e.g one is direct
+          // match, the other not), we will need to move on disk count back.
+          on_disk_count = last_match_on_disk_count;
+          on_disk_id = last_match_on_disk_id;
+        } else {
+          last_match_on_disk_count = on_disk_count;
+          last_match_on_disk_id = on_disk_id;
+        }
+
         local_word_length = search_words[local_word_count].first.length();
         local_first_char = search_words[local_word_count].first[0];
         break;
