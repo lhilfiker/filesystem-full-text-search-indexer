@@ -1,10 +1,12 @@
 #include "../Logging/logging.h"
 #include "index.h"
 #include <array>
+#include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
@@ -117,6 +119,9 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
   size_t last_match_on_disk_count = 0;
   size_t last_match_on_disk_id = 0;
 
+  std::pair<std::size_t, std::size_t> wildcard_match_mark(
+      0, 0); // first is count, second id.
+
   char disk_first_char = 'a';
   char local_first_char = search_words[0].first[0];
 
@@ -168,13 +173,35 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
 
     for (int i = 0; i < word_seperator; ++i) {
 
+      // the current char on disk and local are the same.
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] ==
           (int)(search_words[local_word_count].first[i])) {
 
-        // If its last char and words are the same length we found it.
+        // exact same length, exact match.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
+
+          if (!search_words[local_word_count].second) {
+            // wildcard match, exact same.
+            if (i >= min_char_for_match) {
+              result_word_ids[local_word_length].push_back(on_disk_id);
+            }
+            if (wildcard_match_mark.first != 0) {
+              wildcard_match_mark.first = on_disk_count;
+              wildcard_match_mark.second = on_disk_id;
+            }
+            continue;
+          }
           result_word_ids[local_word_length].push_back(on_disk_id);
+
           ++local_word_count;
+          if (wildcard_match_mark.first != 0) {
+            // if we had a wildcard that reached his exact match or passed it we
+            // will need to go back there for potential upcoming searches.
+            on_disk_count = wildcard_match_mark.first;
+            on_disk_id = wildcard_match_mark.second;
+          }
+          wildcard_match_mark = std::make_pair(0, 0);
+
           if (local_word_count ==
               search_words.size()) { // if not more words to compare quit.
             break;
@@ -200,15 +227,32 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
           break;
         }
 
+        // local word length reached, on disk is bigger.
         if (i == local_word_length - 1) {
           // IF exact_match is true check if I is bigger or same than
           // min_char_for_match
-          if (!search_words[local_word_count].second &&
-              i >= min_char_for_match) {
+          if (!search_words[local_word_count].second) {
             // still a match
-            result_word_ids[local_word_count].push_back(on_disk_id);
+            if (i >= min_char_for_match) {
+              result_word_ids[local_word_length].push_back(on_disk_id);
+            }
+            // only bigger words to come. mark
+            if (wildcard_match_mark.first != 0) {
+              wildcard_match_mark.first = on_disk_count;
+              wildcard_match_mark.second = on_disk_id;
+            }
+            continue;
           }
+
           ++local_word_count;
+          if (wildcard_match_mark.first != 0) {
+            // if we had a wildcard that reached his exact match or passed it we
+            // will need to go back there for potential upcoming searches.
+            on_disk_count = wildcard_match_mark.first;
+            on_disk_id = wildcard_match_mark.second;
+          }
+          wildcard_match_mark = std::make_pair(0, 0);
+
           if (local_word_count ==
               search_words.size()) { // if not more words to compare quit.
             break;
@@ -230,13 +274,8 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
           break;
         }
 
-        // If its the last on disk char and at the end and not the same
-        // length. means we need to skip this word.
+        // on disk word length reached, local word is bigger, skipping.
         if (i == word_seperator - 1) {
-          if (!search_words[local_word_count].second &&
-              i >= min_char_for_match) {
-            result_word_ids[local_word_count].push_back(on_disk_id);
-          }
           on_disk_count +=
               word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
           ++on_disk_id;
@@ -247,10 +286,15 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
       // If disk char > local char
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] >
           (int)(search_words[local_word_count].first[i])) {
-        if (!search_words[local_word_count].second && i >= min_char_for_match) {
-          result_word_ids[local_word_count].push_back(on_disk_id);
-        }
+
         ++local_word_count;
+        if (wildcard_match_mark.first != 0) {
+          // if we had a wildcard that reached his exact match or passed it we
+          // will need to go back there for potential upcoming searches.
+          on_disk_count = wildcard_match_mark.first;
+          on_disk_id = wildcard_match_mark.second;
+        }
+        wildcard_match_mark = std::make_pair(0, 0);
         if (local_word_count ==
             search_words.size()) { // if not more words to compare quit.
           break;
@@ -275,9 +319,7 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
       // If disk char < local char
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] <
           (int)(search_words[local_word_count].first[i])) {
-        if (!search_words[local_word_count].second && i >= min_char_for_match) {
-          result_word_ids[local_word_count].push_back(on_disk_id);
-        }
+
         on_disk_count += word_seperator + 1; // then the next seperator
         ++on_disk_id;
         break;
