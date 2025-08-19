@@ -89,7 +89,8 @@ void Search::query_search(const std::string &query) {
   std::vector<search_path_ids_count_return> word_search_results =
       Index::search_word_list(search_words, config_min_char_for_match);
 
-  std::vector<std::unordered_set<PATH_ID_TYPE>> query_sub_result_table;
+  std::vector<std::unordered_map<PATH_ID_TYPE, uint32_t>>
+      query_sub_result_table;
 
   std::vector<std::pair<uint8_t, uint32_t>> query_processing_table;
   // first is the type:
@@ -121,7 +122,7 @@ void Search::query_search(const std::string &query) {
         }
       }
 
-      std::unordered_set<PATH_ID_TYPE> temp_comparision;
+      std::unordered_map<PATH_ID_TYPE, uint32_t> temp_comparision;
       uint32_t sub_query_counter = 0;
       int current_operator = 0;
       for (int j = opening_sub_query; j < query_processing_table.size(); j++) {
@@ -145,8 +146,10 @@ void Search::query_search(const std::string &query) {
                          .path_id.size();
                  ++k) {
               temp_comparision.insert(
-                  word_search_results[query_processing_table[j].second]
-                      .path_id[k]);
+                  {word_search_results[query_processing_table[j].second]
+                       .path_id[k],
+                   word_search_results[query_processing_table[j].second]
+                       .count[k]});
               // insert all because it's first.
             }
             break;
@@ -163,47 +166,64 @@ void Search::query_search(const std::string &query) {
         }
         if (query_processing_table[j].first == 1) {
           if (current_operator == 0) { // OR
-            temp_comparision.insert(
-                query_sub_result_table[query_processing_table[j].second]
-                    .begin(),
-                query_sub_result_table[query_processing_table[j].second].end());
-          }
-          if (current_operator == 1) { // AND
-            std::unordered_set<PATH_ID_TYPE> intersection;
+            for (auto &element :
+                 query_sub_result_table[query_processing_table[j].second]) {
+              temp_comparision[element.first] += element.second;
+            }
+          } else if (current_operator == 1) { // AND
+            std::unordered_map<PATH_ID_TYPE, uint32_t> intersection;
             for (const auto &element : temp_comparision) {
               if (query_sub_result_table[query_processing_table[j].second]
-                      .count(element)) {
-                intersection.insert(element);
+                      .count(element.first)) {
+                intersection[element.first] +=
+                    element.second +
+                    query_sub_result_table[query_processing_table[j].second]
+                                          [element.first];
               }
             }
             temp_comparision = intersection;
-          }
-          if (current_operator == 2) { // NOT
+          } else if (current_operator == 2) { // NOT
             for (const auto &element :
                  query_sub_result_table[query_processing_table[j].second]) {
-              temp_comparision.erase(element);
+              temp_comparision.erase(element.first);
             }
           }
           current_operator = 0;
         }
         if (query_processing_table[j].first == 2) { // words
-          if (current_operator == 0) {
-            for (const auto &element :
-                 word_search_results[query_processing_table[j].second]
-                     .path_id) {
-              temp_comparision.insert(element);
+          if (current_operator == 0) {              // OR
+            for (int k = 0;
+                 k < word_search_results[query_processing_table[j].second]
+                         .path_id.size();
+                 ++k) {
+              temp_comparision
+                  [word_search_results[query_processing_table[j].second]
+                       .path_id[k]] +=
+                  word_search_results[query_processing_table[j].second]
+                      .count[k];
             }
-          }
-          if (current_operator == 1) {
-            std::unordered_set<PATH_ID_TYPE> intersection;
-            for (const auto &element :
-                 word_search_results[query_processing_table[j].second].path_id)
-              if (temp_comparision.count(element)) {
-                intersection.insert(element);
+          } else if (current_operator == 1) { // AND
+            std::unordered_map<PATH_ID_TYPE, uint32_t> intersection;
+
+            for (int k = 0;
+                 k < word_search_results[query_processing_table[j].second]
+                         .path_id.size();
+                 ++k) {
+              if (temp_comparision.count(
+                      word_search_results[query_processing_table[j].second]
+                          .path_id[k])) {
+                intersection[word_search_results[query_processing_table[j]
+                                                     .second]
+                                 .path_id[k]] =
+                    word_search_results[query_processing_table[j].second]
+                        .count[k] +
+                    temp_comparision
+                        [word_search_results[query_processing_table[j].second]
+                             .path_id[k]];
               }
+            }
             temp_comparision = intersection;
-          }
-          if (current_operator == 2) {
+          } else if (current_operator == 2) { // NOT
             for (const auto &element :
                  word_search_results[query_processing_table[j].second]
                      .path_id) {
@@ -280,19 +300,22 @@ void Search::search() {
   std::vector<std::string> search_words;
   std::string current_word = "";
   current_word.reserve(100);
+
   for (char c : input) {
     Helper::convert_char(c);
     if (c == '!') {
       if (current_word.length() > 1 &&
           current_word.length() < 100) { // allow bigger and smaller words.
-        // stem word
+                                         // stem word
         search_words.push_back(current_word);
       }
       current_word.clear();
     } else {
+
       current_word.push_back(c);
     }
   }
+
   // Add last word
   if (current_word.length() > 1 &&
       current_word.length() < 100) { // allow bigger and smaller words.
