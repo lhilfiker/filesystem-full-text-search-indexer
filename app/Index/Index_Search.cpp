@@ -335,7 +335,8 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] <
           (int)(search_words[local_word_count].first[i])) {
 
-        on_disk_count += word_seperator + 1; // then the next seperator
+        on_disk_count +=
+            word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
         ++on_disk_id;
         break;
       }
