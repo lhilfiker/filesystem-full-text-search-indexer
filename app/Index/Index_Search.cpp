@@ -119,6 +119,15 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
   size_t last_match_on_disk_count = 0;
   size_t last_match_on_disk_id = 0;
 
+  // WILDCARD MATCHING EXPLANATION:
+  // When doing wildcard search, we may need to backtrack to catch
+  // longer words that start with the same prefix. The wildcard_backtrack_point
+  // marks where we found a wildcard match so we can return there later.
+
+  // DUPLICATE WORD HANDLING:
+  // If search_words contains ["cat", "cat"] where one is exact and one is
+  // wildcard, we need to process the same disk position twice with different
+  // match rules.
   std::pair<std::size_t, std::size_t> wildcard_match_mark(
       0, 0); // first is count, second id.
 
