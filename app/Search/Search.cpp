@@ -300,52 +300,30 @@ void Search::search() {
   std::string input = "";
   std::cout << "Search\n\nEnter Search Query(Search by pressing ENTER):\n";
   std::getline(std::cin, input);
+  input = "(" + input + ")"; // add these because query-search expects it.
 
-  // split it into a vector by whitespaces, dots, etc... convert each char
-  std::vector<std::string> search_words;
-  std::string current_word = "";
-  current_word.reserve(100);
-
-  for (char c : input) {
-    Helper::convert_char(c);
-    if (c == '!') {
-      if (current_word.length() > 1 &&
-          current_word.length() < 100) { // allow bigger and smaller words.
-                                         // stem word
-        search_words.push_back(current_word);
-      }
-      current_word.clear();
-    } else {
-
-      current_word.push_back(c);
-    }
+  std::vector<search_path_ids_return> search_result = query_search(input);
+  if (search_result.size() == 0) {
+    std::cout
+        << "\n\nNo search results found or invalid search query.:\n"; // TODO:
+                                                                      // better
+                                                                      // error
+                                                                      // message
   }
 
-  // Add last word
-  if (current_word.length() > 1 &&
-      current_word.length() < 100) { // allow bigger and smaller words.
-    // stem word
-    search_words.push_back(current_word);
-  }
-
-  // get path ids and count of the search query
-  std::vector<search_path_ids_return> path_ids_count = Index::search_word_list(
-      search_words, config_exact_match, config_min_char_for_match);
-
-  // get the paths string from path ids.
   std::unordered_map<PATH_ID_TYPE, std::string> path_string =
-      Index::id_to_path_string(path_ids_count);
+      Index::id_to_path_string(search_result); // get path strings
 
   // sort path id and count to display from most to least
-  std::sort(path_ids_count.begin(), path_ids_count.end(),
+  std::sort(search_result.begin(), search_result.end(),
             [](const search_path_ids_return &a,
                const search_path_ids_return &b) { return a.count > b.count; });
 
   // output the results
   std::cout << "\n\nSearch Results:\n";
-  for (int i = 0; i < path_ids_count.size(); ++i) {
+  for (int i = 0; i < search_result.size(); ++i) {
     std::cout << "\n " << std::to_string(i) << ". "
-              << path_string[path_ids_count[i].path_id] << " with "
-              << std::to_string(path_ids_count[i].count) << " matches.\n";
+              << path_string[search_result[i].path_id] << " with "
+              << std::to_string(search_result[i].count) << " matches.\n";
   }
 }
