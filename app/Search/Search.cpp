@@ -22,14 +22,17 @@ void Search::save_config(bool exact_match, uint8_t min_char_for_match) {
   config_min_char_for_match = min_char_for_match;
 }
 
-void Search::query_search(const std::string &query) {
+std::vector<search_path_ids_return>
+Search::query_search(const std::string &query) {
+
+  std::vector<search_path_ids_return> result;
   // We get a full search string query which we will first run queries on the
   // index on all words and then process it according to the query.
   if (query.length() == 0) {
-    return;
+    return result;
   }
   if (query[0] != '(' || query[query.size() - 1] != ')') {
-    return; // it needs to begin and end with it.
+    return result; // it needs to begin and end with it.
   }
 
   std::vector<std::pair<std::string, bool>> search_words;
@@ -113,7 +116,7 @@ void Search::query_search(const std::string &query) {
       // the earliest '(', then we process all and remove them and just add a 1
       // for query sub result.
       if (query_processing_table.size() == 0)
-        return;
+        return result;
       uint32_t opening_sub_query = 0;
       for (int j = query_processing_table.size() - 1; j >= 0; --j) {
         if (query_processing_table[j].first == 0) {
@@ -284,10 +287,12 @@ void Search::query_search(const std::string &query) {
     }
   }
   // Now we have only one query sub block linked to the processing table. This
-  // is the final result.
-
-  // TODO: get all counts from search results for future ranking,  delete sub
-  // results after copying final one. return result.
+  // is the final result. Convert to return type
+  for (const auto &element :
+       query_sub_result_table[query_processing_table[0].second]) {
+    result.push_back({element.first, element.second});
+  }
+  return result;
 }
 
 void Search::search() {

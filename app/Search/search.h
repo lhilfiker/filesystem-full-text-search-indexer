@@ -2,6 +2,7 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
+#include "../LocalIndex/localindex_types.h"
 #include "../lib/mio.hpp"
 #include <array>
 #include <filesystem>
@@ -19,8 +20,14 @@ private:
 
 public:
   static void save_config(bool exact_match, uint8_t min_char_for_match);
-  static void query_search(const std::string &query);
+  static std::vector<search_path_ids_return>
+  query_search(const std::string &query);
   static void search();
+};
+
+struct search_query_result {
+  std::string path;
+  uint32_t count;
 };
 
 #endif
