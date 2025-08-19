@@ -183,7 +183,7 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
           if (!search_words[local_word_count].second) {
             // wildcard match, exact same.
             if (i >= min_char_for_match) {
-              result_word_ids[local_word_length].push_back(on_disk_id);
+              result_word_ids[local_word_count].push_back(on_disk_id);
             }
             if (wildcard_match_mark.first != 0) {
               wildcard_match_mark.first = on_disk_count;
@@ -191,7 +191,7 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
             }
             continue;
           }
-          result_word_ids[local_word_length].push_back(on_disk_id);
+          result_word_ids[local_word_count].push_back(on_disk_id);
 
           ++local_word_count;
           if (wildcard_match_mark.first != 0) {
@@ -234,7 +234,7 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
           if (!search_words[local_word_count].second) {
             // still a match
             if (i >= min_char_for_match) {
-              result_word_ids[local_word_length].push_back(on_disk_id);
+              result_word_ids[local_word_count].push_back(on_disk_id);
             }
             // only bigger words to come. mark
             if (wildcard_match_mark.first != 0) {
