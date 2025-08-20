@@ -112,6 +112,22 @@ Search::query_search(const std::string &query) {
       continue;
     }
     if (query[i] == ')') {
+
+      if (current_word.size() != 0) {
+        if (current_word == "AND" || current_word == "OR" ||
+            current_word == "NOT") {
+          query_processing_table.emplace_back(
+              3, current_word == "AND" ? 1 : (current_word == "OR" ? 0 : 2));
+        }
+        if (current_word.length() > 3 && current_word.length() < 254) {
+          auto it = std::find(search_words.begin(), search_words.end(),
+                              std::make_pair(current_word, false));
+          if (it != search_words.end()) {
+            query_processing_table.emplace_back(2, it - search_words.begin());
+          }
+          current_word.clear();
+        }
+      }
       // we need to process all entries in the processing table unril we reach
       // the earliest '(', then we process all and remove them and just add a 1
       // for query sub result.
@@ -259,6 +275,7 @@ Search::query_search(const std::string &query) {
             query_processing_table.emplace_back(2, it - search_words.begin());
           }
           current_word.clear();
+          exact_match_query = false;
         }
       } else {
         exact_match_query = true;
