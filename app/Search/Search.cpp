@@ -57,7 +57,7 @@ Search::query_search(const std::string &query) {
     if (Helper::convert_char(c); c == '!') {
       if (current_word.length() > 3 && current_word.length() < 254) {
         if (current_word == "and" || current_word == "or" ||
-            current_word == "nor") {
+            current_word == "not") {
           current_word.clear();
           continue;
         }
