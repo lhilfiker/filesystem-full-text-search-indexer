@@ -52,11 +52,12 @@ Search::query_search(const std::string &query) {
       } else {
         exact_match_query = true;
       }
+      continue;
     }
     if (Helper::convert_char(c); c == '!') {
       if (current_word.length() > 3 && current_word.length() < 254) {
-        if (current_word == "AND" || current_word == "OR" ||
-            current_word == "NOT") {
+        if (current_word == "and" || current_word == "or" ||
+            current_word == "nor") {
           current_word.clear();
           continue;
         }
@@ -114,12 +115,12 @@ Search::query_search(const std::string &query) {
     if (query[i] == ')') {
 
       if (current_word.size() != 0) {
-        if (current_word == "AND" || current_word == "OR" ||
-            current_word == "NOT") {
+        if (current_word == "and" || current_word == "or" ||
+            current_word == "not") {
           query_processing_table.emplace_back(
-              3, current_word == "AND" ? 1 : (current_word == "OR" ? 0 : 2));
-        }
-        if (current_word.length() > 3 && current_word.length() < 254) {
+              3, current_word == "and" ? 1 : (current_word == "or" ? 0 : 2));
+          current_word.clear();
+        } else if (current_word.length() > 3 && current_word.length() < 254) {
           auto it = std::find(search_words.begin(), search_words.end(),
                               std::make_pair(current_word, false));
           if (it != search_words.end()) {
@@ -144,7 +145,8 @@ Search::query_search(const std::string &query) {
       std::unordered_map<PATH_ID_TYPE, uint32_t> temp_comparision;
       uint32_t sub_query_counter = 0;
       int current_operator = 0;
-      for (int j = opening_sub_query; j < query_processing_table.size(); j++) {
+      for (int j = opening_sub_query + 1; j < query_processing_table.size();
+           j++) {
         if (sub_query_counter == 0 ||
             query_processing_table[j] ==
                 std::make_pair<uint8_t, uint32_t>(
@@ -283,12 +285,12 @@ Search::query_search(const std::string &query) {
       }
     }
     if (query[i] == ' ') {
-      if (current_word == "AND" || current_word == "OR" ||
-          current_word == "NOT") {
+      if (current_word == "and" || current_word == "or" ||
+          current_word == "not") {
         query_processing_table.emplace_back(
-            3, current_word == "AND" ? 1 : (current_word == "OR" ? 0 : 2));
-      }
-      if (current_word.length() > 3 && current_word.length() < 254) {
+            3, current_word == "and" ? 1 : (current_word == "or" ? 0 : 2));
+        current_word.clear();
+      } else if (current_word.length() > 3 && current_word.length() < 254) {
         auto it = std::find(search_words.begin(), search_words.end(),
                             std::make_pair(current_word, false));
         if (it != search_words.end()) {
