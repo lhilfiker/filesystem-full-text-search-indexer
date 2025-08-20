@@ -200,41 +200,31 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
               wildcard_match_mark.first = on_disk_count;
               wildcard_match_mark.second = on_disk_id;
             }
-            continue;
-          }
-          result_word_ids[local_word_count].push_back(on_disk_id);
-
-          ++local_word_count;
-          if (wildcard) {
-            // if we had a wildcard that reached his exact match or passed it we
-            // will need to go back there for potential upcoming searches.
-            on_disk_count = wildcard_match_mark.first;
-            on_disk_id = wildcard_match_mark.second;
-          }
-          wildcard_match_mark = std::make_pair(0, 0);
-          wildcard = false;
-
-          if (local_word_count ==
-              search_words.size()) { // if not more words to compare quit.
-            break;
-          }
-
-          if (search_words[local_word_count].first ==
-              search_words[local_word_count - 1].first) {
-            // If the current and next word are the same (e.g one is direct
-            // match, the other not), we will need to move on disk count back.
-            on_disk_count = last_match_on_disk_count;
-            on_disk_id = last_match_on_disk_id;
           } else {
-            last_match_on_disk_count = on_disk_count;
-            last_match_on_disk_id = on_disk_id;
+            result_word_ids[local_word_count].push_back(on_disk_id);
+            ++local_word_count;
+            if (local_word_count ==
+                search_words.size()) { // if not more words to compare quit.
+              break;
+            }
+
+            if (search_words[local_word_count].first ==
+                search_words[local_word_count - 1].first) {
+              // If the current and next word are the same (e.g one is direct
+              // match, the other not), we will need to move on disk count back.
+              on_disk_count = last_match_on_disk_count;
+              on_disk_id = last_match_on_disk_id;
+            } else {
+              last_match_on_disk_count = on_disk_count;
+              last_match_on_disk_id = on_disk_id;
+            }
+            local_word_length = search_words[local_word_count].first.length();
+            local_first_char = search_words[local_word_count].first[0];
           }
 
-          local_word_length = search_words[local_word_count].first.length();
           on_disk_count +=
               word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
           ++on_disk_id;
-          local_first_char = search_words[local_word_count].first[0];
 
           break;
         }
@@ -254,37 +244,29 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
               wildcard_match_mark.first = on_disk_count;
               wildcard_match_mark.second = on_disk_id;
             }
-            continue;
-          }
-
-          ++local_word_count;
-          if (wildcard) {
-            // if we had a wildcard that reached his exact match or passed it we
-            // will need to go back there for potential upcoming searches.
-            on_disk_count = wildcard_match_mark.first;
-            on_disk_id = wildcard_match_mark.second;
-          }
-          wildcard_match_mark = std::make_pair(0, 0);
-          wildcard = false;
-
-          if (local_word_count ==
-              search_words.size()) { // if not more words to compare quit.
-            break;
-          }
-
-          if (search_words[local_word_count].first ==
-              search_words[local_word_count - 1].first) {
-            // If the current and next word are the same (e.g one is direct
-            // match, the other not), we will need to move on disk count back.
-            on_disk_count = last_match_on_disk_count;
-            on_disk_id = last_match_on_disk_id;
+            on_disk_count +=
+                word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
+            ++on_disk_id;
           } else {
-            last_match_on_disk_count = on_disk_count;
-            last_match_on_disk_id = on_disk_id;
+            ++local_word_count;
+            if (local_word_count ==
+                search_words.size()) { // if not more words to compare quit.
+              break;
+            }
+            if (search_words[local_word_count].first ==
+                search_words[local_word_count - 1].first) {
+              // If the current and next word are the same (e.g one is direct
+              // match, the other not), we will need to move on disk count back.
+              on_disk_count = last_match_on_disk_count;
+              on_disk_id = last_match_on_disk_id;
+            } else {
+              last_match_on_disk_count = on_disk_count;
+              last_match_on_disk_id = on_disk_id;
+            }
+            local_word_length = search_words[local_word_count].first.length();
+            local_first_char = search_words[local_word_count].first[0];
           }
 
-          local_word_length = search_words[local_word_count].first.length();
-          local_first_char = search_words[local_word_count].first[0];
           break;
         }
 
@@ -307,9 +289,10 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
           // will need to go back there for potential upcoming searches.
           on_disk_count = wildcard_match_mark.first;
           on_disk_id = wildcard_match_mark.second;
+          wildcard_match_mark = std::make_pair(0, 0);
+          wildcard = false;
         }
-        wildcard_match_mark = std::make_pair(0, 0);
-        wildcard = false;
+
         if (local_word_count ==
             search_words.size()) { // if not more words to compare quit.
           break;
