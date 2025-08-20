@@ -74,8 +74,8 @@ Search::query_search(const std::string &query) {
     }
   }
   if (current_word.length() > 3 && current_word.length() < 254) {
-    if (current_word == "AND" || current_word == "OR" ||
-        current_word == "NOT") {
+    if (current_word == "and" || current_word == "or" ||
+        current_word == "not") {
     } else if (config_exact_match) {
       search_words.emplace_back(current_word, true);
     } else {
