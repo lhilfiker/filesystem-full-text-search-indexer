@@ -55,12 +55,12 @@ Search::query_search(const std::string &query) {
       continue;
     }
     if (Helper::convert_char(c); c == '!') {
+      if (current_word == "and" || current_word == "or" ||
+          current_word == "not") {
+        current_word.clear();
+        continue;
+      }
       if (current_word.length() > 3 && current_word.length() < 254) {
-        if (current_word == "and" || current_word == "or" ||
-            current_word == "not") {
-          current_word.clear();
-          continue;
-        }
         if (config_exact_match) {
           search_words.emplace_back(current_word, true);
 
