@@ -5,10 +5,10 @@
 
  The project is currently still in development and not really usable. The most features are already there. For the first 'alpha' release the following items need to be completed first:
 
- - config file #48 , PR: #107
- - Updated Files (detect changed files for only partial indexing) #99
+ - config file [#48](https://github.com/lhilfiker/filesystem-full-text-search-indexer/issues/48) , PR: [#107](https://github.com/lhilfiker/filesystem-full-text-search-indexer/pull/107)
+ - Updated Files (detect changed files for only partial indexing) [#99](https://github.com/lhilfiker/filesystem-full-text-search-indexer/issues/99)
  - cli: initial functionality (sub-stories will follow after a design is available.)
- - Build System #103
+ - Build System [#103](https://github.com/lhilfiker/filesystem-full-text-search-indexer/issues/103)
  - Better Readme with introduction, feature list, installation instruction, build instruction, etc..
  
  Those are also tracked in the Milestone: https://github.com/lhilfiker/filesystem-full-text-search-indexer/milestone/1
