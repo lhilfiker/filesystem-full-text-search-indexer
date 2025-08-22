@@ -145,8 +145,7 @@ Search::query_search(const std::string &query) {
       std::unordered_map<PATH_ID_TYPE, uint32_t> temp_comparision;
       uint32_t sub_query_counter = 0;
       int current_operator = 0;
-      for (int j = opening_sub_query + 1; j < query_processing_table.size();
-           j++) {
+      for (int j = opening_sub_query; j < query_processing_table.size(); j++) {
         if (sub_query_counter == 0 ||
             query_processing_table[j] ==
                 std::make_pair<uint8_t, uint32_t>(
