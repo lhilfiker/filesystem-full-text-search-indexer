@@ -155,7 +155,7 @@ Search::query_search(const std::string &query) {
         }
       }
 
-      std::unordered_map<PATH_ID_TYPE, uint32_t> temp_comparision;
+      std::unordered_map<PATH_ID_TYPE, uint32_t> temp_comparison;
       uint32_t sub_query_counter = 0;
       int current_operator = 0;
       for (int j = opening_sub_query; j < query_processing_table.size(); j++) {
@@ -167,7 +167,7 @@ Search::query_search(const std::string &query) {
           switch (query_processing_table[j].first) {
           case 1:
 
-            temp_comparision.insert(
+            temp_comparison.insert(
                 query_sub_result_table[query_processing_table[j].second]
                     .begin(),
                 query_sub_result_table[query_processing_table[j].second].end());
@@ -178,7 +178,7 @@ Search::query_search(const std::string &query) {
                  k < word_search_results[query_processing_table[j].second]
                          .path_id.size();
                  ++k) {
-              temp_comparision.insert(
+              temp_comparison.insert(
                   {word_search_results[query_processing_table[j].second]
                        .path_id[k],
                    word_search_results[query_processing_table[j].second]
@@ -201,11 +201,11 @@ Search::query_search(const std::string &query) {
           if (current_operator == 0) { // OR
             for (auto &element :
                  query_sub_result_table[query_processing_table[j].second]) {
-              temp_comparision[element.first] += element.second;
+              temp_comparison[element.first] += element.second;
             }
           } else if (current_operator == 1) { // AND
             std::unordered_map<PATH_ID_TYPE, uint32_t> intersection;
-            for (const auto &element : temp_comparision) {
+            for (const auto &element : temp_comparison) {
               if (query_sub_result_table[query_processing_table[j].second]
                       .count(element.first)) {
                 intersection[element.first] +=
@@ -214,11 +214,11 @@ Search::query_search(const std::string &query) {
                                           [element.first];
               }
             }
-            temp_comparision = intersection;
+            temp_comparison = intersection;
           } else if (current_operator == 2) { // NOT
             for (const auto &element :
                  query_sub_result_table[query_processing_table[j].second]) {
-              temp_comparision.erase(element.first);
+              temp_comparison.erase(element.first);
             }
           }
           current_operator = 0;
@@ -229,7 +229,7 @@ Search::query_search(const std::string &query) {
                  k < word_search_results[query_processing_table[j].second]
                          .path_id.size();
                  ++k) {
-              temp_comparision
+              temp_comparison
                   [word_search_results[query_processing_table[j].second]
                        .path_id[k]] +=
                   word_search_results[query_processing_table[j].second]
@@ -242,7 +242,7 @@ Search::query_search(const std::string &query) {
                  k < word_search_results[query_processing_table[j].second]
                          .path_id.size();
                  ++k) {
-              if (temp_comparision.count(
+              if (temp_comparison.count(
                       word_search_results[query_processing_table[j].second]
                           .path_id[k])) {
                 intersection[word_search_results[query_processing_table[j]
@@ -250,17 +250,17 @@ Search::query_search(const std::string &query) {
                                  .path_id[k]] =
                     word_search_results[query_processing_table[j].second]
                         .count[k] +
-                    temp_comparision
+                    temp_comparison
                         [word_search_results[query_processing_table[j].second]
                              .path_id[k]];
               }
             }
-            temp_comparision = intersection;
+            temp_comparison = intersection;
           } else if (current_operator == 2) { // NOT
             for (const auto &element :
                  word_search_results[query_processing_table[j].second]
                      .path_id) {
-              temp_comparision.erase(element);
+              temp_comparison.erase(element);
             }
           }
 
@@ -277,7 +277,7 @@ Search::query_search(const std::string &query) {
       query_processing_table.push_back(
           std::make_pair(1, query_sub_result_table.size()));
 
-      query_sub_result_table.push_back(temp_comparision);
+      query_sub_result_table.push_back(temp_comparison);
       continue;
     }
     if (query[i] == '"') {
