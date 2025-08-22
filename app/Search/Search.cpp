@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 // Default values
@@ -33,6 +32,20 @@ Search::query_search(const std::string &query) {
   }
   if (query[0] != '(' || query[query.size() - 1] != ')') {
     return result; // it needs to begin and end with it.
+  }
+  int opened_counter = 0;
+  for (const char &c : query) {
+    if (c == '(')
+      ++opened_counter;
+    if (c == ')')
+      --opened_counter;
+    if (opened_counter < 0) {
+      return result; // if it goes ever to minus, it means a closing ) came
+                     // before an opening one.
+    }
+  }
+  if (opened_counter != 0) {
+    return result;
   }
 
   std::vector<std::pair<std::string, bool>> search_words;
