@@ -17,7 +17,11 @@ std::map<std::string, std::string> Config::internal_config{
 
 void Config::read_config(std::filesystem::path config_file_path) {}
 
-void Config::update_value(std::pair<std::string, std::string>) {}
+void Config::update_value(std::pair<std::string, std::string> overwrite) {
+  if (internal_config.count(overwrite.first) != 0) {
+    internal_config[overwrite.first] = overwrite.second;
+  }
+}
 
 bool Config::validate() {}
 
