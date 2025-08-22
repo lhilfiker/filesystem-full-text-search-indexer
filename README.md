@@ -16,3 +16,4 @@ A multithreaded file indexer for word searches with a self-developed index struc
  After the v.0.1 release the following tasks are available, mainly focusing on improving maintainability, refactoring, testing and adding some new features and performance and configurations improvements to support even larger datasets(TBs+ in size): 
  https://github.com/lhilfiker/filesystem-full-text-search-indexer/milestone/2
 
+Metadata per file, integrations are also planned and tracked in their respective issues.
