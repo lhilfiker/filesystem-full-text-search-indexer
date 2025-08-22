@@ -21,7 +21,7 @@
 ### **Wildcard (Default)**
 - Matches any word containing the search term
 - Example: `(app)` matches "apple", "application", "app"
-- For words to be found, they need to be atleast 4 letters(by default) long. This can be configured globaly via the config_min_char_for_match option.
+- For words to be found, they need to be at least 4 letters (by default) long. This can be configured globally via the config_min_char_for_match option.
 
 ### **Exact Match**
 - Use double quotes: `"apple"` matches only "apple"
