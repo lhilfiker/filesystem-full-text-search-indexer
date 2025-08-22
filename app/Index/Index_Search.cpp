@@ -1,10 +1,12 @@
 #include "../Logging/logging.h"
 #include "index.h"
 #include <array>
+#include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
@@ -73,11 +75,16 @@ std::vector<PATH_ID_TYPE> Index::path_ids_from_word_id(uint64_t word_id) {
 // ap and it encounters apple. If false it would count that as a match.
 // min_char_for_match will also count words if the first x chars are the same,
 // only if exact_match is false.
-std::vector<search_path_ids_return>
-Index::search_word_list(std::vector<std::string> &search_words,
-                        bool exact_match, int min_char_for_match) {
-  std::vector<uint64_t> result_word_ids;
-  std::vector<search_path_ids_return> results;
+std::vector<search_path_ids_count_return>
+Index::search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
+                        int min_char_for_match) {
+  std::vector<std::vector<uint64_t>> result_word_ids(
+      search_words
+          .size()); // because of exact match some words may have multiple
+                    // word ids connected. and to keep it connected to the
+                    // search words for later processing we need to do this.
+  std::vector<search_path_ids_count_return> results(search_words.size());
+
   if (!initialized || !health_status()) {
     Log::write(3, "Index is not initialized or it's not readable(e.g because a "
                   "Transaction Execution is in progress)");
@@ -90,7 +97,9 @@ Index::search_word_list(std::vector<std::string> &search_words,
   if (search_words.size() == 0) {
     return results;
   }
-  // sort first so we can do char for char compare.
+  // sort first so we can do char for char compare. This should be done already
+  // in the search function but we will do it again because this is public and
+  // if not sorted it may freeze.
   std::sort(search_words.begin(), search_words.end());
 
   // copy words_f into memory
@@ -106,9 +115,25 @@ Index::search_word_list(std::vector<std::string> &search_words,
   size_t on_disk_count = 0;
   size_t on_disk_id = 0;
   size_t local_word_count = 0;
-  size_t local_word_length = search_words[0].length();
+  size_t local_word_length = search_words[0].first.length();
+  size_t last_match_on_disk_count = 0;
+  size_t last_match_on_disk_id = 0;
+
+  // WILDCARD MATCHING EXPLANATION:
+  // When doing wildcard search, we may need to backtrack to catch
+  // longer words that start with the same prefix. The wildcard_backtrack_point
+  // marks where we found a wildcard match so we can return there later.
+
+  // DUPLICATE WORD HANDLING:
+  // If search_words contains ["cat", "cat"] where one is exact and one is
+  // wildcard, we need to process the same disk position twice with different
+  // match rules.
+  bool wildcard = false;
+  std::pair<std::size_t, std::size_t> wildcard_match_mark(
+      0, 0); // first is count, second id.
+
   char disk_first_char = 'a';
-  char local_first_char = search_words[0][0];
+  char local_first_char = search_words[0].first[0];
 
   // check each word on disk. if it is different first letter we will skip using
   // words_f. we will compare chars to chars until they differ. we then know if
@@ -158,48 +183,95 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
     for (int i = 0; i < word_seperator; ++i) {
 
+      // the current char on disk and local are the same.
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] ==
-          (int)(search_words[local_word_count][i])) {
-        // If its last char and words are the same length we found it.
+          (int)(search_words[local_word_count].first[i])) {
+
+        // exact same length, exact match.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
-          result_word_ids.push_back(on_disk_id);
-          ++local_word_count;
-          if (local_word_count ==
-              search_words.size()) { // if not more words to compare quit.
-            break;
+
+          if (!search_words[local_word_count].second) {
+            // wildcard match, exact same.
+            if (i >= min_char_for_match) {
+              result_word_ids[local_word_count].push_back(on_disk_id);
+            }
+            if (!wildcard) {
+              wildcard = true;
+              wildcard_match_mark.first = on_disk_count;
+              wildcard_match_mark.second = on_disk_id;
+            }
+          } else {
+            result_word_ids[local_word_count].push_back(on_disk_id);
+            ++local_word_count;
+            if (local_word_count ==
+                search_words.size()) { // if not more words to compare quit.
+              break;
+            }
+
+            if (search_words[local_word_count].first ==
+                search_words[local_word_count - 1].first) {
+              // If the current and next word are the same (e.g one is direct
+              // match, the other not), we will need to move on disk count back.
+              on_disk_count = last_match_on_disk_count;
+              on_disk_id = last_match_on_disk_id;
+            } else {
+              last_match_on_disk_count = on_disk_count;
+              last_match_on_disk_id = on_disk_id;
+            }
+            local_word_length = search_words[local_word_count].first.length();
+            local_first_char = search_words[local_word_count].first[0];
           }
-          local_word_length = search_words[local_word_count].length();
+
           on_disk_count +=
               word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
           ++on_disk_id;
-          local_first_char = search_words[local_word_count][0];
 
           break;
         }
 
+        // local word length reached, on disk is bigger.
         if (i == local_word_length - 1) {
           // IF exact_match is true check if I is bigger or same than
           // min_char_for_match
-          if (!exact_match && i >= min_char_for_match) {
+          if (!search_words[local_word_count].second) {
             // still a match
-            result_word_ids.push_back(on_disk_id);
+            if (i >= min_char_for_match) {
+              result_word_ids[local_word_count].push_back(on_disk_id);
+            }
+            // only bigger words to come. mark
+            if (!wildcard) {
+              wildcard = true;
+              wildcard_match_mark.first = on_disk_count;
+              wildcard_match_mark.second = on_disk_id;
+            }
+            on_disk_count +=
+                word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
+            ++on_disk_id;
+          } else {
+            ++local_word_count;
+            if (local_word_count ==
+                search_words.size()) { // if not more words to compare quit.
+              break;
+            }
+            if (search_words[local_word_count].first ==
+                search_words[local_word_count - 1].first) {
+              // If the current and next word are the same (e.g one is direct
+              // match, the other not), we will need to move on disk count back.
+              on_disk_count = last_match_on_disk_count;
+              on_disk_id = last_match_on_disk_id;
+            } else {
+              last_match_on_disk_count = on_disk_count;
+              last_match_on_disk_id = on_disk_id;
+            }
+            local_word_length = search_words[local_word_count].first.length();
+            local_first_char = search_words[local_word_count].first[0];
           }
-          ++local_word_count;
-          if (local_word_count ==
-              search_words.size()) { // if not more words to compare quit.
-            break;
-          }
-          local_word_length = search_words[local_word_count].length();
-          local_first_char = search_words[local_word_count][0];
+
           break;
         }
 
-        // If its the last on disk char and at the end and not the same
-        // length. means we need to skip this word.
+        // on disk word length reached, local word is bigger, skipping.
         if (i == word_seperator - 1) {
-          if (!exact_match && i >= min_char_for_match) {
-            result_word_ids.push_back(on_disk_id);
-          }
           on_disk_count +=
               word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
           ++on_disk_id;
@@ -209,27 +281,45 @@ Index::search_word_list(std::vector<std::string> &search_words,
 
       // If disk char > local char
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] >
-          (int)(search_words[local_word_count][i])) {
-        if (!exact_match && i >= min_char_for_match) {
-          result_word_ids.push_back(on_disk_id);
-        }
+          (int)(search_words[local_word_count].first[i])) {
+
         ++local_word_count;
+        if (wildcard) {
+          // if we had a wildcard that reached his exact match or passed it we
+          // will need to go back there for potential upcoming searches.
+          on_disk_count = wildcard_match_mark.first;
+          on_disk_id = wildcard_match_mark.second;
+          wildcard_match_mark = std::make_pair(0, 0);
+          wildcard = false;
+        }
+
         if (local_word_count ==
             search_words.size()) { // if not more words to compare quit.
           break;
         }
-        local_word_length = search_words[local_word_count].length();
-        local_first_char = search_words[local_word_count][0];
+
+        if (search_words[local_word_count].first ==
+            search_words[local_word_count - 1].first) {
+          // If the current and next word are the same (e.g one is direct
+          // match, the other not), we will need to move on disk count back.
+          on_disk_count = last_match_on_disk_count;
+          on_disk_id = last_match_on_disk_id;
+        } else {
+          last_match_on_disk_count = on_disk_count;
+          last_match_on_disk_id = on_disk_id;
+        }
+
+        local_word_length = search_words[local_word_count].first.length();
+        local_first_char = search_words[local_word_count].first[0];
         break;
       }
 
       // If disk char < local char
       if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] <
-          (int)(search_words[local_word_count][i])) {
-        if (!exact_match && i >= min_char_for_match) {
-          result_word_ids.push_back(on_disk_id);
-        }
-        on_disk_count += word_seperator + 1; // then the next seperator
+          (int)(search_words[local_word_count].first[i])) {
+
+        on_disk_count +=
+            word_seperator + WORD_SEPARATOR_SIZE; // then the next seperator
         ++on_disk_id;
         break;
       }
@@ -243,26 +333,26 @@ Index::search_word_list(std::vector<std::string> &search_words,
   // Now we need to read all reversed and additionals and put it into a list of
   // path_id count.
   // we will later combine them but it's easier like this.
-  std::vector<PATH_ID_TYPE> path_ids;
-  std::vector<uint32_t> counts;
+
   if (result_word_ids.size() == 0)
     return results;
   for (size_t i = 0; i < result_word_ids.size(); ++i) {
-    for (const int &path_id : path_ids_from_word_id(result_word_ids[i])) {
-      // potential future performance improvments
-      if (auto it = std::find(path_ids.begin(), path_ids.end(), path_id);
-          it == path_ids.end()) {
-        path_ids.push_back(path_id);
-        counts.push_back(1);
-      } else {
-        ++counts[it - path_ids.begin()]; // increase count of the element
+    if (result_word_ids[i].size() == 0)
+      continue;
+    for (int j = 0; j < result_word_ids[i].size(); ++j) {
+      for (const int &path_id : path_ids_from_word_id(result_word_ids[i][j])) {
+        // potential future performance improvments
+        if (auto it = std::find(results[i].path_id.begin(),
+                                results[i].path_id.end(), path_id);
+            it == results[i].path_id.end()) {
+          results[i].path_id.push_back(path_id);
+          results[i].count.push_back(1);
+        } else {
+          ++results[i].count[it - results[i].path_id.begin()]; // increase count
+                                                               // of the element
+        }
       }
     }
-  }
-  // convert into struct and return.
-  results.reserve(path_ids.size());
-  for (size_t i = 0; i < path_ids.size(); ++i) {
-    results.push_back({path_ids[i], counts[i]});
   }
   return results;
 }
