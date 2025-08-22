@@ -1,5 +1,9 @@
 #include "config.h"
+#include "../Index/index.h"
+#include "../Indexer/indexer.h"
 #include "../Logging/logging.h"
+#include "../Search/search.h"
+
 #include <filesystem>
 #include <map>
 #include <string>
@@ -34,7 +38,25 @@ bool Config::validate() {
   return true;
 }
 
-void Config::set() {}
+void Config::set() {
+  try {
+
+    Index::save_config(internal_config["index_path"],
+                       std::stoi(internal_config["lock_aquisition_timeout"]));
+    indexer::save_config(
+        internal_config["config_scan_dot_paths"] == "True" ? true : false,
+        internal_config["config_path_to_scan"],
+        std::stoi(internal_config["config_threads_to_use"]),
+        std::stoi(internal_config["config_local_index_memory"]));
+    Log::save_config(std::stoi(internal_config["config_min_log_level"]));
+    Search::save_config(
+        internal_config["config_exact_match"] == "true" ? true : false,
+        std::stoi(internal_config["config_min_char_for_match"]));
+  } catch (...) {
+    Log::error("error when saving config in internal state. Please make sure "
+               "all your values are correct.");
+  }
+}
 
 void Config::load(std::vector<std::pair<std::string, std::string>> overwrites,
                   std::filesystem::path config_file_path) {
