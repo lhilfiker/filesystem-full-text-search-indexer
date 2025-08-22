@@ -24,7 +24,15 @@ void Config::update_value(std::pair<std::string, std::string> overwrite) {
   }
 }
 
-bool Config::validate() { return true; }
+bool Config::validate() {
+  if (internal_config["index_path"] == "") {
+    return false;
+  }
+  if (internal_config["config_path_to_scan"] == "") {
+    return false;
+  }
+  return true;
+}
 
 void Config::set() {}
 
