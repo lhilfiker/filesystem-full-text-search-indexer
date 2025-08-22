@@ -16,10 +16,10 @@
 class Config {
 private:
   static std::map<std::string, std::string> internal_config;
-  void read_config(std::filesystem::path config_file_path);
-  void update_value(std::pair<std::string, std::string> overwrite);
-  bool validate();
-  void set();
+  static void read_config(std::filesystem::path config_file_path);
+  static void update_value(std::pair<std::string, std::string> overwrite);
+  static bool validate();
+  static void set();
 
 public:
   static void load(std::vector<std::pair<std::string, std::string>> overwrites,
