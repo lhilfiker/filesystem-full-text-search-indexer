@@ -1,0 +1,29 @@
+#include "config.h"
+#include <filesystem>
+#include <map>
+#include <string>
+#include <vector>
+
+std::map<std::string, std::string> Config::internal_config{
+    {"index_path", ""},
+    {"lock_aquisition_timeout", "30"},
+    {"config_scan_dot_paths", "false"},
+    {"config_path_to_scan", ""},
+    {"threads_to_use", "1"},
+    {"config_local_index_memory", "50000"},
+    {"config_min_log_level", "3"},
+    {"config_exact_match", "false"},
+    {"config_min_char_for_match", "4"}};
+
+void Config::read_config(std::filesystem::path config_file_path) {}
+
+void Config::update_value(std::pair<std::string, std::string>) {}
+
+bool Config::validate() {}
+
+void Config::set() {}
+
+void Config::load(std::vector<std::pair<std::string, std::string>> overwrites,
+                  std::filesystem::path config_file_path) {
+  // overwrites is a key<->value list.
+}
