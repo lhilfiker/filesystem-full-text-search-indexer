@@ -1,0 +1,29 @@
+// config.h
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include "../lib/mio.hpp"
+#include <array>
+#include <filesystem>
+#include <future>
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+// Config/Config.cpp
+class Config {
+private:
+  static std::map<std::string, std::string> internal_config;
+  static void read_config(std::filesystem::path config_file_path);
+  static void update_value(std::pair<std::string, std::string> overwrite);
+  static bool validate();
+  static void set();
+
+public:
+  static void load(std::vector<std::pair<std::string, std::string>> overwrites,
+                   std::filesystem::path config_file_path);
+};
+
+#endif
