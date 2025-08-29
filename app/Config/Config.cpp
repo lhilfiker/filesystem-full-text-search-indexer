@@ -16,7 +16,7 @@ std::map<std::string, std::string> Config::internal_config{
     {"lock_aquisition_timeout", "30"},
     {"config_scan_dot_paths", "false"},
     {"config_path_to_scan", ""},
-    {"threads_to_use", "1"},
+    {"config_threads_to_use", "1"},
     {"config_local_index_memory", "50000"},
     {"config_min_log_level", "3"},
     {"config_exact_match", "false"},
