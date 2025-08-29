@@ -40,4 +40,18 @@ void CliParser::parse(int argc, char *argv[]) {
     }
     ++i;
   }
+  while (i < argc) {
+    if (search_query.size() != 0) {
+      search_query += " ";
+    }
+    search_query += argv[i];
+    ++i;
+  }
 }
+
+std::vector<std::pair<std::string, std::string>>
+CliParser::get_config_values() {
+  return config;
+}
+std::vector<std::string> CliParser::get_options() { return options; }
+std::string CliParser::get_search_query() { return search_query; }

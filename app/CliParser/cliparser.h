@@ -23,6 +23,9 @@ public:
   CliParser();
 
   void parse(int argc, char *argv[]);
+  std::vector<std::pair<std::string, std::string>> get_config_values();
+  std::vector<std::string> get_options();
+  std::string get_search_query();
 };
 
 #endif
