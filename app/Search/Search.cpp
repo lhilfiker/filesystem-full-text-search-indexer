@@ -326,11 +326,17 @@ Search::query_search(const std::string &query) {
   return result;
 }
 
-void Search::search() {
+void Search::search(const std::string &query) {
   // Ask the user to input text.
   std::string input = "";
-  std::cout << "Search\n\nEnter Search Query(Search by pressing ENTER):\n";
-  std::getline(std::cin, input);
+
+  if (query.size() == 0) {
+    std::cout << "Search\n\nEnter Search Query(Search by pressing ENTER):\n";
+    std::getline(std::cin, input);
+  } else {
+    input = query
+  }
+
   input = "(" + input + ")"; // add these because query-search expects it.
 
   std::vector<search_path_ids_return> search_result = query_search(input);
