@@ -13,7 +13,7 @@
 
 std::map<std::string, std::string> Config::internal_config{
     {"index_path", ""},
-    {"lock_aquisition_timeout", "30"},
+    {"lock_acquisition_timeout", "30"},
     {"config_scan_dot_paths", "false"},
     {"config_path_to_scan", ""},
     {"config_threads_to_use", "1"},
@@ -63,9 +63,9 @@ void Config::set() {
   try {
 
     Index::save_config(internal_config["index_path"],
-                       std::stoi(internal_config["lock_aquisition_timeout"]));
+                       std::stoi(internal_config["lock_acquisition_timeout"]));
     indexer::save_config(
-        internal_config["config_scan_dot_paths"] == "True" ? true : false,
+        internal_config["config_scan_dot_paths"] == "true" ? true : false,
         internal_config["config_path_to_scan"],
         std::stoi(internal_config["config_threads_to_use"]),
         std::stoi(internal_config["config_local_index_memory"]));
