@@ -1,13 +1,4 @@
 #include "cliparser.h"
-#include "../Index/index.h"
-#include "../Indexer/indexer.h"
-#include "../Logging/logging.h"
-#include "../Search/search.h"
-#include <fstream>
-#include <sstream>
-
-#include <filesystem>
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
