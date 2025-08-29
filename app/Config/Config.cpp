@@ -3,6 +3,8 @@
 #include "../Indexer/indexer.h"
 #include "../Logging/logging.h"
 #include "../Search/search.h"
+#include <fstream>
+#include <sstream>
 
 #include <filesystem>
 #include <map>
@@ -20,11 +22,30 @@ std::map<std::string, std::string> Config::internal_config{
     {"config_exact_match", "false"},
     {"config_min_char_for_match", "4"}};
 
-void Config::read_config(std::filesystem::path config_file_path) {}
-
 void Config::update_value(std::pair<std::string, std::string> overwrite) {
   if (internal_config.count(overwrite.first) != 0) {
     internal_config[overwrite.first] = overwrite.second;
+  }
+}
+
+void Config::read_config(std::filesystem::path config_file_path) {
+
+  std::ifstream file(config_file_path);
+  if (!file.is_open()) {
+    // return when config does not exist because you can also set config via
+    // CLI.
+    return;
+  }
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream is_line(line);
+    std::string key;
+    if (std::getline(is_line, key, '=')) {
+      std::string value;
+      if (std::getline(is_line, value))
+        update_value(std::make_pair(key, value));
+    }
   }
 }
 
