@@ -47,6 +47,11 @@ void Index::set_last_updated_time(std::filesystem::file_time_type new_time) {
         "Will continue because this is non critcal, but it will mean the last "
         "updated staus could not be updated and you will need to index again.");
   }
+  if (!std::filesystem::exists(
+          CONFIG_INDEX_PATH /
+          "lastupdated_mtime.info")) { // create if not existing.
+    std::ofstream{CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info"};
+  }
 
   std::filesystem::last_write_time(CONFIG_INDEX_PATH / "lastupdated_mtime.info",
                                    new_time);
