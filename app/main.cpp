@@ -45,8 +45,9 @@ int main(int argc, char *argv[]) {
       if (options[i] == "s" || options[i] == "search") {
         // interactive search
         options_used = true;
-
-        Search::search();
+        while (true) { // TODO: add option to exit without exiting program.
+          Search::search("");
+        }
       }
       if (options[i] == "h" || options[i] == "help") {
         // help
@@ -59,6 +60,8 @@ int main(int argc, char *argv[]) {
   // TODO: search query
   if (search_query.empty() && !options_used) {
     output_help(); // if not query got sent or no valid option.
+  } else {
+    Search::search(search_query);
   }
 
   return 0;
