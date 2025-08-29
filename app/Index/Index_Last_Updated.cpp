@@ -3,6 +3,7 @@
 #include "index_types.h"
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 bool Index::last_updated_once() {
@@ -30,8 +31,7 @@ std::filesystem::file_time_type Index::last_updated_time(bool temp) {
   }
 }
 
-void Index::set_last_updated_time(std::filesystem::file_time_type new_time,
-                                  bool temp) {
+void Index::set_last_updated_time(std::filesystem::file_time_type new_time) {
   if (!Index::lock(false)) {
     Log::write(
         3,
@@ -39,11 +39,23 @@ void Index::set_last_updated_time(std::filesystem::file_time_type new_time,
         "Will continue because this is non critcal, but it will mean the last "
         "updated staus could not be updated and you will need to index again.");
   }
-  if (temp) {
-    std::filesystem::last_write_time(
-        CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info", new_time);
-  } else {
-    std::filesystem::last_write_time(
-        CONFIG_INDEX_PATH / "lastupdated_mtime.info", new_time);
+
+  std::filesystem::last_write_time(CONFIG_INDEX_PATH / "lastupdated_mtime.info",
+                                   new_time);
+}
+
+void Index::mark_current_time_temp() {
+  if (!Index::lock(false)) {
+    Log::write(
+        3,
+        "Index: mark_current_time_temp failed because could not lock index. "
+        "Will continue because this is non critcal, but it will mean the last "
+        "updated staus could not be updated and you will need to index again.");
   }
+  // remove if existing
+  if (!std::filesystem::exists(CONFIG_INDEX_PATH /
+                               "lastupdated_mtime_TEMP.info")) {
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
+  }
+  std::ofstream{CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info"};
 }

@@ -108,8 +108,8 @@ public:
   static bool health_status();
   static bool last_updated_once();
   static std::filesystem::file_time_type last_updated_time(bool temp);
-  static void set_last_updated_time(std::filesystem::file_time_type new_time,
-                                    bool temp);
+  static void set_last_updated_time(std::filesystem::file_time_type new_time);
+  static void mark_current_time_temp();
 };
 
 #endif
