@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   auto options = cli.get_options();
   auto search_query = cli.get_search_query();
   std::string config_file = getenv("HOME");
-  config_file += "/.config/filesystem-full-text-search-index";
+  config_file += "/.config/filesystem-full-text-search-indexer";
 
   // see if config file location is set.
   for (const auto &pair : config) {
@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
         options_used = true;
         output_help();
       }
+      ++i;
     }
   }
 

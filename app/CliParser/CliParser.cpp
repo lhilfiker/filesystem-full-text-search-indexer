@@ -22,7 +22,7 @@ void CliParser::parse(int argc, char *argv[]) {
       if (full_arg.find('=') != std::string::npos) {
         config.push_back(std::make_pair(
             full_arg.substr(0, full_arg.length() - full_arg.find('=')),
-            full_arg.substr(full_arg.find('='))));
+            full_arg.substr(full_arg.find('=') + 1)));
       } else {
         options.push_back(full_arg);
       }
