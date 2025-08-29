@@ -49,7 +49,7 @@ Required paths - Both index_path and config_path_to_scan must be set (either in 
 | Key      | Allowed Values      | Default Value      | Part      | Required      |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
 | index_path | full path | none | Index | Yes |
-| lock_aquisition_timeout | number in seconds | 30 | Index | No |
+| lock_acquisition_timeout | number in seconds | 30 | Index | No |
 | config_scan_dot_paths | true/false | false | Indexer | No |
 | config_path_to_scan | full path | none | Indexer | Yes |
 | config_threads_to_use | number of threads to use | 1 | Indexer | No |
