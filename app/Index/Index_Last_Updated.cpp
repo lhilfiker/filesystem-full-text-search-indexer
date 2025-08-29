@@ -56,6 +56,7 @@ void Index::set_last_updated_time(std::filesystem::file_time_type new_time) {
 
   std::filesystem::last_write_time(CONFIG_INDEX_PATH / "lastupdated_mtime.info",
                                    new_time);
+  Index::unlock(false);
 }
 
 void Index::mark_current_time_temp() {
@@ -73,4 +74,5 @@ void Index::mark_current_time_temp() {
     std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
   }
   std::ofstream{CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info"};
+  Index::unlock(false);
 }
