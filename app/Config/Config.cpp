@@ -16,6 +16,7 @@ std::map<std::string, std::string> Config::internal_config{
     {"lock_acquisition_timeout", "30"},
     {"config_scan_dot_paths", "false"},
     {"config_path_to_scan", ""},
+    {"config_updated_files_only", "true"},
     {"config_threads_to_use", "1"},
     {"config_local_index_memory", "50000"},
     {"config_min_log_level", "3"},
@@ -68,7 +69,8 @@ void Config::set() {
         internal_config["config_scan_dot_paths"] == "true" ? true : false,
         internal_config["config_path_to_scan"],
         std::stoi(internal_config["config_threads_to_use"]),
-        std::stoi(internal_config["config_local_index_memory"]));
+        std::stoi(internal_config["config_local_index_memory"]),
+        internal_config["config_updated_files_only"] == "true" ? true : false);
     Log::save_config(std::stoi(internal_config["config_min_log_level"]));
     Search::save_config(
         internal_config["config_exact_match"] == "true" ? true : false,

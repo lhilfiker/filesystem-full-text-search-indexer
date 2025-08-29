@@ -11,6 +11,7 @@
 
 bool indexer::config_loaded = false;
 bool indexer::scan_dot_paths = false;
+bool indexer::updated_files_only = true;
 std::filesystem::path indexer::path_to_scan;
 int indexer::threads_to_use = 1;
 size_t indexer::local_index_memory = 50000;
@@ -18,7 +19,8 @@ size_t indexer::local_index_memory = 50000;
 void indexer::save_config(const bool config_scan_dot_paths,
                           const std::filesystem::path &config_path_to_scan,
                           const int config_threads_to_use,
-                          const size_t &config_local_index_memory) {
+                          const size_t &config_local_index_memory,
+                          const bool config_updated_files_only) {
   std::error_code ec;
   if (config_threads_to_use < 1) {
     threads_to_use = 1;
@@ -35,6 +37,7 @@ void indexer::save_config(const bool config_scan_dot_paths,
   }
   scan_dot_paths = config_scan_dot_paths;
   path_to_scan = config_path_to_scan;
+  updated_files_only = config_updated_files_only;
   Log::write(1, "indexer: save_config: saved config successfully.");
   config_loaded = true;
   return;
