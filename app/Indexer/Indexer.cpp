@@ -1,5 +1,6 @@
 #include "indexer.h"
 #include "../Helper/helper.h"
+#include "../Index/index.h"
 #include "../Logging/logging.h"
 #include <chrono>
 #include <filesystem>
@@ -181,6 +182,16 @@ int indexer::start_from() {
   bool needs_a_queue = true;
   std::vector<threads_jobs> async_awaits;
   async_awaits.reserve(threads_to_use);
+  std::filesystem::file_time_type last_updated_time;
+  bool full_scan = true;
+
+  if (updated_files_only) {
+    Index::mark_current_time_temp();
+    if (Index::last_updated_once()) {
+      last_updated_time = Index::last_updated_time(false);
+      full_scan = false;
+    } // if it does not exist, do a full scan.
+  }
 
   for (const auto &dir_entry : std::filesystem::recursive_directory_iterator(
            path_to_scan,
@@ -188,6 +199,13 @@ int indexer::start_from() {
     if (extension_allowed(dir_entry.path()) &&
         !std::filesystem::is_directory(dir_entry, ec) &&
         dir_entry.path().string().find("/.") == std::string::npos) {
+      if (!full_scan) {
+        if (std::filesystem::last_write_time(dir_entry) < last_updated_time) {
+          Log::write(1,
+                     "indexer: skipping file, was not updated since last scan");
+          continue;
+        }
+      }
       size_t filesize = std::filesystem::file_size(dir_entry.path(), ec);
       if (ec)
         continue;
@@ -404,5 +422,9 @@ int indexer::start_from() {
                     std::to_string(too_big_files.size()));
   Log::write(2, "writing to disk");
   index.add_to_disk();
+  if (updated_files_only) {
+    Index::set_last_updated_time(Index::last_updated_time(
+        true)); // set the last updated time to the time we marked before.
+  }
   return 0;
 }
