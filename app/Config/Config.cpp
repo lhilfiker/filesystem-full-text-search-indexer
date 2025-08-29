@@ -98,4 +98,5 @@ void Config::load(std::vector<std::pair<std::string, std::string>> overwrites,
 
   // finally send the new values to the other classes.
   set();
+  Log::write(1, "Config: Loaded config and is valid.");
 }
