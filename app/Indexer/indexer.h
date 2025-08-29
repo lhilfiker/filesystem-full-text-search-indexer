@@ -18,6 +18,7 @@ class indexer {
 private:
   static bool config_loaded;
   static bool scan_dot_paths;
+  static bool updated_files_only;
   static std::filesystem::path path_to_scan;
   static int threads_to_use;
   static size_t local_index_memory;
@@ -41,7 +42,8 @@ public:
   static void save_config(const bool config_scan_dot_paths,
                           const std::filesystem::path &config_path_to_scan,
                           const int config_threads_to_use,
-                          const size_t &config_local_index_memory);
+                          const size_t &config_local_index_memory,
+                          const bool config_updated_files_only);
   static int start_from();
 };
 
