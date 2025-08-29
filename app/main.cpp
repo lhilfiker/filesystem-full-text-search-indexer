@@ -4,9 +4,9 @@
 #include "Indexer/indexer.h"
 #include "Logging/logging.h"
 #include "Search/search.h"
-#include "iostream"
 #include <algorithm>
 #include <filesystem>
+#include <iostream>
 #include <string>
 
 void output_help() { std::cout << ""; }
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   auto options = cli.get_options();
   auto search_query = cli.get_search_query();
   std::string config_file = getenv("HOME");
-  config_file += ".config/filesystem-full-text-search-index";
+  config_file += "/.config/filesystem-full-text-search-index";
 
   // see if config file location is set.
   for (const auto &pair : config) {
