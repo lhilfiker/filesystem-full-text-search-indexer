@@ -1,45 +1,34 @@
+#include "CliParser/cliparser.h"
+#include "Config/config.h"
 #include "Index/index.h"
 #include "Indexer/indexer.h"
 #include "Logging/logging.h"
 #include "Search/search.h"
+#include <algorithm>
 #include <filesystem>
 #include <string>
 
-int test() {
-  Log::write(2, "main: starting application. loading config...");
-  Log::save_config(1);
-  Index::save_config(
-      "/home/lukas/.local/share/filesystem-full-text-search-indexer/");
-  Log::write(2, "config loaded.");
-  Log::write(2, "attempting to initialize index.");
-  if (Index::initialize() == 1) {
-    Log::write(4, "error when initializing index");
-    return 1;
-  }
-  Log::write(2, "initialized successfully");
-  Log::write(2, "uninitializing now.");
-  if (Index::uninitialize() == 1) {
-    Log::write(4, "uninitialize failed.");
-    return 1;
-  }
-  indexer::save_config(false, "/home/lukas/Dokumente/incoming", 4, 1500000000);
-  indexer::start_from();
+int main(int argc, char *argv[]) {
+  // parse args
+  CliParser cli;
+  cli.parse(argc, argv);
 
-  Search::search();
+  auto config = cli.get_config_values();
+  auto options = cli.get_options();
+  auto search_query = cli.get_search_query();
+  std::string config_file = getenv("HOME");
+  config_file += "./config/filesystem-full-text-search-index";
 
-  Log::write(2, "done, uninitializing...");
-  if (Index::uninitialize() == 1) {
-    Log::write(4, "uninitialize failed.");
-    return 1;
+  // see if config file location is set.
+  for (const auto &pair : config) {
+    if (pair.first == "config_file") {
+      config_file = pair.second;
+      break;
+    }
   }
-  return 0;
-}
 
-int main() {
-  if (test() == 1) {
-    Log::write(4, "main: test function returned error, exiting");
-    return 1;
-  }
-  Log::write(1, "done all");
+  Config::load(config, config_file);
+  Index::initialize();
+
   return 0;
 }
