@@ -187,7 +187,7 @@ int indexer::start_from() {
 
   if (updated_files_only) {
     Index::mark_current_time_temp();
-    if (Index::last_updated_once()) {
+    if (Index::last_updated_once(false)) {
       last_updated_time = Index::last_updated_time(false);
       full_scan = false;
     } // if it does not exist, do a full scan.

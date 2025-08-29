@@ -6,18 +6,26 @@
 #include <fstream>
 #include <string>
 
-bool Index::last_updated_once() {
+bool Index::last_updated_once(bool temp) {
   if (!is_config_loaded)
     return false;
-
-  if (std::filesystem::exists(CONFIG_INDEX_PATH / "lastupdated_mtime.info")) {
-    return true;
+  if (!temp) {
+    if (std::filesystem::exists(CONFIG_INDEX_PATH / "lastupdated_mtime.info")) {
+      return true;
+    } else {
+      return false;
+    }
   } else {
-    return false;
+    if (std::filesystem::exists(CONFIG_INDEX_PATH /
+                                "lastupdated_mtime_TEMP.info")) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 std::filesystem::file_time_type Index::last_updated_time(bool temp) {
-  if (!last_updated_once() || is_config_loaded)
+  if (!last_updated_once(temp))
     Log::error("Invalid use of Index::last_updated_time. last_updated_once "
                "returns false. Should be checked first.");
 
