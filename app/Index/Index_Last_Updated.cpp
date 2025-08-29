@@ -44,8 +44,9 @@ void Index::set_last_updated_time(std::filesystem::file_time_type new_time) {
     Log::write(
         3,
         "Index: set_last_updated_time failed because could not lock index. "
-        "Will continue because this is non critcal, but it will mean the last "
-        "updated staus could not be updated and you will need to index again.");
+        "Will continue because this is non critical, but it will mean the last "
+        "updated status could not be updated and you will need to index "
+        "again.");
   }
   if (!std::filesystem::exists(
           CONFIG_INDEX_PATH /
@@ -62,12 +63,13 @@ void Index::mark_current_time_temp() {
     Log::write(
         3,
         "Index: mark_current_time_temp failed because could not lock index. "
-        "Will continue because this is non critcal, but it will mean the last "
-        "updated staus could not be updated and you will need to index again.");
+        "Will continue because this is non critical, but it will mean the last "
+        "updated status could not be updated and you will need to index "
+        "again.");
   }
   // remove if existing
-  if (!std::filesystem::exists(CONFIG_INDEX_PATH /
-                               "lastupdated_mtime_TEMP.info")) {
+  if (std::filesystem::exists(CONFIG_INDEX_PATH /
+                              "lastupdated_mtime_TEMP.info")) {
     std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
   }
   std::ofstream{CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info"};
