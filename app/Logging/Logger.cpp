@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-int Log::min_log_level = 1;
+int Log::min_log_level = 3;
 
 void Log::save_config(const int config_min_log_level) {
   // min_log_level
