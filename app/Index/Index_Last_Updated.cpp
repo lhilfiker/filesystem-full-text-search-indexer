@@ -50,7 +50,7 @@ void Index::set_last_updated_time(std::filesystem::file_time_type new_time) {
   if (!std::filesystem::exists(
           CONFIG_INDEX_PATH /
           "lastupdated_mtime.info")) { // create if not existing.
-    std::ofstream{CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info"};
+    std::ofstream{CONFIG_INDEX_PATH / "lastupdated_mtime.info"};
   }
 
   std::filesystem::last_write_time(CONFIG_INDEX_PATH / "lastupdated_mtime.info",
