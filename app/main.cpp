@@ -30,5 +30,21 @@ int main(int argc, char *argv[]) {
   Config::load(config, config_file);
   Index::initialize();
 
+  if (!options.empty()) {
+    int i = 0;
+    while (options.size() > i) {
+      if (options[i] == "i" || options[i] == "index") {
+        // index
+        indexer::start_from();
+      }
+      if (options[i] == "s" || options[i] == "search") {
+        // interactive search
+        Search::search();
+      }
+    }
+  }
+
+  // TODO: search query
+
   return 0;
 }
