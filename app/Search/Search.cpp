@@ -334,7 +334,7 @@ void Search::search(const std::string &query) {
     std::cout << "Search\n\nEnter Search Query(Search by pressing ENTER):\n";
     std::getline(std::cin, input);
   } else {
-    input = query
+    input = query;
   }
 
   input = "(" + input + ")"; // add these because query-search expects it.
