@@ -106,6 +106,8 @@ public:
   static bool lock(bool initialize);
   static bool unlock(bool initialize);
   static bool health_status();
+  static bool last_updated_once();
+  static std::filesystem::file_time_type last_updated_time();
 };
 
 #endif
