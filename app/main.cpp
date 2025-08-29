@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO: search query
-  if (search_query.empty() && !options_used) {
+  if (search_query.empty() || !options_used) {
     output_help(); // if not query got sent or no valid option.
   } else {
     Search::search(search_query);
