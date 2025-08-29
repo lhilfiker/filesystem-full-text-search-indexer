@@ -4,9 +4,12 @@
 #include "Indexer/indexer.h"
 #include "Logging/logging.h"
 #include "Search/search.h"
+#include "iostream"
 #include <algorithm>
 #include <filesystem>
 #include <string>
+
+void output_help() { std::cout << ""; }
 
 int main(int argc, char *argv[]) {
   // parse args
@@ -30,21 +33,33 @@ int main(int argc, char *argv[]) {
   Config::load(config, config_file);
   Index::initialize();
 
+  bool options_used = false;
   if (!options.empty()) {
     int i = 0;
     while (options.size() > i) {
       if (options[i] == "i" || options[i] == "index") {
         // index
+        options_used = true;
         indexer::start_from();
       }
       if (options[i] == "s" || options[i] == "search") {
         // interactive search
+        options_used = true;
+
         Search::search();
+      }
+      if (options[i] == "h" || options[i] == "help") {
+        // help
+        options_used = true;
+        output_help();
       }
     }
   }
 
   // TODO: search query
+  if (search_query.empty() && !options_used) {
+    output_help(); // if not query got sent or no valid option.
+  }
 
   return 0;
 }
