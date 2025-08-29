@@ -45,8 +45,15 @@ int main(int argc, char *argv[]) {
       if (options[i] == "s" || options[i] == "search") {
         // interactive search
         options_used = true;
-        while (true) { // TODO: add option to exit without exiting program.
-          Search::search("");
+        while (true) {
+          std::string input = "";
+          std::cout << "Search\n\nEnter Search Query(Search by pressing "
+                       "ENTER), exit by sending 'q' or 'quit':\n";
+          std::getline(std::cin, input);
+          if (input == "q" || input == "quit" || input == "exit") {
+            break;
+          }
+          Search::search(input);
         }
       }
       if (options[i] == "h" || options[i] == "help") {
