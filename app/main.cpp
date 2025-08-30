@@ -18,8 +18,8 @@ void output_help() {
   std::cout << "  -i, --index                     Index files in the "
                "configured directory\n";
   std::cout
-      << "  -s, --search                    Start interactive search mode\n";
-               "of whether they have been updated or not.\n";
+      << "  -s, --search                    Start interactive search mode\n"
+         "of whether they have been updated or not.\n";
   std::cout << "  -c, --current                   Change config path to scan "
                "to current path for this session\n";
   std::cout << "  -h, --help                      Show this help message\n";
