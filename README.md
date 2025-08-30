@@ -81,7 +81,7 @@ make -j$(nproc)
 ./filesystem-indexer -s --index_path=/path/to/index
 
 # Direct search
-./filesystem-indexer --index_path=/path/to/index "search query"
+./filesystem-indexer --index_path=/path/to/index "search-query"
 ```
 
 ### Configuration
