@@ -14,6 +14,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG -Wall -march=x86-64")
 endif()
 
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Install prefix" FORCE)
+endif()
+
 find_package(Threads REQUIRED)
 
 set(SOURCES
@@ -120,6 +124,7 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "C++ standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug features: AddressSanitizer, UBSan enabled")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -128,13 +133,22 @@ endif()
 
 install(TARGETS filesystem-indexer
     RUNTIME DESTINATION bin
-)
-
-install(DIRECTORY docs/
-    DESTINATION share/doc/filesystem-full-text-search-indexer
-    FILES_MATCHING PATTERN "*.md"
+    COMPONENT Runtime
 )
 
 install(FILES README.md
     DESTINATION share/doc/filesystem-full-text-search-indexer
+    COMPONENT Documentation
+)
+
+install(DIRECTORY docs/
+    DESTINATION share/doc/filesystem-full-text-search-indexer/docs
+    FILES_MATCHING PATTERN "*.md"
+    COMPONENT Documentation
+)
+
+install(FILES config.txt.example
+    DESTINATION share/doc/filesystem-full-text-search-indexer
+    COMPONENT Documentation
+    OPTIONAL
 )
