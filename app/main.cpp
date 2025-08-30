@@ -19,7 +19,7 @@ void output_help() {
   std::cout
       << "  -s, --search                    Start interactive search mode\n";
   std::cout << "  -h, --help                      Show this help message\n";
-  std::cout << "Config Options:\n";
+  std::cout << "\nConfig Options:\n";
   std::cout << "  --config_file=/full/path        Overwrites config file path "
                "from default\n";
   std::cout << "  --config_key=value              Overwrites config option\n";
