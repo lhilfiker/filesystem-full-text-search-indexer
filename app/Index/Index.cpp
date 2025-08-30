@@ -254,7 +254,7 @@ int Index::initialize() {
 
   if (!std::filesystem::is_directory(CONFIG_INDEX_PATH)) {
 
-    Log::write(1, "Index: check_files: creating index directory.");
+    Log::write(1, "Index: initialize: creating index directory.");
     std::filesystem::create_directories(CONFIG_INDEX_PATH, ec);
     if (ec) {
       Log::error("Index: Initialize: Could not create index path. Permission "
