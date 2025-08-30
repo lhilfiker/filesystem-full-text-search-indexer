@@ -4,7 +4,7 @@ A high-performance, multithreaded file indexer with custom binary storage format
 
 ## Project Status
 
-**Alpha Release** - The project is currently in alpha state but already works quite well for most use cases. While still in active development, the core functionality is stable and ready for testing and feedback.
+**Alpha Release** - The project is currently in alpha state and works quite well for most use cases, but will likely have bugs and edge cases that have not been encountered yet during development. While the core functionality is stable and ready for testing and feedback, it is not recommended for use with critical data. The focus has been on getting version v0.1.0 alpha released, so there is no real testing infrastructure in place and code readability along with other code quality aspects are not that good. This is however planned to be substantially improved in v0.2.0.
 
 ## Features
 
