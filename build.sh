@@ -47,4 +47,7 @@ echo
 echo "Done!"
 echo
 echo "Quick start:"
-echo "  ./build/filesystem-indexer --help"
+echo "  1. Create config directory: mkdir -p ~/.config/filesystem-full-text-search-indexer/"
+echo "  2. Copy example config: cp /usr/local/share/doc/filesystem-full-text-search-indexer/config.txt.example ~/.config/filesystem-full-text-search-indexer/config.txt"
+echo "  3. Edit the config file with your paths"
+echo "  4. Run: filesystem-indexer --help   to get started."
