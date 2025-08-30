@@ -95,7 +95,9 @@ int main(int argc, char *argv[]) {
   if (search_query == "" && !options_used) {
     output_help(); // if not query got sent or no valid option.
   } else {
-    Search::search(search_query);
+    if (search_query != "") {
+      Search::search(search_query);
+    }
   }
 
   Index::uninitialize();
