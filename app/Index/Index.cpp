@@ -199,6 +199,8 @@ void Index::check_files() {
     std::filesystem::remove(CONFIG_INDEX_PATH / "firsttimewrite.info");
     std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
                             "transaction.list");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime.info");
   }
 
   if (!std::filesystem::exists(CONFIG_INDEX_PATH / "paths.index") ||
@@ -233,6 +235,8 @@ void Index::check_files() {
     // Remove Transacition file if exist
     std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
                             "transaction.list");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime.info");
   }
   if (ec) {
     Log::error("Index: check_files: error accessing/creating index files in " +
@@ -246,8 +250,19 @@ int Index::initialize() {
     Log::write(4, "Index: initialize: config not loaded. can not continue.");
     return 1;
   }
-  is_mapped = false;
   std::error_code ec;
+
+  if (!std::filesystem::is_directory(CONFIG_INDEX_PATH)) {
+
+    Log::write(1, "Index: initialize: creating index directory.");
+    std::filesystem::create_directories(CONFIG_INDEX_PATH, ec);
+    if (ec) {
+      Log::error("Index: Initialize: Could not create index path. Permission "
+                 "Error? Can not continue like that.");
+    }
+  }
+
+  is_mapped = false;
   readonly_initialized = true;
   unlock(true); // to remove potential leftover lock.
   if (lock_status(true) == 1) {
