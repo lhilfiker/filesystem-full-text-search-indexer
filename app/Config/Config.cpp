@@ -85,7 +85,9 @@ void Config::load(std::vector<std::pair<std::string, std::string>> overwrites,
                   std::filesystem::path config_file_path) {
   // overwrites is a key<->value list.
 
-  read_config(config_file_path);
+  if (config_file_path != "") {
+    read_config(config_file_path);
+  }
 
   // overwrite with cli options
   for (auto &element : overwrites) {
