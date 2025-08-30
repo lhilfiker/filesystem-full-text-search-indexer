@@ -37,13 +37,15 @@ A high-performance, multithreaded file indexer with custom binary storage format
 ### Option 1: Release Downloads
 Download the latest release from the [GitHub releases page](https://github.com/lhilfiker/filesystem-full-text-search-indexer/releases) and extract the binary to your preferred location.
 
+Download the [example config file](https://github.com/lhilfiker/filesystem-full-text-search-indexer/blob/main/config.txt.example), save it to `~/.config/filesystem-full-text-search-indexer/config.txt`, and edit your paths.
+
 ### Option 2: Build from Source (Recommended)
 
 #### Quick Build
 ```bash
 ./build.sh
 ```
-The build script will check dependencies and build the project automatically.
+The build script will check dependencies and build the project automatically and will ask you to install it.
 
 #### Manual Build
 ```bash
@@ -51,6 +53,17 @@ mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$(nproc)
+sudo make install
+```
+
+#### Configuration Quick Start
+```bash
+# Create config directory and copy example
+mkdir -p ~/.config/filesystem-full-text-search-indexer/
+cp /usr/local/share/doc/filesystem-full-text-search-indexer/config.txt.example ~/.config/filesystem-full-text-search-indexer/config.txt
+
+# Edit with your paths
+nano ~/.config/filesystem-full-text-search-indexer/config.txt
 ```
 
 #### Debug Build

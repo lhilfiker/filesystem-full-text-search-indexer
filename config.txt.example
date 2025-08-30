@@ -1,0 +1,33 @@
+# Example configuration file for filesystem-full-text-search-indexer
+# Copy this to ~/.config/filesystem-full-text-search-indexer/config.txt
+# and modify the paths below
+
+# Required: Where to store the search index
+index_path=/home/user/.local/share/filesystem-full-text-search-indexer/
+
+# Required: Directory to scan and index
+config_path_to_scan=/home/user/Documents
+
+# Optional settings (uncomment and modify as needed):
+
+# Scan hidden directories (default: false)
+#config_scan_dot_paths=false
+
+# Only index files modified since last scan (default: true)
+#config_updated_files_only=true
+
+# Number of threads to use for indexing (default: 1)
+#config_threads_to_use=4
+
+# Memory limit for indexing in bytes (default: 50000)
+#config_local_index_memory=100000
+
+# Minimum log level: 1=debug, 2=info, 3=warn, 4=critical (default: 3)
+#config_min_log_level=3
+
+# Search settings
+#config_exact_match=false
+#config_min_char_for_match=4
+
+# Lock acquisition timeout in seconds (default: 30)
+#lock_acquisition_timeout=30
