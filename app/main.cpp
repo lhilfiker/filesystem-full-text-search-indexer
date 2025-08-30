@@ -80,6 +80,10 @@ int main(int argc, char *argv[]) {
           options[i] == "current-dir") {
         // overwrite config which path to scan with current path.
         Config::load(
+            std::vector<std::pair<std::string, std::string>>(
+                {std::make_pair("config_updated_files_only", "false")}),
+            "");
+        Config::load(
             std::vector<std::pair<std::string, std::string>>({std::make_pair(
                 "config_path_to_scan", std::filesystem::current_path())}),
             "");
