@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
         // interactive search
         options_used = true;
         while (true) {
-          std::string input = "";
+          std::string input;
           std::cout << "Search\n\nEnter Search Query(Search by pressing "
                        "ENTER), exit by sending 'q' or 'quit':\n";
           std::getline(std::cin, input);
