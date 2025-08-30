@@ -19,8 +19,7 @@ void output_help() {
                "configured directory\n";
   std::cout
       << "  -s, --search                    Start interactive search mode\n";
-  std::cout << "  -a, --all                       Index all files, regardless "
-               "if they got updated or not.\n";
+               "of whether they have been updated or not.\n";
   std::cout << "  -c, --current                   Change config path to scan "
                "to current path for this session\n";
   std::cout << "  -h, --help                      Show this help message\n";
