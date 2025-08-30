@@ -133,22 +133,18 @@ endif()
 
 install(TARGETS filesystem-indexer
     RUNTIME DESTINATION bin
-    COMPONENT Runtime
 )
 
 install(FILES README.md
     DESTINATION share/doc/filesystem-full-text-search-indexer
-    COMPONENT Documentation
 )
 
 install(DIRECTORY docs/
     DESTINATION share/doc/filesystem-full-text-search-indexer/docs
     FILES_MATCHING PATTERN "*.md"
-    COMPONENT Documentation
 )
 
 install(FILES config.txt.example
     DESTINATION share/doc/filesystem-full-text-search-indexer
-    COMPONENT Documentation
     OPTIONAL
 )
