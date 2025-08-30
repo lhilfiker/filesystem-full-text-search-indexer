@@ -199,6 +199,8 @@ void Index::check_files() {
     std::filesystem::remove(CONFIG_INDEX_PATH / "firsttimewrite.info");
     std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
                             "transaction.list");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime.info");
   }
 
   if (!std::filesystem::exists(CONFIG_INDEX_PATH / "paths.index") ||
@@ -233,6 +235,8 @@ void Index::check_files() {
     // Remove Transacition file if exist
     std::filesystem::remove(CONFIG_INDEX_PATH / "transaction" /
                             "transaction.list");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime_TEMP.info");
+    std::filesystem::remove(CONFIG_INDEX_PATH / "lastupdated_mtime.info");
   }
   if (ec) {
     Log::error("Index: check_files: error accessing/creating index files in " +
