@@ -41,6 +41,13 @@ int main(int argc, char *argv[]) {
   auto options = cli.get_options();
   auto search_query = cli.get_search_query();
 
+  if (std::find(options.begin(), options.end(), "help") != options.end() ||
+      std::find(options.begin(), options.end(), "h") != options.end()) {
+    // show help and exit.
+    output_help();
+    return 0;
+  }
+
   const char *home_env = getenv("HOME");
   std::string config_file = "";
   if (home_env != nullptr) {
@@ -81,11 +88,6 @@ int main(int argc, char *argv[]) {
           }
           Search::search(input);
         }
-      }
-      if (options[i] == "h" || options[i] == "help") {
-        // help
-        options_used = true;
-        output_help();
       }
       ++i;
     }
