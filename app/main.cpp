@@ -1,45 +1,104 @@
+#include "CliParser/cliparser.h"
+#include "Config/config.h"
 #include "Index/index.h"
 #include "Indexer/indexer.h"
 #include "Logging/logging.h"
 #include "Search/search.h"
+#include <algorithm>
 #include <filesystem>
+#include <iostream>
 #include <string>
 
-int test() {
-  Log::write(2, "main: starting application. loading config...");
-  Log::save_config(1);
-  Index::save_config(
-      "/home/lukas/.local/share/filesystem-full-text-search-indexer/");
-  Log::write(2, "config loaded.");
-  Log::write(2, "attempting to initialize index.");
-  if (Index::initialize() == 1) {
-    Log::write(4, "error when initializing index");
-    return 1;
-  }
-  Log::write(2, "initialized successfully");
-  Log::write(2, "uninitializing now.");
-  if (Index::uninitialize() == 1) {
-    Log::write(4, "uninitialize failed.");
-    return 1;
-  }
-  indexer::save_config(false, "/home/lukas/Dokumente/incoming", 4, 1500000000);
-  indexer::start_from();
-
-  Search::search();
-
-  Log::write(2, "done, uninitializing...");
-  if (Index::uninitialize() == 1) {
-    Log::write(4, "uninitialize failed.");
-    return 1;
-  }
-  return 0;
+void output_help() {
+  std::cout << "Filesystem Full Text Search Index\n";
+  std::cout << "Usage:\n";
+  std::cout << "  app [OPTIONS] [SEARCH_QUERY]\n";
+  std::cout << "\nOptions:\n";
+  std::cout << "  -i, --index                     Index files in the "
+               "configured directory\n";
+  std::cout
+      << "  -s, --search                    Start interactive search mode\n";
+  std::cout << "  -h, --help                      Show this help message\n";
+  std::cout << "\nConfig Options:\n";
+  std::cout << "  --config_file=/full/path        Overwrites config file path "
+               "from default\n";
+  std::cout << "  --config_key=value              Overwrites config option\n";
+  std::cout << "\nArguments:\n";
+  std::cout << "  SEARCH_QUERY                    Search for the given query\n";
+  std::cout << "\nExamples:\n";
+  std::cout << "  app -i                          # Index files\n";
+  std::cout << "  app -s                          # Start interactive search\n";
+  std::cout << "  app myquery                     # Search for 'myquery'\n";
+  std::cout << std::endl;
 }
 
-int main() {
-  if (test() == 1) {
-    Log::write(4, "main: test function returned error, exiting");
-    return 1;
+int main(int argc, char *argv[]) {
+  // parse args
+  CliParser cli;
+  cli.parse(argc, argv);
+
+  auto config = cli.get_config_values();
+  auto options = cli.get_options();
+  auto search_query = cli.get_search_query();
+
+  const char *home_env = getenv("HOME");
+  std::string config_file = "";
+  if (home_env != nullptr) {
+    config_file = std::string(home_env) +
+                  "/.config/filesystem-full-text-search-indexer/config.txt";
   }
-  Log::write(1, "done all");
+
+  // see if config file location is set.
+  for (const auto &pair : config) {
+    if (pair.first == "config_file") {
+      config_file = pair.second;
+      break;
+    }
+  }
+
+  Config::load(config, config_file);
+  Index::initialize();
+
+  bool options_used = false;
+  if (!options.empty()) {
+    int i = 0;
+    while (options.size() > i) {
+      if (options[i] == "i" || options[i] == "index") {
+        // index
+        options_used = true;
+        indexer::start_from();
+      }
+      if (options[i] == "s" || options[i] == "search") {
+        // interactive search
+        options_used = true;
+        while (true) {
+          std::string input;
+          std::cout << "Search\n\nEnter Search Query(Search by pressing "
+                       "ENTER), exit by sending 'q' or 'quit':\n";
+          std::getline(std::cin, input);
+          if (input == "q" || input == "quit" || input == "exit") {
+            break;
+          }
+          Search::search(input);
+        }
+      }
+      if (options[i] == "h" || options[i] == "help") {
+        // help
+        options_used = true;
+        output_help();
+      }
+      ++i;
+    }
+  }
+
+  // TODO: search query
+  if (search_query == "" && !options_used) {
+    output_help(); // if not query got sent or no valid option.
+  } else {
+    Search::search(search_query);
+  }
+
+  Index::uninitialize();
+
   return 0;
 }

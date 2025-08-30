@@ -22,7 +22,7 @@ public:
   static void save_config(bool exact_match, uint8_t min_char_for_match);
   static std::vector<search_path_ids_return>
   query_search(const std::string &query);
-  static void search();
+  static void search(const std::string &query);
 };
 
 struct search_query_result {
