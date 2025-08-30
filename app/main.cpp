@@ -14,15 +14,21 @@ void output_help() {
   std::cout << "Usage:\n";
   std::cout << "  app [OPTIONS] [SEARCH_QUERY]\n";
   std::cout << "\nOptions:\n";
-  std::cout << "  -i, --index        Index files in the configured directory\n";
-  std::cout << "  -s, --search       Start interactive search mode\n";
-  std::cout << "  -h, --help         Show this help message\n";
+  std::cout << "  -i, --index                     Index files in the "
+               "configured directory\n";
+  std::cout
+      << "  -s, --search                    Start interactive search mode\n";
+  std::cout << "  -h, --help                      Show this help message\n";
+  std::cout << "Config Options:\n";
+  std::cout << "  --config_file=/full/path        Overwrites config file path "
+               "from default\n";
+  std::cout << "  --config_key=value              Overwrites config option\n";
   std::cout << "\nArguments:\n";
-  std::cout << "  SEARCH_QUERY       Search for the given query\n";
+  std::cout << "  SEARCH_QUERY                    Search for the given query\n";
   std::cout << "\nExamples:\n";
-  std::cout << "  app -i             # Index files\n";
-  std::cout << "  app -s             # Start interactive search\n";
-  std::cout << "  app myquery        # Search for 'myquery'\n";
+  std::cout << "  app -i                          # Index files\n";
+  std::cout << "  app -s                          # Start interactive search\n";
+  std::cout << "  app myquery                     # Search for 'myquery'\n";
   std::cout << std::endl;
 }
 
@@ -81,7 +87,7 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO: search query
-  if (search_query.empty() || !options_used) {
+  if (search_query == "" && !options_used) {
     output_help(); // if not query got sent or no valid option.
   } else {
     Search::search(search_query);
