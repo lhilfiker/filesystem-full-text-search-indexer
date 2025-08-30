@@ -11,7 +11,7 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -Wpedantic")
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto -DNDEBUG -Wall -march=native")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG -Wall -march=x86-64")
 endif()
 
 find_package(Threads REQUIRED)
