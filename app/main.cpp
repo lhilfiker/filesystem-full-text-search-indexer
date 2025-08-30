@@ -17,9 +17,10 @@ void output_help() {
   std::cout << "\nOptions:\n";
   std::cout << "  -i, --index                     Index files in the "
                "configured directory\n";
-  std::cout
-      << "  -s, --search                    Start interactive search mode\n"
-         "of whether they have been updated or not.\n";
+  std::cout << "  -s, --search                          Start interactive "
+               "search mode\n";
+  std::cout << "  -a, --all                       Index all files, regardless "
+               "of whether they have been updated or not.\n";
   std::cout << "  -c, --current                   Change config path to scan "
                "to current path for this session\n";
   std::cout << "  -h, --help                      Show this help message\n";
@@ -45,7 +46,8 @@ int main(int argc, char *argv[]) {
   auto options = cli.get_options();
   auto search_query = cli.get_search_query();
 
-  if (std::find(options.begin(), options.end(), "help") != options.end() ||
+  if (argc == 1 ||
+      std::find(options.begin(), options.end(), "help") != options.end() ||
       std::find(options.begin(), options.end(), "h") != options.end()) {
     // show help and exit.
     output_help();
