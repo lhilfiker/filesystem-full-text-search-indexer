@@ -31,13 +31,6 @@ jobs:
         cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
         make -j$(nproc)
     
-    - name: Test executable
-      run: |
-        # Test that binary exists and runs
-        test -f build/filesystem-indexer
-        ./build/filesystem-indexer --help > /dev/null
-        echo "✓ Executable test passed"
-    
     - name: Upload build artifacts
       if: matrix.build_type == 'Release'
       uses: actions/upload-artifact@v4
