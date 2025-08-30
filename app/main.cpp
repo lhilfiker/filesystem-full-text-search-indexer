@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <utility>
 
 void output_help() {
   std::cout << "Filesystem Full Text Search Index\n";
@@ -18,6 +19,9 @@ void output_help() {
                "configured directory\n";
   std::cout
       << "  -s, --search                    Start interactive search mode\n";
+               "of whether they have been updated or not.\n";
+  std::cout << "  -c, --current                   Change config path to scan "
+               "to current path for this session\n";
   std::cout << "  -h, --help                      Show this help message\n";
   std::cout << "\nConfig Options:\n";
   std::cout << "  --config_file=/full/path        Overwrites config file path "
@@ -59,6 +63,35 @@ int main(int argc, char *argv[]) {
   Config::load(config, config_file);
   Index::initialize();
 
+  // options config overwrite loop
+  if (!options.empty()) {
+    int i = 0;
+    while (options.size() > i) {
+      if (options[i] == "a" || options[i] == "all") {
+        // overwrite config to make it search all files, regardless of updated
+        // status
+        Config::load(
+            std::vector<std::pair<std::string, std::string>>(
+                {std::make_pair("config_updated_files_only", "false")}),
+            "");
+      }
+      if (options[i] == "c" || options[i] == "current" ||
+          options[i] == "current-dir") {
+        // overwrite config which path to scan with current path.
+        Config::load(
+            std::vector<std::pair<std::string, std::string>>(
+                {std::make_pair("config_updated_files_only", "false")}),
+            "");
+        Config::load(
+            std::vector<std::pair<std::string, std::string>>({std::make_pair(
+                "config_path_to_scan", std::filesystem::current_path())}),
+            "");
+      }
+      ++i;
+    }
+  }
+
+  // options action loop
   bool options_used = false;
   if (!options.empty()) {
     int i = 0;
