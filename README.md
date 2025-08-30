@@ -147,7 +147,7 @@ Development roadmap and issues are tracked in the [project milestones](https://g
 - **CPU**: 64-bit processor (32-bit may work but untested)
 - **Memory**: Configurable, depends on dataset size and settings
 - **Storage**: Sufficient space for index files (typically 15% of indexed content size)
-- **OS**: only Linux currently
+- **OS**: Only Linux currently
 
 ## Contributing
 
