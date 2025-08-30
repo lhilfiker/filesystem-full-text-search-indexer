@@ -19,6 +19,10 @@ void output_help() {
                "configured directory\n";
   std::cout
       << "  -s, --search                    Start interactive search mode\n";
+  std::cout << "  -a, --all                       Index all files, regardless "
+               "if they got updated or not.\n";
+  std::cout << "  -c, --current                   Change config path to scan "
+               "to current path for this session\n";
   std::cout << "  -h, --help                      Show this help message\n";
   std::cout << "\nConfig Options:\n";
   std::cout << "  --config_file=/full/path        Overwrites config file path "
