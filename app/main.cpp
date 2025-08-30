@@ -40,8 +40,13 @@ int main(int argc, char *argv[]) {
   auto config = cli.get_config_values();
   auto options = cli.get_options();
   auto search_query = cli.get_search_query();
-  std::string config_file = getenv("HOME");
-  config_file += "/.config/filesystem-full-text-search-indexer/config.txt";
+
+  const char *home_env = getenv("HOME");
+  std::string config_file = "";
+  if (home_env != nullptr) {
+    config_file = std::string(home_env) +
+                  "/.config/filesystem-full-text-search-indexer/config.txt";
+  }
 
   // see if config file location is set.
   for (const auto &pair : config) {
