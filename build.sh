@@ -38,5 +38,13 @@ make -j$(nproc 2>/dev/null || echo 2)
 echo
 echo "Build complete!"
 echo
+echo "Do you want to install the program in /usr/local/bin? (y/N)"
+read -r response
+if [[ "$response" =~ ^[Yy]$ ]]; then
+    sudo make install
+fi
+echo
+echo "Done!"
+echo
 echo "Quick start:"
 echo "  ./build/filesystem-indexer --help"
