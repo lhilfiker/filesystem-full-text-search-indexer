@@ -315,6 +315,21 @@ Search::query_search(const std::string &query) {
     char c = query[i];
     if (Helper::convert_char(c); c != '!') {
       current_word += c;
+    } else {
+      if (current_word == "and" || current_word == "or" ||
+          current_word == "not") {
+        query_processing_table.emplace_back(
+            3, current_word == "and" ? 1 : (current_word == "or" ? 0 : 2));
+        current_word.clear();
+      } else if (current_word.length() > 3 && current_word.length() < 254) {
+        auto it = std::find(search_words.begin(), search_words.end(),
+                            std::make_pair(current_word, false));
+        if (it != search_words.end()) {
+          query_processing_table.emplace_back(2, it - search_words.begin());
+        }
+        current_word.clear();
+      }
+      continue;
     }
   }
   // Now we have only one query sub block linked to the processing table. This
