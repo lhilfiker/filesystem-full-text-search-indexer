@@ -17,7 +17,7 @@ void output_help() {
   std::cout << "\nOptions:\n";
   std::cout << "  -i, --index                     Index files in the "
                "configured directory\n";
-  std::cout << "  -s, --search                          Start interactive "
+  std::cout << "  -s, --search                    Start interactive "
                "search mode\n";
   std::cout << "  -a, --all                       Index all files, regardless "
                "of whether they have been updated or not.\n";
