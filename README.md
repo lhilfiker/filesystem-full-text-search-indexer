@@ -60,7 +60,7 @@ sudo make install
 ```bash
 # Create config directory and copy example
 mkdir -p ~/.config/filesystem-full-text-search-indexer/
-cp /usr/local/share/doc/filesystem-full-text-search-indexer/config.example ~/.config/filesystem-full-text-search-indexer/config.txt
+cp /usr/local/share/doc/filesystem-full-text-search-indexer/config.txt.example ~/.config/filesystem-full-text-search-indexer/config.txt
 
 # Edit with your paths
 nano ~/.config/filesystem-full-text-search-indexer/config.txt
