@@ -41,6 +41,13 @@ void indexer::save_config(const bool config_scan_dot_paths,
   if (config_local_index_memory > 50000) { // do not allow smaller memory.
     local_index_memory = config_local_index_memory;
   }
+  if (config_min_word_length >= 1 && config_min_word_length <= 230) {
+    min_word_length = config_min_word_length;
+  }
+  if (config_max_word_length >= 1 && config_max_word_length <= 230 &&
+      config_min_word_length < config_max_word_length) {
+    max_word_length = config_max_word_length;
+  }
   scan_dot_paths = config_scan_dot_paths;
   path_to_scan = config_path_to_scan;
   updated_files_only = config_updated_files_only;
