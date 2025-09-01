@@ -15,13 +15,18 @@ bool indexer::scan_dot_paths = false;
 bool indexer::updated_files_only = true;
 std::filesystem::path indexer::path_to_scan;
 int indexer::threads_to_use = 1;
+int indexer::min_word_length = 4;
+int indexer::max_word_length = 230;
+
 size_t indexer::local_index_memory = 50000;
 
 void indexer::save_config(const bool config_scan_dot_paths,
                           const std::filesystem::path &config_path_to_scan,
                           const int config_threads_to_use,
                           const size_t &config_local_index_memory,
-                          const bool config_updated_files_only) {
+                          const bool config_updated_files_only,
+                          const int config_min_word_length,
+                          const int config_max_word_length) {
   std::error_code ec;
   if (config_threads_to_use < 1) {
     threads_to_use = 1;
@@ -72,7 +77,8 @@ indexer::get_words_utf8(const std::filesystem::path &path,
     for (char c : file) {
       Helper::convert_char(c);
       if (c == '!') {
-        if (current_word.length() > 4 && current_word.length() < 15) {
+        if (current_word.length() >= min_word_length &&
+            current_word.length() <= max_word_length) {
           // stem word
           words_return.insert(current_word);
         }
@@ -82,7 +88,8 @@ indexer::get_words_utf8(const std::filesystem::path &path,
       }
     }
   }
-  if (end_file && current_word.length() > 3 && current_word.length() < 20) {
+  if (end_file && current_word.length() >= min_word_length &&
+      current_word.length() <= max_word_length) {
     // stem word only if its until the last, if not it means we are batching
     // because the file is too large and we don't want to add incomplete words.
     words_return.insert(current_word);
@@ -95,7 +102,8 @@ indexer::get_words_utf8(const std::filesystem::path &path,
     for (char c : path.filename().string()) {
       Helper::convert_char(c);
       if (c == '!') {
-        if (current_word.length() > 4 && current_word.length() < 15) {
+        if (current_word.length() >= min_word_length &&
+            current_word.length() <= max_word_length) {
           // stem word
           words_return.insert(current_word);
         }
@@ -104,7 +112,8 @@ indexer::get_words_utf8(const std::filesystem::path &path,
         current_word.push_back(c);
       }
     }
-    if (current_word.length() > 3 && current_word.length() < 20) {
+    if (current_word.length() >= min_word_length &&
+        current_word.length() <= max_word_length) {
       // stem word
       words_return.insert(current_word);
     }

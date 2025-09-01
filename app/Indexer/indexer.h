@@ -21,6 +21,9 @@ private:
   static bool updated_files_only;
   static std::filesystem::path path_to_scan;
   static int threads_to_use;
+  static int min_word_length;
+  static int max_word_length;
+
   static size_t local_index_memory;
 
 private:
@@ -43,7 +46,9 @@ public:
                           const std::filesystem::path &config_path_to_scan,
                           const int config_threads_to_use,
                           const size_t &config_local_index_memory,
-                          const bool config_updated_files_only);
+                          const bool config_updated_files_only,
+                          const int config_min_word_length,
+                          const int config_max_word_length);
   static int start_from();
 };
 
