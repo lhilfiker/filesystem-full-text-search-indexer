@@ -47,6 +47,8 @@ Download the [example config file](https://github.com/lhilfiker/filesystem-full-
 
 #### Quick Build
 ```bash
+git clone https://github.com/lhilfiker/filesystem-full-text-search-indexer
+cd filesystem-full-text-search-indexer
 ./build.sh
 ```
 The build script will check dependencies and build the project automatically and will ask you to install it.
@@ -58,6 +60,16 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$(nproc)
 sudo make install
+```
+### Option 2: Download from the AUR
+Download it directly from the [Arch User Repository](https://aur.archlinux.org/packages/filesystem-indexer) with your AUR-Helper of choice.
+
+```bash
+yay -S filesystem-indexer
+```
+Alternatively with paru
+```bash
+paru -S filesystem-indexer
 ```
 
 #### Configuration Quick Start
