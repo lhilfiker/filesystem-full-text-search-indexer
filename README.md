@@ -58,7 +58,7 @@ make -j$(nproc)
 sudo make install
 ```
 ### Option 2: Download from the AUR
-Download it directly from the Arch User Repository with your AUR-Helper of choice.
+Download it directly from the [Arch User Repository](https://aur.archlinux.org/packages/filesystem-indexer) with your AUR-Helper of choice.
 
 ```bash
 yay -S filesystem-indexer
