@@ -80,6 +80,9 @@ int main(int argc, char* argv[])
   if (!options.empty()) {
     int i = 0;
     while (options.size() > i) {
+      if (options[i] == "v" || options[i] == "verbose") {
+        verbose = true;
+      }
       if (options[i] == "a" || options[i] == "all") {
         // overwrite config to make it search all files, regardless of updated
         // status
@@ -111,9 +114,6 @@ int main(int argc, char* argv[])
   if (!options.empty()) {
     int i = 0;
     while (options.size() > i) {
-      if (options[i] == "v" || options[i] == "verbose") {
-        verbose = true;
-      }
       if (options[i] == "check") {
         // expensive index check
         options_used = true;
