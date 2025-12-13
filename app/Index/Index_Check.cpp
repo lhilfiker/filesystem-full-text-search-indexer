@@ -133,6 +133,7 @@ bool Index::expensive_index_check(const bool verbose_output)
                 &mmap_words_f[i * (8 + WORDS_F_LOCATION_SIZE)],
                 (8 + WORDS_F_LOCATION_SIZE));
   }
+
   if (words_f[0].id != 0 || words_f[0].location != 0) {
     Log::write(4, "Index: Check: Word_f: location and/or id for letter a is not 0 which is invalid.");
     if (verbose_output) {
@@ -141,6 +142,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
     return false;
   }
+
   // compare them
   for (int i = 1; i < 26; ++i) {
     if (words_f_comparison[i].location == words_f[i].location || words_f_comparison[i].id == words_f[i].id) {
