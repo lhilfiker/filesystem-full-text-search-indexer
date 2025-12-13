@@ -41,6 +41,8 @@ set(SOURCES
         app/Index/Index_Merge.cpp
         app/Index/Index_Search.cpp
         app/Index/Index_Transaction.cpp
+        app/Index/Index_Check.cpp
+
 
         # Indexer
         app/Indexer/Indexer.cpp
