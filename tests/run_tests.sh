@@ -1,6 +1,5 @@
 #!/bin/bash
 # Integration test suite for filesystem-full-text-search-indexer
-set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -30,28 +29,44 @@ cleanup() {
 trap cleanup EXIT
 
 log_info() { echo -e "${YELLOW}[INFO]${NC} $1"; }
-log_pass() { echo -e "${GREEN}[PASS]${NC} $1"; ((TESTS_PASSED++)); }
-log_fail() { echo -e "${RED}[FAIL]${NC} $1"; ((TESTS_FAILED++)); }
+log_pass() { echo -e "${GREEN}[PASS]${NC} $1"; TESTS_PASSED=$((TESTS_PASSED + 1)); }
+log_fail() { echo -e "${RED}[FAIL]${NC} $1"; TESTS_FAILED=$((TESTS_FAILED + 1)); }
 
 run_test() {
     local name="$1"
     local cmd="$2"
-    ((TESTS_RUN++))
+    TESTS_RUN=$((TESTS_RUN + 1))
 
     echo -e "\n${YELLOW}━━━ Test: $name ━━━${NC}"
     echo "Running: $cmd"
-    set +e
-    eval "$cmd"
-    local result=$?
-    set -e
-    if [ $result -eq 0 ]; then
+    if eval "$cmd"; then
         log_pass "$name"
         return 0
     else
         log_fail "$name"
         echo "Command output (if any):"
         cat "$TEST_WORK_DIR/last_output.txt" 2>/dev/null || true
-        return 1
+        # Don't exit on failure, continue with other tests
+        return 0
+    fi
+}
+
+# Helper to run a test that must pass (fatal)
+run_test_fatal() {
+    local name="$1"
+    local cmd="$2"
+    TESTS_RUN=$((TESTS_RUN + 1))
+
+    echo -e "\n${YELLOW}━━━ Test (FATAL): $name ━━━${NC}"
+    echo "Running: $cmd"
+    if eval "$cmd"; then
+        log_pass "$name"
+        return 0
+    else
+        log_fail "$name (FATAL - stopping)"
+        echo "Command output (if any):"
+        cat "$TEST_WORK_DIR/last_output.txt" 2>/dev/null || true
+        exit 1
     fi
 }
 
@@ -179,16 +194,16 @@ echo -e "\n${GREEN}═══ Phase 1: Initial Indexing ═══${NC}"
 
 create_config "$TEST_WORK_DIR/scan_part1"
 
-run_test "Help command works" \
+run_test_fatal "Help command works" \
     "assert_exit_code 0 $INDEXER_BIN --help"
 
-run_test "Index first batch of files" \
+run_test_fatal "Index first batch of files" \
     "assert_exit_code 0 $INDEXER_BIN -i --config_file=$CONFIG_FILE"
 
-run_test "Index files exist after indexing" \
+run_test_fatal "Index files exist after indexing" \
     "[ -f '$INDEX_PATH/words.index' ] && [ -f '$INDEX_PATH/paths.index' ] && [ -f '$INDEX_PATH/reversed.index' ]"
 
-run_test "Run expensive index check after initial index" \
+run_test_fatal "Run expensive index check after initial index" \
     "assert_output_contains 'No corruption' $INDEXER_BIN --check -v --config_file=$CONFIG_FILE"
 
 # ═══════════════════════════════════════════════════════════════
@@ -199,10 +214,10 @@ echo -e "\n${GREEN}═══ Phase 2: Merge Additional Content ═══${NC}"
 # Add data2 files to scan directory for merge
 cp "$SCRIPT_DIR/data2/"*.txt "$TEST_WORK_DIR/scan_part1/"
 
-run_test "Merge additional files into index" \
+run_test_fatal "Merge additional files into index" \
     "assert_exit_code 0 $INDEXER_BIN -i --config_file=$CONFIG_FILE"
 
-run_test "Run expensive index check after merge" \
+run_test_fatal "Run expensive index check after merge" \
     "assert_output_contains 'No corruption' $INDEXER_BIN --check -v --config_file=$CONFIG_FILE"
 
 # ═══════════════════════════════════════════════════════════════
