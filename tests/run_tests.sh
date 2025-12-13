@@ -1,6 +1,6 @@
 #!/bin/bash
 # Integration test suite for filesystem-full-text-search-indexer
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,11 +39,18 @@ run_test() {
     ((TESTS_RUN++))
 
     echo -e "\n${YELLOW}━━━ Test: $name ━━━${NC}"
-    if eval "$cmd"; then
+    echo "Running: $cmd"
+    set +e
+    eval "$cmd"
+    local result=$?
+    set -e
+    if [ $result -eq 0 ]; then
         log_pass "$name"
         return 0
     else
         log_fail "$name"
+        echo "Command output (if any):"
+        cat "$TEST_WORK_DIR/last_output.txt" 2>/dev/null || true
         return 1
     fi
 }
@@ -153,11 +160,17 @@ mkdir -p "$TEST_WORK_DIR/scan_part1"
 mkdir -p "$TEST_WORK_DIR/scan_part2"
 mkdir -p "$TEST_WORK_DIR/scan_full"
 
+# Debug: show what we found
+echo "Files in data1: $(ls -1 "$SCRIPT_DIR/data1/" 2>/dev/null | wc -l) files"
+echo "Files in data2: $(ls -1 "$SCRIPT_DIR/data2/" 2>/dev/null | wc -l) files"
+
 # Copy test data for partial indexing
 cp "$SCRIPT_DIR/data1/"*.txt "$TEST_WORK_DIR/scan_part1/"
 cp "$SCRIPT_DIR/data2/"*.txt "$TEST_WORK_DIR/scan_part2/"
 cp "$SCRIPT_DIR/data1/"*.txt "$TEST_WORK_DIR/scan_full/"
 cp "$SCRIPT_DIR/data2/"*.txt "$TEST_WORK_DIR/scan_full/"
+
+echo "Files copied to scan_part1: $(ls -1 "$TEST_WORK_DIR/scan_part1/" | wc -l) files"
 
 # ═══════════════════════════════════════════════════════════════
 # TEST PHASE 1: Initial Indexing
