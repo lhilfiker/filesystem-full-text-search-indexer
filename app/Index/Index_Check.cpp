@@ -42,7 +42,7 @@ bool Index::expensive_index_check(const bool verbose_output)
   // 2. Validate that non-seperators are only a-z
   // 3. Also build a words_f so we can compare it later with words_f.
   // 4. Keep track of other values like size, count for later use.
-  size_t words_check_size = 0;
+  uint64_t words_check_size = 0;
   WORDS_F_LOCATION_TYPE words_check_count = 0;
   std::vector<WordsFValue> words_f_comparison(26);
 
@@ -82,7 +82,9 @@ bool Index::expensive_index_check(const bool verbose_output)
         WORD_SEPARATOR_SIZE]) {
       // + WORD_SEPARATOR_SIZE because of the word seperator
       disk_first_char = mmap_words[words_check_size + WORD_SEPARATOR_SIZE];
-      words_f_comparison[disk_first_char] = {.location = words_check_size, .id = words_check_count};
+      words_f_comparison[disk_first_char - 'a'] = {
+        .location = words_check_size + WORD_SEPARATOR_SIZE, .id = words_check_count
+      };
     }
 
     std::string current_word = "";
