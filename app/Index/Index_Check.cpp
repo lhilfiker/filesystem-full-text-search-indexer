@@ -166,7 +166,7 @@ bool Index::expensive_index_check(const bool verbose_output)
         }
       }
       if (next_value.location == 0) {
-        next_value = {.id = words_check_count, .location = words_check_size};
+        next_value = {.location = words_check_size, .id = words_check_count};
       }
       if (words_f[i].location != next_value.location || words_f[i].id != next_value.id) {
         Log::write(4, "Index: Check: Word_f: location and/or id is wrong for values that use the next-non value.");
