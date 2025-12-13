@@ -229,19 +229,22 @@ echo -e "\n${GREEN}═══ Phase 3: Search Tests ═══${NC}"
 NONEXISTENT_WORD="xyzzyqwkplm"
 
 run_test "Search for non-existent word returns no results" \
-    "assert_output_not_contains 'book' $INDEXER_BIN --config_file=$CONFIG_FILE '$NONEXISTENT_WORD'"
+    "assert_output_not_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '$NONEXISTENT_WORD'"
 
-# Search for common word that should exist (from Gutenberg books)
-run_test "Search for common word 'the' returns results" \
-    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'the'"
+# Search for common words that should exist in Gutenberg books (4+ chars)
+run_test "Search for common word 'that' returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'that'"
+
+run_test "Search for common word 'have' returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'have'"
 
 # ═══════════════════════════════════════════════════════════════
 # TEST PHASE 4: Dynamic Content Test
 # ═══════════════════════════════════════════════════════════════
 echo -e "\n${GREEN}═══ Phase 4: Dynamic Content Test ═══${NC}"
 
-# Create a new file with a unique word
-UNIQUE_WORD="supercalifragilisticexpialidocious"
+# Create a new file with a unique word (must be 4+ chars)
+UNIQUE_WORD="zyxwvutsr"
 echo "This file contains the unique word $UNIQUE_WORD for testing purposes." > "$TEST_WORK_DIR/scan_part1/unique_test.txt"
 echo "The word $UNIQUE_WORD appears multiple times here." >> "$TEST_WORK_DIR/scan_part1/unique_test.txt"
 
