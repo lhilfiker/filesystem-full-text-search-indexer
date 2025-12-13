@@ -122,6 +122,61 @@ bool Index::expensive_index_check(const bool verbose_output)
     return false;
   }
 
+  // Check Words_f Index:
+  // 1. Validate size
+  // 2. Compare values to previously created one (if our is 0 just validate it is the same as the next non zero)
+
+  // copy words_f into memory
+  std::vector<WordsFValue> words_f(26);
+  for (int i = 0; i < 26; ++i) {
+    std::memcpy(&words_f[i].bytes[0],
+                &mmap_words_f[i * (8 + WORDS_F_LOCATION_SIZE)],
+                (8 + WORDS_F_LOCATION_SIZE));
+  }
+  if (words_f[0].id != 0 || words_f[0].location != 0) {
+    Log::write(4, "Index: Check: Word_f: location and/or id for letter a is not 0 which is invalid.");
+    if (verbose_output) {
+      std::cout
+        << "\nCheck: Word_f: location and/or id for letter a is not 0 which is invalid.\n";
+    }
+    return false;
+  }
+  // compare them
+  for (int i = 1; i < 26; ++i) {
+    if (words_f_comparison[i].location == words_f[i].location || words_f_comparison[i].id == words_f[i].id) {
+      continue;
+    }
+    if (words_f[1].location == 0 || words_f[i].id == 0) {
+      Log::write(4, "Index: Check: Word_f: location and/or id is 0 which is not allowed.");
+      if (verbose_output) {
+        std::cout
+          << "\nCheck: Word_f: location and/or id is 0 which is not allowed.\n";
+      }
+      return false;
+    }
+    // if local is zero, get the next non-zero value and compare.
+    if (words_f_comparison[i].id == 0 || words_f_comparison[i].location == 0) {
+      WordsFValue next_value = {.location = 0, .id = 0};
+      for (int j = i + 1; j < 26; ++j) {
+        if (words_f_comparison[j].id != 0) {
+          next_value = {.location = words_f_comparison[j].location, .id = words_f_comparison[j].id};
+          break;
+        }
+      }
+      if (next_value.location == 0) {
+        next_value = {.id = words_check_count, .location = words_check_size};
+      }
+      if (words_f[i].location != next_value.location || words_f[i].id != next_value.id) {
+        Log::write(4, "Index: Check: Word_f: location and/or id is wrong for values that use the next-non value.");
+        if (verbose_output) {
+          std::cout
+            << "\nCheck: Word_f: location and/or id is wrong for values that use the next-non value.\n";
+        }
+        return false;
+      }
+    }
+  }
+
 
   Index::unlock(false);
   Log::write(2, "Index: Check: No corruption detected.");
