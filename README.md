@@ -2,6 +2,10 @@
 
 A high-performance, multithreaded file indexer with custom binary storage format designed for minimal memory usage and maximum scalability. Features transaction-based updates with crash recovery, inter-process locking for data integrity, and support for millions of files. Includes a powerful boolean query language (AND, OR, NOT) with wildcard and exact matching capabilities, optimized search performance through alphabet jump tables, and configurable memory settings for different dataset sizes.
 
+
+https://github.com/user-attachments/assets/86b1ccf3-a747-4d39-a90a-4bfc06bf0d05
+
+
 ## Project Status
 
 **Alpha Release** - The project is currently in alpha state and works quite well for most use cases, but will likely have bugs and edge cases that have not been encountered yet during development. While the core functionality is stable and ready for testing and feedback, it is not recommended for use with critical data. The focus has been on getting version v0.1.0 alpha released, so there is no real testing infrastructure in place and code readability along with other code quality aspects are not that good. This is however planned to be substantially improved in v0.2.0.
@@ -37,13 +41,17 @@ A high-performance, multithreaded file indexer with custom binary storage format
 ### Option 1: Release Downloads
 Download the latest release from the [GitHub releases page](https://github.com/lhilfiker/filesystem-full-text-search-indexer/releases) and extract the binary to your preferred location.
 
+Download the [example config file](https://github.com/lhilfiker/filesystem-full-text-search-indexer/blob/main/config.txt.example), save it to `~/.config/filesystem-full-text-search-indexer/config.txt`, and edit your paths.
+
 ### Option 2: Build from Source (Recommended)
 
 #### Quick Build
 ```bash
+git clone https://github.com/lhilfiker/filesystem-full-text-search-indexer
+cd filesystem-full-text-search-indexer
 ./build.sh
 ```
-The build script will check dependencies and build the project automatically.
+The build script will check dependencies and build the project automatically and will ask you to install it.
 
 #### Manual Build
 ```bash
@@ -51,6 +59,27 @@ mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$(nproc)
+sudo make install
+```
+### Option 2: Download from the AUR
+Download it directly from the [Arch User Repository](https://aur.archlinux.org/packages/filesystem-indexer) with your AUR-Helper of choice.
+
+```bash
+yay -S filesystem-indexer
+```
+Alternatively with paru
+```bash
+paru -S filesystem-indexer
+```
+
+#### Configuration Quick Start
+```bash
+# Create config directory and copy example
+mkdir -p ~/.config/filesystem-full-text-search-indexer/
+cp /usr/local/share/doc/filesystem-full-text-search-indexer/config.txt.example ~/.config/filesystem-full-text-search-indexer/config.txt
+
+# Edit with your paths
+nano ~/.config/filesystem-full-text-search-indexer/config.txt
 ```
 
 #### Debug Build
