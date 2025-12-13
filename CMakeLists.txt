@@ -5,18 +5,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
-endif()
+endif ()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -Wpedantic")
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG -Wall -march=x86-64")
-endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -Wpedantic --std=c++20")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG -Wall -march=x86-64 --std=c++20")
+endif ()
 
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Install prefix" FORCE)
-endif()
+endif ()
 
 find_package(Threads REQUIRED)
 
@@ -109,7 +109,7 @@ target_link_libraries(filesystem-indexer
         Threads::Threads
 )
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(filesystem-indexer PRIVATE
             $<$<CONFIG:Debug>:-fsanitize=address,undefined>
             $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
@@ -126,32 +126,32 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
             $<$<CONFIG:Release>:-flto>
             $<$<CONFIG:Release>:-s>  # Strip symbols
     )
-endif()
+endif ()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "C++ standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug features: AddressSanitizer, UBSan enabled")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Release optimizations: LTO, native arch, stripped symbols")
-endif()
+endif ()
 
 install(TARGETS filesystem-indexer
         RUNTIME DESTINATION bin
 )
 
 install(FILES README.md
-    DESTINATION share/doc/filesystem-full-text-search-indexer
+        DESTINATION share/doc/filesystem-full-text-search-indexer
 )
 
 install(DIRECTORY docs/
-    DESTINATION share/doc/filesystem-full-text-search-indexer/docs
-    FILES_MATCHING PATTERN "*.md"
+        DESTINATION share/doc/filesystem-full-text-search-indexer/docs
+        FILES_MATCHING PATTERN "*.md"
 )
 
 install(FILES config.txt.example
-    DESTINATION share/doc/filesystem-full-text-search-indexer
-    OPTIONAL
+        DESTINATION share/doc/filesystem-full-text-search-indexer
+        OPTIONAL
 )
