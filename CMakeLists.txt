@@ -142,15 +142,15 @@ install(TARGETS filesystem-indexer
 )
 
 install(FILES README.md
-        DESTINATION share/doc/filesystem-full-text-search-indexer
+    DESTINATION share/doc/filesystem-full-text-search-indexer
 )
 
 install(DIRECTORY docs/
-        DESTINATION share/doc/filesystem-full-text-search-indexer/docs
-        FILES_MATCHING PATTERN "*.md"
+    DESTINATION share/doc/filesystem-full-text-search-indexer/docs
+    FILES_MATCHING PATTERN "*.md"
 )
 
 install(FILES config.txt.example
-        DESTINATION share/doc/filesystem-full-text-search-indexer
-        OPTIONAL
+    DESTINATION share/doc/filesystem-full-text-search-indexer
+    OPTIONAL
 )
