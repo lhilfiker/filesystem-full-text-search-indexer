@@ -225,28 +225,55 @@ run_test_fatal "Run expensive index check after merge" \
 # ═══════════════════════════════════════════════════════════════
 echo -e "\n${GREEN}═══ Phase 3: Search Tests ═══${NC}"
 
-# Search for word that should NOT exist
+# Debug: Show index file sizes
+echo "Index file sizes:"
+ls -la "$INDEX_PATH/"
+
+# Search for word that should NOT exist (5+ chars)
 NONEXISTENT_WORD="xyzzyqwkplm"
 
 run_test "Search for non-existent word returns no results" \
     "assert_output_not_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '$NONEXISTENT_WORD'"
 
-# Search for common words that should exist in Gutenberg books (4+ chars)
-run_test "Search for common word 'that' returns results" \
-    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'that'"
+# Search for common words that should exist in Gutenberg books (5+ chars)
+run_test "Search for 'which' returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'which'"
 
-run_test "Search for common word 'have' returns results" \
-    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'have'"
+run_test "Search for 'would' returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'would'"
+
+run_test "Search for 'there' returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE 'there'"
+
+# Test exact match with quotes
+run_test "Exact match search for 'people' returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '\"people\"'"
+
+# Test AND operator
+run_test "AND query (which AND would) returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '(which AND would)'"
+
+# Test OR operator
+run_test "OR query (xyzzy OR which) returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '(xyzzy OR which)'"
+
+# Test NOT operator
+run_test "NOT query (which NOT xyzzyqwk) returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '(which NOT xyzzyqwk)'"
+
+# Test nested query
+run_test "Nested query ((which OR would) AND there) returns results" \
+    "assert_output_contains '/' $INDEXER_BIN --config_file=$CONFIG_FILE '((which OR would) AND there)'"
 
 # ═══════════════════════════════════════════════════════════════
 # TEST PHASE 4: Dynamic Content Test
 # ═══════════════════════════════════════════════════════════════
 echo -e "\n${GREEN}═══ Phase 4: Dynamic Content Test ═══${NC}"
 
-# Create a new file with a unique word (must be 4+ chars)
-UNIQUE_WORD="zyxwvutsr"
-echo "This file contains the unique word $UNIQUE_WORD for testing purposes." > "$TEST_WORK_DIR/scan_part1/unique_test.txt"
-echo "The word $UNIQUE_WORD appears multiple times here." >> "$TEST_WORK_DIR/scan_part1/unique_test.txt"
+# Create a new file with a unique word (must be 5+ chars, only a-z)
+UNIQUE_WORD="zyxwvutsrqp"
+echo "this file contains the unique word $UNIQUE_WORD for testing purposes" > "$TEST_WORK_DIR/scan_part1/unique_test.txt"
+echo "the word $UNIQUE_WORD appears multiple times here" >> "$TEST_WORK_DIR/scan_part1/unique_test.txt"
 
 run_test "Index new file with unique word" \
     "assert_exit_code 0 $INDEXER_BIN -i --config_file=$CONFIG_FILE"
@@ -256,6 +283,10 @@ run_test "Run expensive index check after adding new file" \
 
 run_test "Search finds unique word in new file" \
     "assert_output_contains 'unique_test.txt' $INDEXER_BIN --config_file=$CONFIG_FILE '$UNIQUE_WORD'"
+
+# Test exact match on unique word
+run_test "Exact match search finds unique word" \
+    "assert_output_contains 'unique_test.txt' $INDEXER_BIN --config_file=$CONFIG_FILE '\"$UNIQUE_WORD\"'"
 
 # ═══════════════════════════════════════════════════════════════
 # TEST PHASE 5: Fresh Full Index
