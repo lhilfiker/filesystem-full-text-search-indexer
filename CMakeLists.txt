@@ -21,103 +21,108 @@ endif()
 find_package(Threads REQUIRED)
 
 set(SOURCES
-    # Main
-    app/main.cpp
-    
-    # CliParser
-    app/CliParser/CliParser.cpp
-    
-    # Config
-    app/Config/Config.cpp
-    
-    # Helper
-    app/Helper/Helper.cpp
-    
-    # Index
-    app/Index/Index.cpp
-    app/Index/Index_Add.cpp
-    app/Index/Index_Last_Updated.cpp
-    app/Index/Index_Lock.cpp
-    app/Index/Index_Merge.cpp
-    app/Index/Index_Search.cpp
-    app/Index/Index_Transaction.cpp
-    
-    # Indexer
-    app/Indexer/Indexer.cpp
-    
-    # LocalIndex
-    app/LocalIndex/LocalIndex.cpp
-    
-    # Logging
-    app/Logging/Logger.cpp
-    
-    # Search
-    app/Search/Search.cpp
+        # Main
+        app/main.cpp
+
+        # CliParser
+        app/CliParser/CliParser.cpp
+
+        # Config
+        app/Config/Config.cpp
+
+        # Helper
+        app/Helper/Helper.cpp
+
+        # Index
+        app/Index/Index.cpp
+        app/Index/Index_Add.cpp
+        app/Index/Index_Last_Updated.cpp
+        app/Index/Index_Lock.cpp
+        app/Index/Index_Merge.cpp
+        app/Index/Index_Search.cpp
+        app/Index/Index_Transaction.cpp
+
+        # Indexer
+        app/Indexer/Indexer.cpp
+
+        # LocalIndex
+        app/LocalIndex/LocalIndex.cpp
+
+        # Logging
+        app/Logging/Logger.cpp
+
+        # Search
+        app/Search/Search.cpp
 )
 
 set(HEADERS
-    # Main headers
-    app/index_config.h
-    
-    # CliParser
-    app/CliParser/cliparser.h
-    
-    # Config
-    app/Config/config.h
-    
-    # Helper
-    app/Helper/helper.h
-    
-    # Index
-    app/Index/index.h
-    app/Index/index_types.h
-    
-    # Indexer
-    app/Indexer/indexer.h
-    app/Indexer/indexer_types.h
-    
-    # LocalIndex
-    app/LocalIndex/localindex.h
-    app/LocalIndex/localindex_types.h
-    
-    # Logging
-    app/Logging/logging.h
-    
-    # Search
-    app/Search/search.h
-    
-    # External libraries
-    app/lib/mio.hpp
+        # Main headers
+        app/index_config.h
+
+        # CliParser
+        app/CliParser/cliparser.h
+
+        # Config
+        app/Config/config.h
+
+        # Helper
+        app/Helper/helper.h
+
+        # Index
+        app/Index/index.h
+        app/Index/index_types.h
+
+        # Indexer
+        app/Indexer/indexer.h
+        app/Indexer/indexer_types.h
+
+        # LocalIndex
+        app/LocalIndex/localindex.h
+        app/LocalIndex/localindex_types.h
+
+        # Logging
+        app/Logging/logging.h
+
+        # Search
+        app/Search/search.h
+
+        # External libraries
+        app/lib/mio.hpp
 )
 
 add_executable(filesystem-indexer ${SOURCES} ${HEADERS})
 
-target_include_directories(filesystem-indexer 
-    PRIVATE 
-    app
+set_target_properties(filesystem-indexer PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 
-target_link_libraries(filesystem-indexer 
-    PRIVATE 
-    Threads::Threads
+target_include_directories(filesystem-indexer
+        PRIVATE
+        app
+)
+
+target_link_libraries(filesystem-indexer
+        PRIVATE
+        Threads::Threads
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(filesystem-indexer PRIVATE
-        $<$<CONFIG:Debug>:-fsanitize=address,undefined>
-        $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+            $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
     )
     target_link_options(filesystem-indexer PRIVATE
-        $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
     )
-    
+
     # Release build optimizations
     target_compile_options(filesystem-indexer PRIVATE
-        $<$<CONFIG:Release>:-flto>
+            $<$<CONFIG:Release>:-flto>
     )
     target_link_options(filesystem-indexer PRIVATE
-        $<$<CONFIG:Release>:-flto>
-        $<$<CONFIG:Release>:-s>  # Strip symbols
+            $<$<CONFIG:Release>:-flto>
+            $<$<CONFIG:Release>:-s>  # Strip symbols
     )
 endif()
 
@@ -132,7 +137,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 install(TARGETS filesystem-indexer
-    RUNTIME DESTINATION bin
+        RUNTIME DESTINATION bin
 )
 
 install(FILES README.md
