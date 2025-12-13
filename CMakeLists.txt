@@ -53,7 +53,6 @@ set(SOURCES
 
         # Search
         app/Search/Search.cpp
-        app/Index/Index_Check.cpp
 )
 
 set(HEADERS
