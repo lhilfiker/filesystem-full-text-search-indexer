@@ -1,12 +1,8 @@
 name: Integration Tests
-permissions:
-  contents: read
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
   integration-test:
@@ -16,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Install dependencies
         run: |

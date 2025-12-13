@@ -119,6 +119,16 @@ if [ ! -x "$INDEXER_BIN" ]; then
     exit 1
 fi
 
+# Unzip test data if needed
+if [ ! -d "$TEST_DATA1_DIR" ] && [ -f "$SCRIPT_DIR/data1.zip" ]; then
+    echo "Extracting data1.zip..."
+    unzip -q "$SCRIPT_DIR/data1.zip" -d "$SCRIPT_DIR/"
+fi
+if [ ! -d "$TEST_DATA2_DIR" ] && [ -f "$SCRIPT_DIR/data2.zip" ]; then
+    echo "Extracting data2.zip..."
+    unzip -q "$SCRIPT_DIR/data2.zip" -d "$SCRIPT_DIR/"
+fi
+
 # Verify test data exists
 if [ ! -d "$TEST_DATA1_DIR" ]; then
     echo -e "${RED}Error: Test data directory not found: $TEST_DATA1_DIR${NC}"
