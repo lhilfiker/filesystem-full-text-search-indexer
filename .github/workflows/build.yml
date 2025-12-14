@@ -1,41 +1,43 @@
-name: Build and Test
+name: Build Debug and Release
+permissions:
+  contents: read
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
 jobs:
   test:
-    name: Build and Test
+    name: Build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04]
-        build_type: [Release, Debug]
+        os: [ ubuntu-22.04 ]
+        build_type: [ Release, Debug ]
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cmake build-essential
-    
-    - name: Build
-      run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
-        make -j$(nproc)
-    
-    - name: Upload build artifacts
-      if: matrix.build_type == 'Release'
-      uses: actions/upload-artifact@v4
-      with:
-        name: filesystem-indexer-${{ matrix.os }}
-        path: build/filesystem-indexer
-        retention-days: 30
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
+          make -j$(nproc)
+
+      - name: Upload build artifacts
+        if: matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: filesystem-indexer-${{ matrix.os }}
+          path: build/filesystem-indexer
+          retention-days: 30

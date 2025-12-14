@@ -110,6 +110,7 @@ public:
   static std::filesystem::file_time_type last_updated_time(bool temp);
   static void set_last_updated_time(std::filesystem::file_time_type new_time);
   static void mark_current_time_temp();
+  static bool expensive_index_check(const bool verbose_output);
 };
 
 #endif

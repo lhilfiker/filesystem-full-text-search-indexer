@@ -1,0 +1,44 @@
+name: Integration Tests
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+
+      - name: Build Release
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+
+      - name: Run Integration Tests
+        run: |
+          chmod +x tests/run_tests.sh
+          ./tests/run_tests.sh ./build/filesystem-indexer
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-logs
+          path: |
+            /tmp/fts-test-*/
+          retention-days: 7
