@@ -10,7 +10,7 @@ The program is automatically built on each push. This just validates that there 
 
 ### 2. Integration Tests
 
-The program is also tested using integration tests for basic functionality such as indexing, merging, search, queary
+The program is also tested using integration tests for basic functionality such as indexing, merging, search, query
 search with a small test set (200MB). More details can be found [Integration-Tests.md](Integration-Tests.md).
 
 ## Planned
