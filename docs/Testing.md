@@ -6,7 +6,7 @@ The program is being tested the following ways:
 
 ### 1. Build Tests
 
-The program is automatically build on each push. This just validates that there are no build issues.
+The program is automatically built on each push. This just validates that there are no build issues.
 
 ### 2. Integration Tests
 
