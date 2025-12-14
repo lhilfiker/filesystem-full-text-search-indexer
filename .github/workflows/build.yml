@@ -1,4 +1,4 @@
-name: Build Debug and Relase
+name: Build Debug and Release
 permissions:
   contents: read
 
