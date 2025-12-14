@@ -80,7 +80,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     if (disk_first_char <
       mmap_words[words_check_size +
         WORD_SEPARATOR_SIZE]) {
-      // + WORD_SEPARATOR_SIZE because of the word seperator
+      // + WORD_SEPARATOR_SIZE because of the word separator
       disk_first_char = mmap_words[words_check_size + WORD_SEPARATOR_SIZE];
       words_f_comparison[disk_first_char - 'a'] = {
         .location = words_check_size + WORD_SEPARATOR_SIZE, .id = words_check_count
