@@ -233,6 +233,18 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
   }
 
+  // Paths count
+  // 1. Just make sure the size is 4 * amount of paths
+
+  if (paths_count_size != paths_check_count * 4) {
+    Log::write(4, "Index: Check: Paths count size is not valid.");
+    if (verbose_output) {
+      std::cout
+        << "\nCheck: Paths count size is not valid.\n";
+    }
+    return false;
+  }
+
 
   Index::unlock(false);
   Log::write(2, "Index: Check: No corruption detected.");
