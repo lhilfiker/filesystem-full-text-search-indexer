@@ -317,6 +317,7 @@ bool Index::expensive_index_check(const bool verbose_output)
           return false;
         }
       }
+      used_path_ids.insert(disk_reversed->ids.path[i]);
     }
 
     // now check additionals
@@ -347,6 +348,8 @@ bool Index::expensive_index_check(const bool verbose_output)
         }
         return false;
       }
+
+      used_additional_ids.insert(current_additional);
 
       AdditionalBlock* disk_additional = reinterpret_cast<AdditionalBlock*>(
         &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
