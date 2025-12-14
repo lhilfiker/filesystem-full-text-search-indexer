@@ -133,7 +133,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     Log::write(4, "Index: Check: Words_f size is wrong.");
     if (verbose_output) {
       std::cout
-        << "\nCheck: Words Index: Index: Check: Words_f size is wrong.\n";
+        << "\nCheck: Words_f size is wrong.\n";
     }
     return false;
   }
