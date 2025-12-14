@@ -160,7 +160,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     if (words_f_comparison[i].location == words_f[i].location && words_f_comparison[i].id == words_f[i].id) {
       continue;
     }
-    if (words_f[1].location == 0 || words_f[i].id == 0) {
+    if (words_f[i].location == 0 || words_f[i].id == 0) {
       Log::write(4, "Index: Check: Word_f: location and/or id is 0 which is not allowed.");
       if (verbose_output) {
         std::cout
