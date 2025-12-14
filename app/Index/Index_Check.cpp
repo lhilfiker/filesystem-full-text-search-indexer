@@ -156,7 +156,7 @@ bool Index::expensive_index_check(const bool verbose_output)
 
   // compare them
   for (int i = 1; i < 26; ++i) {
-    if (words_f_comparison[i].location == words_f[i].location || words_f_comparison[i].id == words_f[i].id) {
+    if (words_f_comparison[i].location == words_f[i].location && words_f_comparison[i].id == words_f[i].id) {
       continue;
     }
     if (words_f[1].location == 0 || words_f[i].id == 0) {
