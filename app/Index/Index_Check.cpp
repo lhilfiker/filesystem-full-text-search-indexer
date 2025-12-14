@@ -110,6 +110,7 @@ bool Index::expensive_index_check(const bool verbose_output)
       }
       return false;
     }
+    previous_word = current_word;
     ++words_check_count;
 
     words_check_size +=
