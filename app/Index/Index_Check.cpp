@@ -387,6 +387,7 @@ bool Index::expensive_index_check(const bool verbose_output)
             return false;
           }
         }
+        used_path_ids.insert(disk_reversed->ids.path[i]);
       }
       current_additional = disk_additional->ids.additional[0];
     }
