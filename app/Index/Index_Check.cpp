@@ -251,9 +251,9 @@ bool Index::expensive_index_check(const bool verbose_output)
   // 3. Read reversed, make sure no duplicate path ids are found and all path ids are valid. Also make sure there are no gaps
   // 4. Read additional and make sure it's valid. Keep track of all additionals. Do the same for each path id in additional as in reversed and follow all additionalsl
 
-  if (reversed_size % ((REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) + ADDITIONAL_ID_LINK_SIZE) != 0 ||
+  if (reversed_size % REVERSED_ENTRY_SIZE != 0 ||
     additional_size
-    % ((ADDITIONAL_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) + ADDITIONAL_ID_LINK_SIZE) != 0) {
+    % ADDITIONAL_ENTRY_SIZE != 0) {
     Log::write(4, "Index: Check: Reversed and/or Additinal size is invalid.");
     if (verbose_output) {
       std::cout
@@ -261,14 +261,133 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
     return false;
   }
-  if (reversed_size != words_check_count * ((REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
-    ADDITIONAL_ID_LINK_SIZE)) {
+  if (reversed_size != words_check_count * REVERSED_ENTRY_SIZE) {
     Log::write(4, "Index: Check: Reversed size does not match up with amounts of words.");
     if (verbose_output) {
       std::cout
         << "\nCheck: Reversed size does not match up with amounts of words.\n";
     }
     return false;
+  }
+
+  uint64_t reversed_check_count = 0;
+  uint64_t reversed_check_size = 0;
+  std::unordered_set<ADDITIONAL_ID_TYPE> used_additional_ids;
+
+
+  while (reversed_check_count < words_check_count) {
+    std::unordered_set<PATH_ID_TYPE> used_path_ids;
+    ADDITIONAL_ID_TYPE current_additional = 0;
+
+    bool found_path = false;
+    bool found_emtpy = false;
+
+    ReversedBlock* disk_reversed = reinterpret_cast<ReversedBlock*>(
+      &mmap_reversed[reversed_check_count * REVERSED_ENTRY_SIZE]);
+
+    for (PATH_ID_TYPE i = 0; i < REVERSED_PATH_LINKS_AMOUNT;
+         ++i) {
+      if (disk_reversed->ids.path[i] == 0) {
+        found_emtpy = true;
+      }
+      else {
+        if (!found_path) { found_path = true; }
+        if (found_emtpy) {
+          Log::write(4, "Index: Check: Reversed entry has a 0 in between which should not happen.");
+          if (verbose_output) {
+            std::cout
+              << "\nCheck: Reversed entry has a 0 in between which should not happen.\n";
+          }
+          return false;
+        }
+        if (disk_reversed->ids.path[i] > paths_check_count) {
+          Log::write(4, "Index: Check: Reversed entry has a too large path id.");
+          if (verbose_output) {
+            std::cout
+              << "\nCheck: Reversed entry has a too large path id.\n";
+          }
+          return false;
+        }
+        if (used_path_ids.count(disk_reversed->ids.path[i]) != 0) {
+          Log::write(4, "Index: Check: Reversed entry has a duplicate path id.");
+          if (verbose_output) {
+            std::cout
+              << "\nCheck: Reversed entry has a duplicate path id.\n";
+          }
+          return false;
+        }
+      }
+    }
+
+    // now check additionals
+    current_additional = disk_reversed->ids.additional[0];
+
+    while (current_additional != 0) {
+      if (found_emtpy && current_additional != 0) {
+        Log::write(4, "Index: Check: There is an additional linked even though a gap was found in reversed.");
+        if (verbose_output) {
+          std::cout
+            << "\nCheck: There is an additional linked even though a gap was found in reversed.\n";
+        }
+        return false;
+      }
+      if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
+        Log::write(4, "Index: Check: Additional linked id is invalid.");
+        if (verbose_output) {
+          std::cout
+            << "\nCheck: Additional linked id is invalid.\n";
+        }
+        return false;
+      }
+      if (used_additional_ids.count(current_additional) != 0) {
+        Log::write(4, "Index: Check: Additional block linked more than once.");
+        if (verbose_output) {
+          std::cout
+            << "\nCheck: Additional block linked more than once.\n";
+        }
+        return false;
+      }
+
+      AdditionalBlock* disk_additional = reinterpret_cast<AdditionalBlock*>(
+        &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
+
+      for (PATH_ID_TYPE i = 0; i < ADDITIONAL_PATH_LINKS_AMOUNT;
+           ++i) {
+        if (disk_additional->ids.path[i] == 0) {
+          found_emtpy = true;
+        }
+        else {
+          if (!found_path) { found_path = true; }
+          if (found_emtpy) {
+            Log::write(4, "Index: Check: Additional entry has a 0 in between which should not happen.");
+            if (verbose_output) {
+              std::cout
+                << "\nCheck: Additional entry has a 0 in between which should not happen.\n";
+            }
+            return false;
+          }
+          if (disk_additional->ids.path[i] > paths_check_count) {
+            Log::write(4, "Index: Check: Additional entry has a too large path id.");
+            if (verbose_output) {
+              std::cout
+                << "\nCheck: Additional entry has a too large path id.\n";
+            }
+            return false;
+          }
+          if (used_path_ids.count(disk_additional->ids.path[i]) != 0) {
+            Log::write(4, "Index: Check: Additional entry has a duplicate path id.");
+            if (verbose_output) {
+              std::cout
+                << "\nCheck: Additional entry has a duplicate path id.\n";
+            }
+            return false;
+          }
+        }
+      }
+      current_additional = disk_additional->ids.additional[0];
+    }
+
+    ++reversed_check_count;
   }
 
 
