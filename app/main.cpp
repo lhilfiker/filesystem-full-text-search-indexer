@@ -20,6 +20,7 @@ void output_help()
     "configured directory\n";
   std::cout << "  -s, --search                    Start interactive "
     "search mode\n";
+  std::cout << "  --check                         Perform an expensive index check\n";
   std::cout << "  -a, --all                       Index all files, regardless "
     "of whether they have been updated or not.\n";
   std::cout << "  -c, --current                   Change config path to scan "
