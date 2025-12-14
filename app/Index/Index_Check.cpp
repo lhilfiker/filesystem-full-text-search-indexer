@@ -247,18 +247,18 @@ bool Index::expensive_index_check(const bool verbose_output)
   }
 
   // reversed & Additional
-  // 1. Check that reversed is divideable by 10
-  // 2. Check that additional is divideable by 50
+  // 1. Check that reversed is dividable by 10
+  // 2. Check that additional is dividable by 50
   // 3. Read reversed, make sure no duplicate path ids are found and all path ids are valid. Also make sure there are no gaps
   // 4. Read additional and make sure it's valid. Keep track of all additionals. Do the same for each path id in additional as in reversed and follow all additionals
 
   if (reversed_size % REVERSED_ENTRY_SIZE != 0 ||
     additional_size
     % ADDITIONAL_ENTRY_SIZE != 0) {
-    Log::write(4, "Index: Check: Reversed and/or Additinal size is invalid.");
+    Log::write(4, "Index: Check: Reversed and/or Additional size is invalid.");
     if (verbose_output) {
       std::cout
-        << "\nCheck: Reversed and/or Additinal size is invalid.\n";
+        << "\nCheck: Reversed and/or Additional size is invalid.\n";
     }
     return false;
   }
