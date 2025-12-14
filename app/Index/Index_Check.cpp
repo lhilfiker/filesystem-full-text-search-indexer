@@ -245,6 +245,23 @@ bool Index::expensive_index_check(const bool verbose_output)
     return false;
   }
 
+  // reversed & Additional
+  // 1. Check that reversed is divideable by 10
+  // 2. Check that additional is divideable by 50
+  // 3. Read reversed, make sure no duplicate path ids are found and all path ids are valid. Also make sure there are no gaps
+  // 4. Read additional and make sure it's valid. Keep track of all additionals. Do the same for each path id in additional as in reversed and follow all additionalsl
+
+  if (reversed_size % ((REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) + ADDITIONAL_ID_LINK_SIZE) != 0 ||
+    additional_size
+    % ((ADDITIONAL_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) + ADDITIONAL_ID_LINK_SIZE) != 0) {
+    Log::write(4, "Index: Check: Reversed and/or Additinal size is invalid.");
+    if (verbose_output) {
+      std::cout
+        << "\nCheck: Reversed and/or Additinal size is invalid.\n";
+    }
+    return false;
+  }
+
 
   Index::unlock(false);
   Log::write(2, "Index: Check: No corruption detected.");
@@ -254,3 +271,4 @@ bool Index::expensive_index_check(const bool verbose_output)
   }
   return true;
 }
+
