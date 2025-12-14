@@ -281,7 +281,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     ADDITIONAL_ID_TYPE current_additional = 0;
 
     bool found_path = false;
-    bool found_emtpy = false;
+    bool found_empty = false;
 
     ReversedBlock* disk_reversed = reinterpret_cast<ReversedBlock*>(
       &mmap_reversed[reversed_check_count * REVERSED_ENTRY_SIZE]);
@@ -289,11 +289,11 @@ bool Index::expensive_index_check(const bool verbose_output)
     for (PATH_ID_TYPE i = 0; i < REVERSED_PATH_LINKS_AMOUNT;
          ++i) {
       if (disk_reversed->ids.path[i] == 0) {
-        found_emtpy = true;
+        found_empty = true;
       }
       else {
         if (!found_path) { found_path = true; }
-        if (found_emtpy) {
+        if (found_empty) {
           Log::write(4, "Index: Check: Reversed entry has a 0 in between which should not happen.");
           if (verbose_output) {
             std::cout
@@ -325,7 +325,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     current_additional = disk_reversed->ids.additional[0];
 
     while (current_additional != 0) {
-      if (found_emtpy && current_additional != 0) {
+      if (found_empty && current_additional != 0) {
         Log::write(4, "Index: Check: There is an additional linked even though a gap was found in reversed.");
         if (verbose_output) {
           std::cout
@@ -358,11 +358,11 @@ bool Index::expensive_index_check(const bool verbose_output)
       for (PATH_ID_TYPE i = 0; i < ADDITIONAL_PATH_LINKS_AMOUNT;
            ++i) {
         if (disk_additional->ids.path[i] == 0) {
-          found_emtpy = true;
+          found_empty = true;
         }
         else {
           if (!found_path) { found_path = true; }
-          if (found_emtpy) {
+          if (found_empty) {
             Log::write(4, "Index: Check: Additional entry has a 0 in between which should not happen.");
             if (verbose_output) {
               std::cout
