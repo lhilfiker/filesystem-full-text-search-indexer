@@ -261,6 +261,15 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
     return false;
   }
+  if (reversed_size != words_check_count * ((REVERSED_PATH_LINKS_AMOUNT * PATH_ID_LINK_SIZE) +
+    ADDITIONAL_ID_LINK_SIZE)) {
+    Log::write(4, "Index: Check: Reversed size does not match up with amounts of words.");
+    if (verbose_output) {
+      std::cout
+        << "\nCheck: Reversed size does not match up with amounts of words.\n";
+    }
+    return false;
+  }
 
 
   Index::unlock(false);
