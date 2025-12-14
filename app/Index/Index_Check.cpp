@@ -224,10 +224,10 @@ bool Index::expensive_index_check(const bool verbose_output)
       ++paths_check_count;
     }
     else {
-      Log::write(4, "Index: Check: Paths index too small to read seperator.");
+      Log::write(4, "Index: Check: Paths index too small to read separator.");
       if (verbose_output) {
         std::cout
-          << "\nCheck: Paths index too small to read seperator.\n";
+          << "\nCheck: Paths index too small to read separator.\n";
       }
       return false;
     }
