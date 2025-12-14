@@ -120,7 +120,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     Log::write(4, "Index: Check: Word size does not match up with counted size.");
     if (verbose_output) {
       std::cout
-        << "\nCheck: Words Index: Index: Check: Word size does not match up with counted size.\n";
+        << "\nCheck: Word size does not match up with counted size.\n";
     }
     return false;
   }
