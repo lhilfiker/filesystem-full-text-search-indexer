@@ -128,6 +128,15 @@ bool Index::expensive_index_check(const bool verbose_output)
   // 1. Validate size
   // 2. Compare values to previously created one (if our is 0 just validate it is the same as the next non zero)
 
+  if (words_f_size != (8 + WORDS_F_LOCATION_SIZE) * 26) {
+    Log::write(4, "Index: Check: Words_f size is wrong.");
+    if (verbose_output) {
+      std::cout
+        << "\nCheck: Words Index: Index: Check: Words_f size is wrong.\n";
+    }
+    return false;
+  }
+
   // copy words_f into memory
   std::vector<WordsFValue> words_f(26);
   for (int i = 0; i < 26; ++i) {
