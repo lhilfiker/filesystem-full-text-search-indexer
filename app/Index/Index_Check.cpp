@@ -190,6 +190,49 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
   }
 
+  // Paths Index check
+  // 1. make sure seperators are correct and size matches
+  // 2. keep track of counts
+
+  uint64_t paths_check_size = 0;
+  uint64_t paths_check_count = 0;
+  uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
+
+  while (paths_check_size < paths_size) {
+    if (paths_check_size + 1 < paths_size) {
+      // we read 1 byte ahead for the offset to prevent
+      // accessing invalid data. The index format would allow it
+      // but it could be corrupted and not detected.
+      PathOffset path_offset;
+      // we read the offset so we know how long the path is and where the next
+      // path starts.
+      path_offset.bytes[0] = mmap_paths[paths_check_size];
+      ++paths_check_size;
+      path_offset.bytes[1] = mmap_paths[paths_check_size];
+      next_path_end = path_offset.offset;
+      ++paths_check_size;
+      if (!(paths_check_size + next_path_end <
+        paths_size + 1)) {
+        Log::write(4, "Index: Check: Paths index too small to read next path.");
+        if (verbose_output) {
+          std::cout
+            << "\nCheck: Paths index too small to read next path.\n";
+        }
+        return false;
+      }
+      paths_check_size += next_path_end;
+      ++paths_check_count;
+    }
+    else {
+      Log::write(4, "Index: Check: Paths index too small to read seperator.");
+      if (verbose_output) {
+        std::cout
+          << "\nCheck: Paths index too small to read seperator.\n";
+      }
+      return false;
+    }
+  }
+
 
   Index::unlock(false);
   Log::write(2, "Index: Check: No corruption detected.");
