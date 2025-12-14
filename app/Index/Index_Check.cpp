@@ -50,7 +50,7 @@ bool Index::expensive_index_check(const bool verbose_output)
   std::string previous_word = "";
 
   while (words_check_size < words_size) {
-    // read the one byte word sperator.
+    // read the one byte word separator.
     WordSeperator word_sep;
     for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
       word_sep.bytes[i] = mmap_words[words_check_size + i];
