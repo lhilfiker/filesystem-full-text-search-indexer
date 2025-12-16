@@ -5,6 +5,63 @@
 #include <filesystem>
 #include <string>
 
+std::string Index::generate_new_additionals(index_combine_data& index_to_add, const size_t& local_word_count,
+                                            PathsMapping& paths_mapping, ADDITIONAL_ID_TYPE& current_additional)
+{
+  std::string additional_transaction_content = "";
+  additional_transaction_content.reserve(
+    ((index_to_add.words_and_reversed[local_word_count].reversed.size() +
+        ADDITIONAL_PATH_LINKS_AMOUNT - 1) /
+      ADDITIONAL_PATH_LINKS_AMOUNT) *
+    ADDITIONAL_ENTRY_SIZE);
+
+  size_t in_additional_counter = 0;
+  // go through all missing local Ids and add them to additionals
+  while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
+    0) {
+    // add path id for local id and then erase it.
+    const auto& a_id =
+      *index_to_add.words_and_reversed[local_word_count].reversed.begin();
+    additional_transaction_content += {
+      reinterpret_cast<const char*>(&paths_mapping.by_local[a_id]), PATH_ID_LINK_SIZE
+    };
+    index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
+
+    ++in_additional_counter;
+    if (in_additional_counter ==
+      ADDITIONAL_PATH_LINKS_AMOUNT) {
+      // if the current additional is full
+      // we add reference to the new
+      // additional and go to the next.
+      if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
+        0) {
+        // If this will be the last one we will add 0.
+        additional_transaction_content += {
+          reinterpret_cast<const char*>(0), ADDITIONAL_ID_LINK_SIZE
+        };
+        in_additional_counter = 0;
+        break;
+      }
+      in_additional_counter = 0;
+      ++current_additional;
+      additional_transaction_content += {
+        reinterpret_cast<const char*>(&current_additional), ADDITIONAL_ID_LINK_SIZE
+      };
+    }
+  }
+
+  // Now that all remaining have been added, we need to make sure the last one is filled up and also added (with 0).
+  if (in_additional_counter != 0) {
+    for (; in_additional_counter < ADDITIONAL_PATH_LINKS_AMOUNT;
+           ++in_additional_counter) {
+      additional_transaction_content += {reinterpret_cast<const char*>(0), PATH_ID_LINK_SIZE};
+    }
+    additional_transaction_content += {reinterpret_cast<const char*>(0), ADDITIONAL_ID_LINK_SIZE};
+  }
+
+  return additional_transaction_content;
+}
+
 void Index::add_reversed_to_word(
   index_combine_data& index_to_add, uint64_t& on_disk_count,
   std::vector<Transaction>& transactions, size_t& additional_new_needed_size,
@@ -220,56 +277,8 @@ void Index::add_reversed_to_word(
 
     Transaction additional_new_transaction;
 
-    // so many additional we need.
-    additional_new_transaction.content.reserve(
-      ((index_to_add.words_and_reversed[local_word_count].reversed.size() +
-          ADDITIONAL_PATH_LINKS_AMOUNT - 1) /
-        ADDITIONAL_PATH_LINKS_AMOUNT) *
-      ADDITIONAL_ENTRY_SIZE);
-    size_t in_additional_counter = 0;
-
-    // go through all missing local Ids and add them to additionals
-    while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
-      0) {
-      // add path id for local id and then erase it.
-      const auto& a_id =
-        *index_to_add.words_and_reversed[local_word_count].reversed.begin();
-      additional_new_transaction.content += {
-        reinterpret_cast<const char*>(&paths_mapping.by_local[a_id]), PATH_ID_LINK_SIZE
-      };
-      index_to_add.words_and_reversed[local_word_count].reversed.erase(a_id);
-
-      ++in_additional_counter;
-      if (in_additional_counter ==
-        ADDITIONAL_PATH_LINKS_AMOUNT) {
-        // if the current additional is full
-        // we add reference to the new
-        // additional and go to the next.
-        if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
-          0) {
-          // If this will be the last one we will add 0.
-          additional_new_transaction.content += {
-            reinterpret_cast<const char*>(0), ADDITIONAL_ID_LINK_SIZE
-          };
-          in_additional_counter = 0;
-          break;
-        }
-        in_additional_counter = 0;
-        ++current_additional;
-        additional_new_transaction.content += {
-          reinterpret_cast<const char*>(&current_additional), ADDITIONAL_ID_LINK_SIZE
-        };
-      }
-    }
-
-    // Now that all remaining have been added, we need to make sure the last one is filled up and also added (with 0).
-    if (in_additional_counter != 0) {
-      for (; in_additional_counter < ADDITIONAL_PATH_LINKS_AMOUNT;
-             ++in_additional_counter) {
-        additional_new_transaction.content += {reinterpret_cast<const char*>(0), PATH_ID_LINK_SIZE};
-      }
-      additional_new_transaction.content += {reinterpret_cast<const char*>(0), ADDITIONAL_ID_LINK_SIZE};
-    }
+    additional_new_transaction.content = generate_new_additionals(index_to_add, local_word_count, paths_mapping,
+                                                                  current_additional);
 
 
     // add the transaction
@@ -307,7 +316,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
   content += index_to_add.words_and_reversed[local_word_count].word;
 
   // when we call this function, on_disk_count is right before the words starts.
-  Insertion new_word{
+  const Insertion new_word{
     {
       {
         on_disk_count,
@@ -325,7 +334,10 @@ void Index::add_new_word(index_combine_data& index_to_add,
   // We create a reversed insertion and remove the first 4 already and check if
   // needed more, if so we add already the next additional id to the reversed
   // insertion
-  Insertion new_reversed{on_disk_id * REVERSED_ENTRY_SIZE, REVERSED_ENTRY_SIZE};
+  Insertion new_reversed{
+    {{on_disk_id * REVERSED_ENTRY_SIZE, REVERSED_ENTRY_SIZE}}, ""
+  };
+
   reversed_new_needed_size += REVERSED_ENTRY_SIZE;
   new_reversed.content.reserve(REVERSED_ENTRY_SIZE);
   ReversedBlock current_ReversedBlock{};
@@ -342,6 +354,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
     }
   }
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() == 0) {
+    // If we have added all new links we don't need to set an additinal id.
     current_ReversedBlock.ids.additional[0] = 0;
   }
   else {
@@ -354,47 +367,19 @@ void Index::add_new_word(index_combine_data& index_to_add,
     // needed size.
 
     Transaction new_additionals{};
-    new_additionals.content.reserve(ADDITIONAL_ENTRY_SIZE);
-    while (true) {
-      AdditionalBlock additional{};
-      for (int i = 0; i < ADDITIONAL_PATH_LINKS_AMOUNT; ++i) {
-        if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
-          0) {
-          additional.ids.path[i] = 0;
-        }
-        else {
-          const auto& a_id = *index_to_add.words_and_reversed[local_word_count]
-                              .reversed.begin();
-          additional.ids.path[i] = paths_mapping.by_local[a_id];
-          index_to_add.words_and_reversed[local_word_count].reversed.erase(
-            a_id);
-        }
-      }
-      if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
-        0) {
-        additional.ids.additional[0] = 0;
-      }
-      else {
-        additional.ids.additional[0] = current_additional + 1;
-      }
+    new_additionals.content = generate_new_additionals(index_to_add, local_word_count, paths_mapping,
+                                                       current_additional);
 
-      for (int i = 0; i < ADDITIONAL_ENTRY_SIZE; ++i) {
-        new_additionals.content += additional.bytes[i];
-      }
-
-      if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
-        0)
-        break; // if no more additional need to be added we break.
-      ++current_additional;
-    }
+    // add the transaction
     new_additionals.header = {
-      0,
-      4,
-      disk_io.get_additional_size() +
-      additional_new_needed_size, // add to the end
-      0,
-      1,
-      new_additionals.content.length()
+      {
+        0,
+        4,
+        disk_io.get_additional_size() + additional_new_needed_size, // add to the end
+        0,
+        1,
+        new_additionals.content.length()
+      }
     };
     transactions.push_back(new_additionals);
     additional_new_needed_size += new_additionals.content.length();

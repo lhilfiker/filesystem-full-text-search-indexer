@@ -110,6 +110,8 @@ private:
   static void resize(const std::filesystem::path path_to_resize,
                      const size_t size);
   static int add_new(index_combine_data& index_to_add);
+  static std::string generate_new_additionals(index_combine_data& index_to_add, const size_t& local_word_count,
+                                              PathsMapping& paths_mapping, uint32_t& current_additional);
   static void add_reversed_to_word(index_combine_data& index_to_add,
                                    uint64_t& on_disk_count,
                                    std::vector<Transaction>& transactions,
