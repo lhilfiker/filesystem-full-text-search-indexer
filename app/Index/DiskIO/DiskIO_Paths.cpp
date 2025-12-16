@@ -1,0 +1,18 @@
+#include "../index.h"
+#include "../../Helper/helper.h"
+#include "../../Logging/logging.h"
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+uint16_t Index::DiskIO::get_path_separator(const size_t start_pos) const
+{
+  return *reinterpret_cast<const uint16_t*>(&mmap_paths[start_pos]);
+}
+
+// Start pos is the pos of the first path byte and not the path separator.
+std::string Index::DiskIO::get_path(const size_t start_pos, const uint16_t length) const
+{
+  return std::string(&mmap_paths[start_pos], length);
+}

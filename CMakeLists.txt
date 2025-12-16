@@ -47,7 +47,9 @@ set(SOURCES
         app/Index/DiskIO/DiskIO_Public_Getters.cpp
         app/Index/DiskIO/DiskIO_Additional.cpp
         app/Index/DiskIO/DiskIO_Reversed.cpp
-
+        app/Index/DiskIO/DiskIO_Words.cpp
+        app/Index/DiskIO/DiskIO_WordsF.cpp
+        app/Index/DiskIO/DiskIO_Paths.cpp
 
         # Indexer
         app/Indexer/Indexer.cpp
@@ -60,7 +62,7 @@ set(SOURCES
 
         # Search
         app/Search/Search.cpp
-        app/Index/DiskIO/DiskIO_Words.cpp
+
 )
 
 set(HEADERS

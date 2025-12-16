@@ -600,14 +600,8 @@ int Index::merge(index_combine_data& index_to_add)
       // we read 1 byte ahead for the offset to prevent
       // accessing invalid data. The index format would allow it,
       // but it could be corrupted and not detected.
-      PathOffset path_offset;
-      // we read the offset so we know how long the path is and where the next
-      // path starts.
-      path_offset.bytes[0] = mmap_paths[on_disk_count];
-      ++on_disk_count;
-      path_offset.bytes[1] = mmap_paths[on_disk_count];
-      next_path_end = path_offset.offset;
-      ++on_disk_count;
+      next_path_end = disk_io.get_path_separator(on_disk_count);
+      on_disk_count += 2;
 
       if (on_disk_count + next_path_end <
         disk_io.get_paths_size() + 1) {
@@ -615,7 +609,7 @@ int Index::merge(index_combine_data& index_to_add)
         // offset.
         // refrence the path to a string and then search in the unordered map we
         // created earlier.
-        std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
+        std::string path_to_compare = disk_io.get_path(on_disk_count, next_path_end);
         if (paths_search.contains(path_to_compare)) {
           // check if the disk path is found in memory index.
 
@@ -744,12 +738,7 @@ int Index::merge(index_combine_data& index_to_add)
   paths_search.clear();
 
   // copy words_f into memory
-  std::vector<WordsFValue> words_f(26);
-  for (int i = 0; i < 26; ++i) {
-    std::memcpy(&words_f[i].bytes[0],
-                &mmap_words_f[i * (8 + WORDS_F_LOCATION_SIZE)],
-                (8 + WORDS_F_LOCATION_SIZE));
-  }
+  std::vector<WordsFValue> words_f = disk_io.get_words_f();
 
   // This is needed when we add new words. Each time we add a new word the start
   // of all following chars will change by how much we add. Here we will note
