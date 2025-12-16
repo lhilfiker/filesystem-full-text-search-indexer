@@ -800,7 +800,6 @@ int Index::merge(index_combine_data& index_to_add)
     char word_first_char = disk_io.get_char_of_word(on_disk_count, 0);
     if (disk_first_char <
       word_first_char) {
-      // + WORD_SEPARATOR_SIZE because of the word seperator
       disk_first_char = word_first_char;
     }
 

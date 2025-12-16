@@ -155,7 +155,7 @@ public:
   search_word_list(std::vector<std::pair<std::string, bool>>& search_words,
                    int min_char_for_match);
   static std::unordered_map<PATH_ID_TYPE, std::string>
-  id_to_path_string(std::vector<search_path_ids_return> path_ids);
+  id_to_path_string(std::vector<search_path_ids_return>& path_ids);
 
   static int lock_status(bool initialize);
   static bool lock(bool initialize);
