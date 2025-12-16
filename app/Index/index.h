@@ -113,7 +113,6 @@ private:
   static std::string generate_new_additionals(index_combine_data& index_to_add, const size_t& local_word_count,
                                               PathsMapping& paths_mapping, uint32_t& current_additional);
   static void add_reversed_to_word(index_combine_data& index_to_add,
-                                   uint64_t& on_disk_count,
                                    std::vector<Transaction>& transactions,
                                    size_t& additional_new_needed_size,
                                    size_t& reversed_new_needed_size,

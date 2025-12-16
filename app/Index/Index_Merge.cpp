@@ -61,7 +61,7 @@ std::string Index::generate_new_additionals(index_combine_data& index_to_add, co
 }
 
 void Index::add_reversed_to_word(
-  index_combine_data& index_to_add, uint64_t& on_disk_count,
+  index_combine_data& index_to_add,
   std::vector<Transaction>& transactions, size_t& additional_new_needed_size,
   size_t& reversed_new_needed_size, uint64_t& on_disk_id,
   const size_t& local_word_count, PathsMapping& paths_mapping)
@@ -465,21 +465,30 @@ void Index::insertion_to_transactions(
       // this means we copy over the data itself we are trying to move. That's
       // why we create a backup of this before and then move it.
       Transaction create_backup{
-        0,
-        static_cast<uint8_t>(index_type),
-        movements_temp[i].start_pos,
-        backup_ids,
-        3,
-        range
+        {
+          {
+            0,
+            static_cast<uint8_t>(index_type),
+            movements_temp[i].start_pos,
+            backup_ids,
+            3,
+            range
+          }
+        },
+        ""
       };
       move_transactions.push_back(create_backup);
       Transaction move_operation{
-        0,
-        static_cast<uint8_t>(index_type),
-        movements_temp[i].start_pos,
-        backup_ids,
-        0,
-        range,
+        {
+          {
+            0,
+            static_cast<uint8_t>(index_type),
+            movements_temp[i].start_pos,
+            backup_ids,
+            0,
+            range,
+          }
+        },
         ""
       };
       MoveOperationContent mov_content;
@@ -493,12 +502,16 @@ void Index::insertion_to_transactions(
     }
     // with no backup
     Transaction move_operation{
-      0,
-      static_cast<uint8_t>(index_type),
-      movements_temp[i].start_pos,
-      0,
-      0,
-      range,
+      {
+        {
+          0,
+          static_cast<uint8_t>(index_type),
+          movements_temp[i].start_pos,
+          0,
+          0,
+          range,
+        }
+      },
       ""
     };
     MoveOperationContent mov_content;
@@ -514,12 +527,16 @@ void Index::insertion_to_transactions(
   // Their location already got updated so it's correct.
   for (size_t i = 0; i < to_insertions.size(); ++i) {
     Transaction insert_item{
-      0,
-      static_cast<uint8_t>(index_type),
-      to_insertions[i].header.location,
-      0,
-      1,
-      to_insertions[i].header.content_length,
+      {
+        {
+          0,
+          static_cast<uint8_t>(index_type),
+          to_insertions[i].header.location,
+          0,
+          1,
+          to_insertions[i].header.content_length,
+        }
+      },
       to_insertions[i].content
     };
     transactions.push_back(insert_item);
@@ -603,12 +620,16 @@ int Index::merge(index_combine_data& index_to_add)
             // if it is different we create a transaction to correct it.
             std::string count_overwrite_content = *reinterpret_cast<std::string*>(&new_path_count);
             Transaction count_to_overwrite_path_transaction{
-              0,
-              5,
-              static_cast<uint64_t>((on_disk_id - 1) * 4),
-              0,
-              1,
-              4,
+              {
+                {
+                  0,
+                  5,
+                  static_cast<uint64_t>((on_disk_id - 1) * 4),
+                  0,
+                  1,
+                  4,
+                }
+              },
               count_overwrite_content
             };
             transactions.push_back(count_to_overwrite_path_transaction);
@@ -662,35 +683,53 @@ int Index::merge(index_combine_data& index_to_add)
   if (paths_needed_space != 0) {
     // resize so all paths + offset fit.
     Transaction resize_transaction{
-      0, 0, 0,
-      0, 2, disk_io.get_paths_size() + paths_needed_space
+      {
+        {
+          0, 0, 0,
+          0, 2, disk_io.get_paths_size() + paths_needed_space
+        }
+      },
+      ""
     };
     transactions.push_back(resize_transaction);
     // write it to the now free space at the end of the file.
     Transaction to_add_path_transaction{
-      0,
-      0,
-      static_cast<uint64_t>(disk_io.get_paths_size()),
-      0,
-      1,
-      paths_needed_space,
+      {
+        {
+          0,
+          0,
+          static_cast<uint64_t>(disk_io.get_paths_size()),
+          0,
+          1,
+          paths_needed_space,
+        }
+      },
       paths_add_content
     };
     transactions.push_back(to_add_path_transaction);
 
     // resize so all paths counts fit.
     Transaction count_resize_transaction{
-      0, 5, 0, 0, 2, disk_io.get_paths_count_size() + count_needed_space
+      {
+        {
+          0, 5, 0, 0, 2, disk_io.get_paths_count_size() + count_needed_space
+        }
+      },
+      ""
     };
     transactions.push_back(count_resize_transaction);
     // write it to the now free space at the end of the file.
     Transaction count_to_add_path_transaction{
-      0,
-      5,
-      (disk_io.get_paths_count_size()),
-      0,
-      1,
-      count_needed_space,
+      {
+        {
+          0,
+          5,
+          (disk_io.get_paths_count_size()),
+          0,
+          1,
+          count_needed_space,
+        }
+      },
       count_add_content
     };
     transactions.push_back(count_to_add_path_transaction);
@@ -775,10 +814,10 @@ int Index::merge(index_combine_data& index_to_add)
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
           // add to existing
           Log::write(1, "Index: Merge: Found existing word");
-          add_reversed_to_word(index_to_add, on_disk_count, transactions,
-                               additional_new_needed_size,
-                               reversed_new_needed_size, on_disk_id,
-                               local_word_count, paths_mapping);
+          add_reversed_to_word(index_to_add, transactions, additional_new_needed_size,
+                               reversed_new_needed_size,
+                               on_disk_id, local_word_count,
+                               paths_mapping);
           ++local_word_count;
           if (local_word_count ==
             index_to_add.words_and_reversed
@@ -907,8 +946,8 @@ int Index::merge(index_combine_data& index_to_add)
   // all. This is not an ideal implementation because we copy the whole
   // thing. When we add custom words_f length then we can make a better
   // implementation that is faster and saves memory and space.
-  Transaction words_f_new{0, 2, 0, 0, 1, ((8 + WORDS_F_LOCATION_SIZE) * 26)};
-  words_f_new.content.resize(((8 + WORDS_F_LOCATION_SIZE) * 26));
+  Transaction words_f_new{{{0, 2, 0, 0, 1, ((8 + WORDS_F_LOCATION_SIZE) * 26)}}, ""};
+  words_f_new.content.reserve(((8 + WORDS_F_LOCATION_SIZE) * 26));
   uint64_t all_size = 0;
   uint64_t all_id_change = 0;
   for (int i = 0; i < 26; ++i) {
@@ -935,16 +974,31 @@ int Index::merge(index_combine_data& index_to_add)
              "Index: Creating resize transaction for additional with size: " +
              std::to_string(disk_io.get_additional_size() + additional_new_needed_size));
   Transaction resize_words{
-    0, 1, 0, 0, 2, disk_io.get_words_size() + words_new_needed_size,
+    {
+      {
+        0, 1, 0, 0, 2, disk_io.get_words_size() + words_new_needed_size,
+
+      }
+    },
     ""
   };
   move_transactions.push_back(resize_words);
   Transaction resize_reversed{
-    0, 3, 0, 0, 2, disk_io.get_reversed_size() + reversed_new_needed_size, ""
+    {
+      {
+        0, 3, 0, 0, 2, disk_io.get_reversed_size() + reversed_new_needed_size,
+      }
+    },
+    ""
   };
   move_transactions.push_back(resize_reversed);
   Transaction resize_additional{
-    0, 4, 0, 0, 2, disk_io.get_additional_size() + additional_new_needed_size, ""
+    {
+      {
+        0, 4, 0, 0, 2, disk_io.get_additional_size() + additional_new_needed_size,
+      }
+    },
+    ""
   };
   move_transactions.push_back(resize_additional);
 
