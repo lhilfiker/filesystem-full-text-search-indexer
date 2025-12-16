@@ -548,7 +548,7 @@ int Index::merge(index_combine_data& index_to_add)
 {
   Log::write(1, "indexer: add: adding to existing index.");
   std::error_code ec;
-  map();
+  disk_io.map(CONFIG_INDEX_PATH);
 
   std::vector<Transaction> transactions;
   std::vector<Transaction> move_transactions;
