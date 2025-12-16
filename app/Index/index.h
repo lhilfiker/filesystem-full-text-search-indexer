@@ -95,7 +95,6 @@ private:
 
 private:
   static void check_files();
-  static int sync_all();
   static void resize(const std::filesystem::path path_to_resize,
                      const size_t size);
   static int add_new(index_combine_data& index_to_add);

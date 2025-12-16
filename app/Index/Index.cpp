@@ -59,19 +59,6 @@ void Index::resize(const std::filesystem::path path_to_resize,
   return;
 }
 
-int Index::sync_all()
-{
-  std::error_code ec;
-  mmap_paths.sync(ec);
-  mmap_words.sync(ec);
-  mmap_words_f.sync(ec);
-  mmap_reversed.sync(ec);
-  mmap_additional.sync(ec);
-  mmap_paths_count.sync(ec);
-  if (ec)
-    return 1;
-  return 0;
-}
 
 void Index::check_files()
 {
@@ -199,23 +186,9 @@ int Index::initialize()
     } // lock file because of check index and transaction execution.
   }
   // just to update internal state
-  unmap(); // unmap anyway incase they are already mapped.
+  disk_io.unmap(); // unmap anyway incase they are already mapped.
   check_files(); // check if index files exist and create them.
-  map(); // ignore error here as it might fail if file size is 0.
-  // get actual sizes of the files.
-  paths_size = Helper::file_size(CONFIG_INDEX_PATH / "paths.index");
-  paths_count_size = Helper::file_size(CONFIG_INDEX_PATH / "paths_count.index");
-  words_size = Helper::file_size(CONFIG_INDEX_PATH / "words.index");
-  words_f_size = Helper::file_size(CONFIG_INDEX_PATH / "words_f.index");
-  reversed_size = Helper::file_size(CONFIG_INDEX_PATH / "reversed.index");
-  additional_size = Helper::file_size(CONFIG_INDEX_PATH / "additional.index");
-  // If an error occured exit.
-  if (paths_size == -1 || words_size == -1 || words_f_size == -1 ||
-    reversed_size == -1 || additional_size == -1) {
-    Log::error("Index: initialize: could not get actual size of index "
-      "files, exiting.");
-    return 1;
-  }
+  disk_io.map(CONFIG_INDEX_PATH); // ignore error here as it might fail if file size is 0.
   is_mapped = true;
 
   // check if transaction file exists
@@ -256,7 +229,7 @@ int Index::uninitialize()
   }
   is_mapped = false;
   // write caches, etc...
-  if (unmap() == 1) {
+  if (disk_io.unmap() == 1) {
     Log::write(4, "Index: uninitialize: could not unmap.");
     return 1;
   }
