@@ -44,6 +44,7 @@ set(SOURCES
         app/Index/Index_Check.cpp
         #Disk IO
         app/Index/DiskIO/DiskIO.cpp
+        app/Index/DiskIO/DiskIO_Public_Getters.cpp
 
 
         # Indexer

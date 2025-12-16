@@ -50,12 +50,14 @@ private:
 
 
     // getters
-    size_t get_paths_size();
-    size_t get_paths_count_size();
-    size_t get_words_size();
-    size_t get_words_f_size();
-    size_t get_reversed_size();
-    size_t get_additional_size();
+    size_t get_paths_size() const;
+    size_t get_paths_count_size() const;
+    size_t get_words_size() const;
+    size_t get_words_f_size() const;
+    size_t get_reversed_size() const;
+    size_t get_additional_size() const;
+    bool get_mapped() const;
+    bool get_locked() const;
   };
 
 private:
