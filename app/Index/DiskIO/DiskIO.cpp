@@ -19,6 +19,30 @@ Index::DiskIO::DiskIO()
 {
 }
 
+bool Index::DiskIO::sync_file(mio::mmap_sink& target_mmap)
+{
+  std::error_code ec;
+  target_mmap.sync(ec);
+  if (ec) {
+    Log::write(4, "Index::DiskIO::sync_file: syncing failed.");
+    return false;
+  }
+  return true;
+}
+
+bool Index::DiskIO::sync_all()
+{
+  // Because sync may be called anytime, we will not check if the operation failed.
+  sync_file(mmap_paths);
+  sync_file(mmap_paths_count);
+  sync_file(mmap_words);
+  sync_file(mmap_words_f);
+  sync_file(mmap_reversed);
+  sync_file(mmap_additional);
+  return true;
+}
+
+
 bool Index::DiskIO::map_file(mio::mmap_sink& target_mmap, size_t& target_size, const std::string& source_path)
 {
   std::error_code ec;
@@ -113,6 +137,7 @@ bool Index::DiskIO::map(const std::filesystem::path& index_path)
 
 bool Index::DiskIO::unmap()
 {
+  sync_all();
   if (mmap_paths.is_mapped()) {
     mmap_paths.unmap();
   }
@@ -136,28 +161,5 @@ bool Index::DiskIO::unmap()
   is_mapped = false;
   Log::write(1, "Index::DiskIO::unmap: unmapped files successfully.");
 
-  return true;
-}
-
-bool Index::DiskIO::sync_file(mio::mmap_sink& target_mmap)
-{
-  std::error_code ec;
-  target_mmap.sync(ec);
-  if (ec) {
-    Log::write(4, "Index::DiskIO::sync_file: syncing failed.");
-    return false;
-  }
-  return true;
-}
-
-bool Index::DiskIO::sync_all()
-{
-  // Because sync may be called anytime, we will not check if the operation failed.
-  sync_file(mmap_paths);
-  sync_file(mmap_paths_count);
-  sync_file(mmap_words);
-  sync_file(mmap_words_f);
-  sync_file(mmap_reversed);
-  sync_file(mmap_additional);
   return true;
 }
