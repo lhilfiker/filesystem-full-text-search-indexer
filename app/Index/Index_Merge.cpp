@@ -64,8 +64,7 @@ void Index::add_reversed_to_word(
       Log::error("Index: path_ids_from_word_id: to search word id would be at "
         "nonexisting location. Index most likely corrupt. Exiting");
     }
-    AdditionalBlock* disk_additional = reinterpret_cast<AdditionalBlock*>(
-      &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
+    AdditionalBlock* disk_additional = disk_io.get_additional_pointer(current_additional);
     // load the current additional block. -1 because additional IDs start at 1.
     size_t i = 0;
     while (index_to_add.words_and_reversed[local_word_count].reversed.size() !=
@@ -85,9 +84,7 @@ void Index::add_reversed_to_word(
               "Index: path_ids_from_word_id: to search word id would be at "
               "nonexisting location. Index most likely corrupt. Exiting");
           }
-          disk_additional = reinterpret_cast<AdditionalBlock*>(
-            &mmap_additional[(current_additional - 1) *
-              ADDITIONAL_ENTRY_SIZE]);
+          disk_additional = disk_io.get_additional_pointer(current_additional);
           i = 0;
           additional_free.push_back(
             {
