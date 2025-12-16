@@ -8,12 +8,14 @@
 
 uint16_t Index::DiskIO::get_path_separator(const size_t start_pos) const
 {
-  return *reinterpret_cast<const uint16_t*>(&mmap_paths[start_pos]);
+  uint16_t separator;
+  std::memcpy(&separator, &mmap_paths[start_pos], sizeof(uint16_t));
+  return separator;
 }
 
 void Index::DiskIO::set_path_separator(const size_t start_pos, const uint16_t separator)
 {
-  *reinterpret_cast<uint16_t*>(&mmap_paths[start_pos]) = separator;
+  std::memcpy(&mmap_paths[start_pos], &separator, sizeof(uint16_t));
 }
 
 // Start pos is the pos of the first path byte and not the path separator.
