@@ -91,37 +91,37 @@ bool Index::DiskIO::map(const std::filesystem::path& index_path)
 
   // paths.index
   if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
-    Log::write(4, "Index::DiskIO::map: mapping failed.");
+    Log::write(4, "Index::DiskIO::map: paths mapping failed.");
     unmap();
     return false;
   }
   // paths_count.index
-  if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
-    Log::write(4, "Index::DiskIO::map: mapping failed.");
+  if (!map_file(mmap_paths, paths_size, (index_path / "paths_count.index").string())) {
+    Log::write(4, "Index::DiskIO::map: paths_count mapping failed.");
     unmap();
     return false;
   }
   // words.index
-  if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
-    Log::write(4, "Index::DiskIO::map: mapping failed.");
+  if (!map_file(mmap_paths, paths_size, (index_path / "words.index").string())) {
+    Log::write(4, "Index::DiskIO::map: words mapping failed.");
     unmap();
     return false;
   }
   // words_f.index
-  if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
-    Log::write(4, "Index::DiskIO::map: mapping failed.");
+  if (!map_file(mmap_paths, paths_size, (index_path / "words_f.index").string())) {
+    Log::write(4, "Index::DiskIO::map: words_f mapping failed.");
     unmap();
     return false;
   }
   // reversed.index
-  if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
-    Log::write(4, "Index::DiskIO::map: mapping failed.");
+  if (!map_file(mmap_paths, paths_size, (index_path / "reversed.index").string())) {
+    Log::write(4, "Index::DiskIO::map: reversed mapping failed.");
     unmap();
     return false;
   }
   // additional.index
   // this one can fail: if there is no additional then it's size is 0.
-  if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
+  if (!map_file(mmap_paths, paths_size, (index_path / "additional.index").string())) {
     additional_mapped = false;
     Log::write(4, "Index::DiskIO::map: mapping failed for additional. This is allowed if it's size is 0.");
   }
