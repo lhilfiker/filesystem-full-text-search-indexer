@@ -37,6 +37,7 @@ private:
     bool is_locked;
 
     bool map_file(mio::mmap_sink& target_mmap, size_t& target_size, const std::string& source_path);
+    bool sync_file(mio::mmap_sink& target_mmap);
 
   public:
     DiskIO();
@@ -47,6 +48,7 @@ private:
     bool unmap();
     // unmaps the index files.
     // returns true if successful , false if not
+    bool sync_all();
 
 
     // getters
@@ -76,24 +78,13 @@ private:
   static bool readonly_initialized;
   static bool is_mapped;
   static bool first_time;
-  static int64_t paths_size;
   static int64_t paths_size_buffer;
-  static int64_t paths_count_size;
   static int64_t paths_count_size_buffer;
-  static int64_t words_size;
   static int64_t words_size_buffer;
-  static int64_t words_f_size;
   static int64_t words_f_size_buffer;
-  static int64_t reversed_size;
   static int64_t reversed_size_buffer;
-  static int64_t additional_size;
   static int64_t additional_size_buffer;
-  static mio::mmap_sink mmap_paths;
-  static mio::mmap_sink mmap_paths_count;
-  static mio::mmap_sink mmap_words;
-  static mio::mmap_sink mmap_words_f;
-  static mio::mmap_sink mmap_reversed;
-  static mio::mmap_sink mmap_additional;
+
 
   static bool index_lock;
   static bool read_only;
@@ -104,9 +95,7 @@ private:
 
 private:
   static void check_files();
-  static int map();
   static int sync_all();
-  static int unmap();
   static void resize(const std::filesystem::path path_to_resize,
                      const size_t size);
   static int add_new(index_combine_data& index_to_add);
