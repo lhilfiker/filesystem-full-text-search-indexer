@@ -38,6 +38,7 @@ private:
 
     bool map_file(mio::mmap_sink& target_mmap, size_t& target_size, const std::string& source_path);
     bool sync_file(mio::mmap_sink& target_mmap);
+    mio::mmap_sink* get_target_mmap(uint8_t target_index);
 
   public:
     DiskIO();
@@ -78,6 +79,12 @@ private:
     void set_words_f(std::vector<WordsFValue>& words_f);
     void set_additional(const AdditionalBlock& additional_block, size_t additional_id);
     void set_reversed(const ReversedBlock& reversed_block, size_t word_id);
+    void copy_to_index(uint8_t target_index, mio::mmap_sink& source, size_t target_pos, size_t source_pos,
+                       size_t length);
+    void shift_data(uint8_t target_index, size_t target_pos, size_t source_pos,
+                    size_t length);
+    void copy_from_index(uint8_t source_index, mio::mmap_sink& target, size_t target_pos, size_t source_pos,
+                         size_t length);
   };
 
 private:
