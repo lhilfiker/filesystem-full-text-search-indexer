@@ -109,28 +109,24 @@ void Index::add_reversed_to_word(
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
     // reversed free slots
     for (const uint16_t& free_slot : reversed_free) {
+      const auto& r_id = *index_to_add.words_and_reversed[local_word_count].reversed.begin();
+      const PATH_ID_TYPE disk_id = paths_mapping.by_local[r_id];
+
       Transaction reversed_add_transaction{
-        0,
-        3,
-        (on_disk_id * REVERSED_ENTRY_SIZE) +
-        reversed_new_needed_size +
-        (free_slot * PATH_ID_LINK_SIZE),
-        0,
-        1,
-        PATH_ID_LINK_SIZE
+        {
+          {
+            0,
+            3,
+            (on_disk_id * REVERSED_ENTRY_SIZE) +
+            reversed_new_needed_size +
+            (free_slot * PATH_ID_LINK_SIZE),
+            0,
+            1,
+            PATH_ID_LINK_SIZE
+          }
+        },
+        {reinterpret_cast<const char*>(&disk_id), PATH_ID_LINK_SIZE}
       };
-      const auto& r_id =
-        *index_to_add.words_and_reversed[local_word_count].reversed.begin();
-      // get the first local id. then convert it to disk id and save it to the
-      // offset. PathIDOffset is the same  The Path ID size of a reversed
-      // slot.
-      PathIDOffset content;
-      content.offset = paths_mapping.by_local[r_id];
-      // add it to the transaction to overwrite the empty place with the new
-      // disk id and then delete it from the local reversed list.
-      for (uint8_t i = 0; i < PATH_ID_LINK_SIZE; ++i) {
-        reversed_add_transaction.content += content.bytes[i];
-      }
 
       index_to_add.words_and_reversed[local_word_count].reversed.erase(r_id);
       transactions.push_back(reversed_add_transaction);
@@ -144,27 +140,26 @@ void Index::add_reversed_to_word(
       reversed_free.clear();
       for (const AdditionalFree& free_slot_block : additional_free) {
         for (const uint16_t& free_slot : free_slot_block.free) {
-          Transaction additional_add_transaction{
-            0,
-            4,
-            ((free_slot_block.additional_id - 1) * ADDITIONAL_ENTRY_SIZE) +
-            (free_slot * PATH_ID_LINK_SIZE),
-            0,
-            1,
-            ADDITIONAL_ID_LINK_SIZE
-          };
           const auto& a_id = *index_to_add.words_and_reversed[local_word_count]
                               .reversed.begin();
-          // get the first local id. then convert it to disk id and save it to
-          // the offset. PathIDOffset is the same The Path ID  size of a
-          // reversed slot.
-          AdditionalOffset content;
-          content.offset = paths_mapping.by_local[a_id];
-          // add it to the transaction to overwrite the empty place with the new
-          // disk id and then delete it from the local reversed list.
-          for (uint8_t i = 0; i < ADDITIONAL_ID_LINK_SIZE; ++i) {
-            additional_add_transaction.content += content.bytes[i];
-          }
+          const PATH_ID_TYPE disk_id = paths_mapping.by_local[a_id];
+
+
+          Transaction additional_add_transaction{
+            {
+              {
+                0,
+                4,
+                ((free_slot_block.additional_id - 1) * ADDITIONAL_ENTRY_SIZE) +
+                (free_slot * PATH_ID_LINK_SIZE),
+                0,
+                1,
+                PATH_ID_LINK_SIZE
+              }
+            },
+            {reinterpret_cast<const char*>(&disk_id), PATH_ID_LINK_SIZE}
+          };
+
           index_to_add.words_and_reversed[local_word_count].reversed.erase(
             a_id);
           transactions.push_back(additional_add_transaction);
