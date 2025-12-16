@@ -193,7 +193,7 @@ bool Index::expensive_index_check(const bool verbose_output)
       // accessing invalid data. The index format would allow it
       // but it could be corrupted and not detected.
       next_path_end = disk_io.get_path_separator(paths_check_size);
-      ++paths_check_size;
+      paths_check_size += 2;
       if (!(paths_check_size + next_path_end <
         disk_io.get_paths_size() + 1)) {
         Log::write(4, "Index: Check: Paths index too small to read next path.");
