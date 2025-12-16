@@ -13,8 +13,54 @@
 #include <vector>
 
 // Index/Index.cpp
-class Index {
+class Index
+{
 private:
+  class DiskIO
+  {
+  private:
+    mio::mmap_sink mmap_paths;
+    mio::mmap_sink mmap_paths_count;
+    mio::mmap_sink mmap_words;
+    mio::mmap_sink mmap_words_f;
+    mio::mmap_sink mmap_reversed;
+    mio::mmap_sink mmap_additional;
+    size_t paths_size;
+    size_t paths_count_size;
+    size_t words_size;
+    size_t words_f_size;
+    size_t reversed_size;
+    size_t additional_size;
+    bool additional_mapped;
+
+    bool is_mapped;
+    bool is_locked;
+
+    bool map_file(mio::mmap_sink& target_mmap, size_t& target_size, const std::string& source_path);
+
+  public:
+    DiskIO();
+
+    bool map(const std::filesystem::path& index_path);
+    // maps the index files.
+    // returns true if successful , false if not
+    bool unmap();
+    // unmaps the index files.
+    // returns true if successful , false if not
+
+
+    // getters
+    size_t get_paths_size();
+    size_t get_paths_count_size();
+    size_t get_words_size();
+    size_t get_words_f_size();
+    size_t get_reversed_size();
+    size_t get_additional_size();
+  };
+
+private:
+  static DiskIO disk_io;
+
   static bool is_config_loaded;
   static bool initialized;
   static bool readonly_initialized;
@@ -53,51 +99,51 @@ private:
   static int unmap();
   static void resize(const std::filesystem::path path_to_resize,
                      const size_t size);
-  static int add_new(index_combine_data &index_to_add);
-  static void add_reversed_to_word(index_combine_data &index_to_add,
-                                   uint64_t &on_disk_count,
-                                   std::vector<Transaction> &transactions,
-                                   size_t &additional_new_needed_size,
-                                   size_t &reversed_new_needed_size,
-                                   uint64_t &on_disk_id,
-                                   const size_t &local_word_count,
-                                   PathsMapping &paths_mapping);
-  static void add_new_word(index_combine_data &index_to_add,
-                           uint64_t &on_disk_count,
-                           std::vector<Transaction> &transactions,
-                           std::vector<Insertion> &words_insertions,
-                           std::vector<Insertion> &reversed_insertions,
-                           size_t &additional_new_needed_size,
-                           size_t &words_new_needed_size,
-                           size_t &reversed_new_needed_size,
-                           uint64_t &on_disk_id, const size_t &local_word_count,
-                           PathsMapping &paths_mapping);
+  static int add_new(index_combine_data& index_to_add);
+  static void add_reversed_to_word(index_combine_data& index_to_add,
+                                   uint64_t& on_disk_count,
+                                   std::vector<Transaction>& transactions,
+                                   size_t& additional_new_needed_size,
+                                   size_t& reversed_new_needed_size,
+                                   uint64_t& on_disk_id,
+                                   const size_t& local_word_count,
+                                   PathsMapping& paths_mapping);
+  static void add_new_word(index_combine_data& index_to_add,
+                           uint64_t& on_disk_count,
+                           std::vector<Transaction>& transactions,
+                           std::vector<Insertion>& words_insertions,
+                           std::vector<Insertion>& reversed_insertions,
+                           size_t& additional_new_needed_size,
+                           size_t& words_new_needed_size,
+                           size_t& reversed_new_needed_size,
+                           uint64_t& on_disk_id, const size_t& local_word_count,
+                           PathsMapping& paths_mapping);
   static void insertion_to_transactions(
-      std::vector<Transaction> &transactions,
-      std::vector<Transaction> &move_transactions,
-      std::vector<Insertion> &to_insertions,
-      int index_type); // index_type: 1 = words, 3 = reversed.
-  static void write_to_transaction(std::vector<Transaction> &transactions,
-                                   mio::mmap_sink &mmap_transactions,
-                                   size_t &transaction_file_location);
-  static int merge(index_combine_data &index_to_add);
+    std::vector<Transaction>& transactions,
+    std::vector<Transaction>& move_transactions,
+    std::vector<Insertion>& to_insertions,
+    int index_type); // index_type: 1 = words, 3 = reversed.
+  static void write_to_transaction(std::vector<Transaction>& transactions,
+                                   mio::mmap_sink& mmap_transactions,
+                                   size_t& transaction_file_location);
+  static int merge(index_combine_data& index_to_add);
   static int execute_transactions();
   static std::vector<PATH_ID_TYPE> path_ids_from_word_id(uint64_t word_id);
   static void lock_update_sizes();
   static int
-  write_transaction_file(const std::filesystem::path &transaction_path,
-                         std::vector<Transaction> &move_transactions,
-                         std::vector<Transaction> &transactions);
+  write_transaction_file(const std::filesystem::path& transaction_path,
+                         std::vector<Transaction>& move_transactions,
+                         std::vector<Transaction>& transactions);
 
 public:
-  static void save_config(const std::filesystem::path &index_path,
+  static void save_config(const std::filesystem::path& index_path,
                           const uint16_t lock_aquisition_timeout);
   static bool is_index_mapped();
   static int initialize();
   static int uninitialize();
-  static int add(index_combine_data &index_to_add);
+  static int add(index_combine_data& index_to_add);
   static std::vector<search_path_ids_count_return>
-  search_word_list(std::vector<std::pair<std::string, bool>> &search_words,
+  search_word_list(std::vector<std::pair<std::string, bool>>& search_words,
                    int min_char_for_match);
   static std::unordered_map<PATH_ID_TYPE, std::string>
   id_to_path_string(std::vector<search_path_ids_return> path_ids);
