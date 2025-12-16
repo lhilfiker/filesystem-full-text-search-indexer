@@ -65,6 +65,7 @@ private:
     std::vector<WordsFValue> get_words_f() const;
     uint16_t get_path_separator(size_t start_pos) const;
     std::string get_path(size_t start_pos, uint16_t length) const;
+    uint32_t get_path_count(size_t path_id) const;
   };
 
 private:

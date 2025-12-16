@@ -622,25 +622,12 @@ int Index::merge(index_combine_data& index_to_add)
           // which ones are not on disk.
           // check paths count and if it is different from the new one we create
           // a transaction and add it.
-          PathsCountItem current_paths_count{};
-          current_paths_count.bytes[0] = mmap_paths_count[(on_disk_id - 1) * 4];
-          current_paths_count.bytes[1] =
-            mmap_paths_count[((on_disk_id - 1) * 4) + 1];
-          current_paths_count.bytes[2] =
-            mmap_paths_count[((on_disk_id - 1) * 4) + 2];
-          current_paths_count.bytes[3] =
-            mmap_paths_count[((on_disk_id - 1) * 4) + 3];
-          if (current_paths_count.num !=
-            index_to_add.paths_count[paths_mapping.by_disk[on_disk_id]]) {
+
+          uint32_t new_path_count = index_to_add.paths_count[paths_mapping.by_disk[on_disk_id]];
+          if (disk_io.get_path_count(on_disk_id) !=
+            new_path_count) {
             // if it is different we create a transaction to correct it.
-            std::string count_overwrite_content = "";
-            PathsCountItem new_paths_count{
-              index_to_add.paths_count[paths_mapping.by_disk[on_disk_id]]
-            };
-            count_overwrite_content.reserve(4);
-            for (int i = 0; i < 4; ++i) {
-              count_overwrite_content += new_paths_count.bytes[i];
-            }
+            std::string count_overwrite_content = *reinterpret_cast<std::string*>(&new_path_count);
             Transaction count_to_overwrite_path_transaction{
               0,
               5,

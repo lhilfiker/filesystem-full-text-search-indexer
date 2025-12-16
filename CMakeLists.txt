@@ -50,6 +50,7 @@ set(SOURCES
         app/Index/DiskIO/DiskIO_Words.cpp
         app/Index/DiskIO/DiskIO_WordsF.cpp
         app/Index/DiskIO/DiskIO_Paths.cpp
+        app/Index/DiskIO/DiskIO_PathsCount.cpp
 
         # Indexer
         app/Indexer/Indexer.cpp
