@@ -16,21 +16,16 @@ mio::mmap_sink* Index::DiskIO::get_target_mmap(uint8_t target_index)
   switch (target_index) {
   case 1:
     return &mmap_words;
-    break;
   case 2:
     return &mmap_words_f;
-    break;
   case 3:
     return &mmap_reversed;
-    break;
   case 4:
     return &mmap_additional;
-    break;
   case 5:
     return &mmap_paths_count;
   default:
     return &mmap_paths;
-    break;
   }
 }
 
