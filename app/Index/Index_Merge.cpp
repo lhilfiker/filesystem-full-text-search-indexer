@@ -13,7 +13,7 @@ void Index::add_reversed_to_word(
   size_t& reversed_new_needed_size, uint64_t& on_disk_id,
   const size_t& local_word_count, PathsMapping& paths_mapping)
 {
-  if (on_disk_id * REVERSED_ENTRY_SIZE + REVERSED_ENTRY_SIZE > reversed_size) {
+  if (on_disk_id * REVERSED_ENTRY_SIZE + REVERSED_ENTRY_SIZE > disk_io.get_reversed_size()) {
     Log::error("Index: Reversed out of range. Index corrupted."); // index most
     // likely
     // corrupted.
@@ -31,8 +31,7 @@ void Index::add_reversed_to_word(
   std::vector<AdditionalFree> additional_free;
 
   // load reversed block by reference.
-  ReversedBlock* disk_reversed = reinterpret_cast<ReversedBlock*>(
-    &mmap_reversed[on_disk_id * REVERSED_ENTRY_SIZE]);
+  ReversedBlock* disk_reversed = disk_io.get_reversed_pointer(on_disk_id);
 
   // we remove already existing path_ids from the local reversed and save slots
   // that are empty.
@@ -60,7 +59,7 @@ void Index::add_reversed_to_word(
         current_additional,
         {}
       }); // create an empty additional_free for the first one.
-    if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
+    if ((current_additional * ADDITIONAL_ENTRY_SIZE) > disk_io.get_additional_size()) {
       Log::error("Index: path_ids_from_word_id: to search word id would be at "
         "nonexisting location. Index most likely corrupt. Exiting");
     }
@@ -79,7 +78,7 @@ void Index::add_reversed_to_word(
         else {
           // load the new additional block
           current_additional = disk_additional->ids.additional[0];
-          if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
+          if ((current_additional * ADDITIONAL_ENTRY_SIZE) > disk_io.get_additional_size()) {
             Log::error(
               "Index: path_ids_from_word_id: to search word id would be at "
               "nonexisting location. Index most likely corrupt. Exiting");
@@ -212,7 +211,7 @@ void Index::add_reversed_to_word(
     }
 
     AdditionalOffset content;
-    current_additional = ((additional_size + additional_new_needed_size) /
+    current_additional = ((disk_io.get_additional_size() + additional_new_needed_size) /
         ADDITIONAL_ENTRY_SIZE) +
       1; // get the ID of the new additional ID at the end.
     content.offset = current_additional;
@@ -288,7 +287,7 @@ void Index::add_reversed_to_word(
     additional_new_transaction.header = {
       0,
       4,
-      additional_size + additional_new_needed_size, // add to the end
+      disk_io.get_additional_size() + additional_new_needed_size, // add to the end
       0,
       1,
       additional_new_transaction.content.length()
@@ -359,7 +358,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
   }
   else {
     ADDITIONAL_ID_TYPE current_additional =
-      ((additional_size + additional_new_needed_size) /
+      ((disk_io.get_additional_size() + additional_new_needed_size) /
         ADDITIONAL_ENTRY_SIZE) +
       1; // 1-indexed
     current_ReversedBlock.ids.additional[0] = current_additional;
@@ -403,7 +402,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
     new_additionals.header = {
       0,
       4,
-      additional_size +
+      disk_io.get_additional_size() +
       additional_new_needed_size, // add to the end
       0,
       1,
@@ -448,7 +447,7 @@ void Index::insertion_to_transactions(
       last_start_location = to_insertions[i].header.location;
     }
     if (to_insertions[i].header.location >=
-      (index_type == 1 ? words_size - 1 : reversed_size - 1)) {
+      (index_type == 1 ? disk_io.get_words_size() - 1 : disk_io.get_reversed_size() - 1)) {
       // appendings. We will update their locations with the byte shift but not
       // move them around. The last check will also just move from the last non
       // append insertion till words/reversed_size
@@ -479,7 +478,7 @@ void Index::insertion_to_transactions(
     movements_temp.push_back(
       {
         last_start_location,
-        static_cast<size_t>(index_type == 1 ? words_size : reversed_size),
+        static_cast<size_t>(index_type == 1 ? disk_io.get_words_size() : disk_io.get_reversed_size()),
         byte_shift
       });
   }
@@ -599,9 +598,9 @@ int Index::merge(index_combine_data& index_to_add)
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
   // paths_size is the count of bytes of the index on disk.
-  while (on_disk_count < paths_size) {
+  while (on_disk_count < disk_io.get_paths_size()) {
     if (on_disk_count + 1 <
-      paths_size) {
+      disk_io.get_paths_size()) {
       // we read 1 byte ahead for the offset to prevent
       // accessing invalid data. The index format would allow it
       // but it could be corrupted and not detected.
@@ -615,7 +614,7 @@ int Index::merge(index_combine_data& index_to_add)
       ++on_disk_count;
 
       if (on_disk_count + next_path_end <
-        paths_size + 1) {
+        disk_io.get_paths_size() + 1) {
         // check if we can read the whole path based on the
         // offset.
         // refrence the path to a string and then search in the unordered map we
@@ -715,14 +714,14 @@ int Index::merge(index_combine_data& index_to_add)
     // resize so all paths + offset fit.
     Transaction resize_transaction{
       0, 0, 0,
-      0, 2, paths_size + paths_needed_space
+      0, 2, disk_io.get_paths_size() + paths_needed_space
     };
     transactions.push_back(resize_transaction);
     // write it to the now free space at the end of the file.
     Transaction to_add_path_transaction{
       0,
       0,
-      static_cast<uint64_t>(paths_size),
+      static_cast<uint64_t>(disk_io.get_paths_size()),
       0,
       1,
       paths_needed_space,
@@ -732,14 +731,14 @@ int Index::merge(index_combine_data& index_to_add)
 
     // resize so all paths counts fit.
     Transaction count_resize_transaction{
-      0, 5, 0, 0, 2, paths_count_size + count_needed_space
+      0, 5, 0, 0, 2, disk_io.get_paths_count_size() + count_needed_space
     };
     transactions.push_back(count_resize_transaction);
     // write it to the now free space at the end of the file.
     Transaction count_to_add_path_transaction{
       0,
       5,
-      static_cast<uint64_t>(paths_count_size),
+      static_cast<uint64_t>(disk_io.get_paths_count_size()),
       0,
       1,
       count_needed_space,
@@ -782,25 +781,25 @@ int Index::merge(index_combine_data& index_to_add)
     index_to_add.words_and_reversed[local_word_count].word[0];
 
   ADDITIONAL_ID_TYPE disk_additional_ids =
-    (additional_size / ADDITIONAL_ENTRY_SIZE) + 1;
+    (disk_io.get_additional_size() / ADDITIONAL_ENTRY_SIZE) + 1;
 
   // check each word on disk. if it is different first letter we will skip using
   // words_f. we will compare chars to chars until they differ. we then know if
   // it is coming first or we are passed it and need to insert the word or we
   // are at the same word.
 
-  while (on_disk_count < words_size) {
+  while (on_disk_count < disk_io.get_words_size()) {
     // If the current word first char is different we use words_f to set the
     // location to the start of that char.
     if (disk_first_char < local_first_char) {
-      if (words_f[local_first_char - 'a'].location < words_size) {
+      if (words_f[local_first_char - 'a'].location < disk_io.get_words_size()) {
         Log::write(1, "Index: Merge: Skipping using Words_f Table");
         on_disk_count = words_f[local_first_char - 'a'].location;
         on_disk_id = words_f[local_first_char - 'a'].id;
         disk_first_char = local_first_char;
       }
       else {
-        if (words_f[local_first_char - 'a'].location == words_size) {
+        if (words_f[local_first_char - 'a'].location == disk_io.get_words_size()) {
           // Words_f can have entries when if it is the same as words_size it
           // means there are no words for this letter.
           break;
@@ -994,23 +993,23 @@ int Index::merge(index_combine_data& index_to_add)
   // resize Transaction for words, reversed and additional at the start of
   // the List.
   Log::write(1, "Index: Creating resize transaction for words with size: " +
-             std::to_string(words_size + words_new_needed_size));
+             std::to_string(disk_io.get_words_size() + words_new_needed_size));
   Log::write(1, "Index: Creating resize transaction for reversed with size: " +
-             std::to_string(reversed_size + reversed_new_needed_size));
+             std::to_string(disk_io.get_reversed_size() + reversed_new_needed_size));
   Log::write(1,
              "Index: Creating resize transaction for additional with size: " +
-             std::to_string(additional_size + additional_new_needed_size));
+             std::to_string(disk_io.get_additional_size() + additional_new_needed_size));
   Transaction resize_words{
-    0, 1, 0, 0, 2, words_size + words_new_needed_size,
+    0, 1, 0, 0, 2, disk_io.get_words_size() + words_new_needed_size,
     ""
   };
   move_transactions.push_back(resize_words);
   Transaction resize_reversed{
-    0, 3, 0, 0, 2, reversed_size + reversed_new_needed_size, ""
+    0, 3, 0, 0, 2, disk_io.get_reversed_size() + reversed_new_needed_size, ""
   };
   move_transactions.push_back(resize_reversed);
   Transaction resize_additional{
-    0, 4, 0, 0, 2, additional_size + additional_new_needed_size, ""
+    0, 4, 0, 0, 2, disk_io.get_additional_size() + additional_new_needed_size, ""
   };
   move_transactions.push_back(resize_additional);
 

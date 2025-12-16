@@ -58,7 +58,8 @@ private:
     size_t get_additional_size() const;
     bool get_mapped() const;
     bool get_locked() const;
-  AdditionalBlock* get_additional_pointer(const ADDITIONAL_ID_TYPE id);
+    AdditionalBlock* get_additional_pointer(const ADDITIONAL_ID_TYPE id);
+    ReversedBlock* get_reversed_pointer(const size_t id);
   };
 
 private:
