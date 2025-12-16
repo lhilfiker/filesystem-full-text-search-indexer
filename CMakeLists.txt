@@ -60,6 +60,7 @@ set(SOURCES
 
         # Search
         app/Search/Search.cpp
+        app/Index/DiskIO/DiskIO_Words.cpp
 )
 
 set(HEADERS

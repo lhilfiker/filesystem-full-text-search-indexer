@@ -1,10 +1,8 @@
 #include "../Logging/logging.h"
 #include "index.h"
 #include "index_types.h"
-#include <array>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
 #include <string>
 
 void Index::add_reversed_to_word(
@@ -186,7 +184,7 @@ void Index::add_reversed_to_word(
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() != 0) {
     Transaction additional_add_transaction;
 
-    // If we need to append to a additional block or reversed
+    // If we need to append to an additional block or reversed
     if (current_additional != 0) {
       // Create a new additional transaction for the end
       additional_add_transaction = {
@@ -311,7 +309,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
                          const size_t& local_word_count,
                          PathsMapping& paths_mapping)
 {
-  // We create a insertion for the new word + word seperator at the start
+  // We create an insertion for the new word + word seperator at the start
   size_t word_length =
     index_to_add.words_and_reversed[local_word_count].word.length();
   Insertion new_word{
@@ -473,8 +471,8 @@ void Index::insertion_to_transactions(
   }
   if (to_insertions.size() !=
     0) {
-    // if its non zero it means there are insertions and the last one
-    // didnt get added yet.
+    // if its non-zero it means there are insertions and the last one
+    // didn't get added yet.
     movements_temp.push_back(
       {
         last_start_location,
@@ -490,7 +488,7 @@ void Index::insertion_to_transactions(
       break;
     size_t range = movements_temp[i].end_pos - movements_temp[i].start_pos;
     if (range > byte_shift) {
-      // this means we copy over the data itself we are trying to move. Thats
+      // this means we copy over the data itself we are trying to move. That's
       // why we create a backup of this before and then move it.
       Transaction create_backup{
         0,
@@ -573,9 +571,7 @@ int Index::merge(index_combine_data& index_to_add)
   size_t words_new_needed_size = 0;
   size_t reversed_new_needed_size = 0;
 
-  size_t paths_l_size = index_to_add.paths.size();
-
-  // So we can easily covert disk or local IDs fast.
+  // So we can easily convert disk or local IDs fast.
   PathsMapping paths_mapping;
 
   // convert local paths to a map with value path and key id. We will go through
@@ -592,7 +588,7 @@ int Index::merge(index_combine_data& index_to_add)
   }
   index_to_add.paths.clear();
 
-  // go through index on disk and map disk Id to local Id.
+  // go through index on disk and map disk ID to local ID.
   uint64_t on_disk_count = 0;
   uint64_t on_disk_id = 1;
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
@@ -602,7 +598,7 @@ int Index::merge(index_combine_data& index_to_add)
     if (on_disk_count + 1 <
       disk_io.get_paths_size()) {
       // we read 1 byte ahead for the offset to prevent
-      // accessing invalid data. The index format would allow it
+      // accessing invalid data. The index format would allow it,
       // but it could be corrupted and not detected.
       PathOffset path_offset;
       // we read the offset so we know how long the path is and where the next
@@ -620,9 +616,7 @@ int Index::merge(index_combine_data& index_to_add)
         // refrence the path to a string and then search in the unordered map we
         // created earlier.
         std::string path_to_compare(&mmap_paths[on_disk_count], next_path_end);
-        if (paths_search.find(path_to_compare) !=
-          paths_search
-          .end()) {
+        if (paths_search.contains(path_to_compare)) {
           // check if the disk path is found in memory index.
 
           paths_mapping.by_local[paths_search[path_to_compare]] =
@@ -738,7 +732,7 @@ int Index::merge(index_combine_data& index_to_add)
     Transaction count_to_add_path_transaction{
       0,
       5,
-      static_cast<uint64_t>(disk_io.get_paths_count_size()),
+      (disk_io.get_paths_count_size()),
       0,
       1,
       count_needed_space,
@@ -746,8 +740,7 @@ int Index::merge(index_combine_data& index_to_add)
     };
     transactions.push_back(count_to_add_path_transaction);
   }
-  paths_add_content = "";
-  count_add_content = "";
+
   paths_search.clear();
 
   // copy words_f into memory
@@ -760,8 +753,8 @@ int Index::merge(index_combine_data& index_to_add)
 
   // This is needed when we add new words. Each time we add a new word the start
   // of all following chars will change by how much we add. Here we will note
-  // down how many now bytes got added at the next char. E.g new word at 'f'. We
-  // add 5 (word is 4 letters + 1 seperator) to the location of 'g' because its
+  // down how many now bytes got added at the next char. E.g. new word at 'f'. We
+  // add 5 (word is 4 letters + 1 seperator) to the location of 'g' because it's
   // the next occurence. After all words got added we will update the real
   // words_f by combining the current with all the ones that came before. e.g a
   // has 2, b has 5, c has 9. wordsf for b adds 5+2. c = 9+5+2. We have 27
@@ -775,17 +768,14 @@ int Index::merge(index_combine_data& index_to_add)
   on_disk_count = 0;
   on_disk_id = 0;
   size_t local_word_count = 0;
-  size_t local_word_length = index_to_add.words_and_reversed[0].word.length();
+  uint8_t local_word_length = index_to_add.words_and_reversed[0].word.length();
   char disk_first_char = 'a';
   char local_first_char =
     index_to_add.words_and_reversed[local_word_count].word[0];
 
-  ADDITIONAL_ID_TYPE disk_additional_ids =
-    (disk_io.get_additional_size() / ADDITIONAL_ENTRY_SIZE) + 1;
-
   // check each word on disk. if it is different first letter we will skip using
   // words_f. we will compare chars to chars until they differ. we then know if
-  // it is coming first or we are passed it and need to insert the word or we
+  // it is coming first, or we are passed it and need to insert the word. or we
   // are at the same word.
 
   while (on_disk_count < disk_io.get_words_size()) {
@@ -811,30 +801,26 @@ int Index::merge(index_combine_data& index_to_add)
       }
     }
 
-    // read the one byte word sperator.
-    WordSeperator word_sep;
-    for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
-      word_sep.bytes[i] = mmap_words[on_disk_count + i];
-    }
-    WORD_SEPARATOR_TYPE word_seperator = word_sep.seperator;
+    WORD_SEPARATOR_TYPE word_seperator = disk_io.get_word_separator(on_disk_count);
     if (word_seperator <= 0) {
       // can't be 0 or lower than 0. index corrupt most likely
       Log::error("Index: Combine: Word Seperator is 0 or lower. This can not "
         "be. Index most likely corrupt.");
     }
 
+    char word_first_char = disk_io.get_char_of_word(on_disk_count, 0);
     if (disk_first_char <
-      mmap_words[on_disk_count +
-        WORD_SEPARATOR_SIZE]) {
+      word_first_char) {
       // + WORD_SEPARATOR_SIZE because of the word seperator
-      disk_first_char = mmap_words[on_disk_count + WORD_SEPARATOR_SIZE];
+      disk_first_char = word_first_char;
     }
 
     for (int i = 0; i < word_seperator; ++i) {
       // If current chars are the same + word on disk length same as on local
       // length and last char add to existing word
-      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] ==
-        (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
+      char disk_c = disk_io.get_char_of_word(on_disk_count, i);
+      char local_c = index_to_add.words_and_reversed[local_word_count].word[i];
+      if (disk_c == local_c) {
         // If its last char and words are the same length we found it.
         if (i == local_word_length - 1 && word_seperator == local_word_length) {
           // add to existing
@@ -888,7 +874,7 @@ int Index::merge(index_combine_data& index_to_add)
           break;
         }
 
-        // If its the last on disk char and at the end and not the same
+        // If it's the last on disk char and at the end and not the same
         // length. means we need to skip this word.
         if (i == word_seperator - 1) {
           // skip
@@ -901,8 +887,8 @@ int Index::merge(index_combine_data& index_to_add)
       }
 
       // If disk char > local char
-      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] >
-        (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
+      if (disk_c > local_c
+      ) {
         // insert new
         Log::write(1, "Index: Merge: Add new Word");
         add_new_word(index_to_add, on_disk_count, transactions,
@@ -928,8 +914,7 @@ int Index::merge(index_combine_data& index_to_add)
       }
 
       // If disk char < local char
-      if ((int)mmap_words[on_disk_count + WORD_SEPARATOR_SIZE + i] <
-        (int)(index_to_add.words_and_reversed[local_word_count].word[i])) {
+      if (disk_c < local_c) {
         // skip
         Log::write(1, "Index: Merge: Skip Word on Disk");
         on_disk_count +=
@@ -953,7 +938,7 @@ int Index::merge(index_combine_data& index_to_add)
     local_word_length =
       index_to_add.words_and_reversed[local_word_count].word.length();
     // Even tho we add multiple words at the same on_disk_id or
-    // on_disk_count it doesnt matter because when insertions are
+    // on_disk_count it doesn't matter because when insertions are
     // processed it will add all the newly added word count to the
     // insertion location.
     Log::write(1, "Index: Merge: Adding a new word at the end");
@@ -1034,7 +1019,7 @@ int Index::merge(index_combine_data& index_to_add)
                              transactions) == 1) {
     Log::write(
       3, "Index: Merge: error writing transaction file. Check logs above");
-    // no return here so we can cleanup and later return
+    // no return here so we can clean up and later return
   }
 
   transactions.clear();

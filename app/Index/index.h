@@ -60,6 +60,8 @@ private:
     bool get_locked() const;
     AdditionalBlock* get_additional_pointer(const ADDITIONAL_ID_TYPE id);
     ReversedBlock* get_reversed_pointer(const size_t id);
+    WORD_SEPARATOR_TYPE get_word_separator(const size_t start_pos) const;
+    char get_char_of_word(size_t word_start_pos, int char_pos) const;
   };
 
 private:
