@@ -68,6 +68,16 @@ private:
     uint16_t get_path_separator(size_t start_pos) const;
     std::string get_path(size_t start_pos, uint16_t length) const;
     uint32_t get_path_count(size_t path_id) const;
+
+    // setters
+    void set_path_separator(size_t start_pos, const uint16_t separator);
+    void set_path(size_t start_pos, const std::string& path, uint16_t length);
+    void set_path_count(const size_t path_id, const uint32_t path_count);
+    void set_word_separator(const size_t start_pos, const WORD_SEPARATOR_TYPE separator);
+    void set_word(const size_t start_pos, const std::string& word, const uint16_t length);
+    void set_words_f(std::vector<WordsFValue>& words_f);
+    void set_additional(const AdditionalBlock& additional_block, size_t additional_id);
+    void set_reversed(const ReversedBlock& reversed_block, size_t word_id);
   };
 
 private:
@@ -78,12 +88,12 @@ private:
   static bool readonly_initialized;
   static bool is_mapped;
   static bool first_time;
-  static int64_t paths_size_buffer;
-  static int64_t paths_count_size_buffer;
-  static int64_t words_size_buffer;
-  static int64_t words_f_size_buffer;
-  static int64_t reversed_size_buffer;
-  static int64_t additional_size_buffer;
+  static size_t paths_size_buffer;
+  static size_t paths_count_size_buffer;
+  static size_t words_size_buffer;
+  static size_t words_f_size_buffer;
+  static size_t reversed_size_buffer;
+  static size_t additional_size_buffer;
 
 
   static bool index_lock;
