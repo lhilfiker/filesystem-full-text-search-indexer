@@ -11,12 +11,13 @@ bool Index::initialized = false;
 bool Index::readonly_initialized = true;
 bool Index::is_mapped = false;
 bool Index::first_time = false;
-int64_t Index::paths_size_buffer = 0;
-int64_t Index::paths_count_size_buffer = 0;
-int64_t Index::words_size_buffer = 0;
-int64_t Index::words_f_size_buffer = 0;
-int64_t Index::reversed_size_buffer = 0;
-int64_t Index::additional_size_buffer = 0;
+size_t Index::paths_size_buffer = 0;
+size_t Index::paths_count_size_buffer = 0;
+size_t Index::words_size_buffer = 0;
+size_t Index::words_f_size_buffer = 0;
+size_t Index::reversed_size_buffer = 0;
+size_t Index::additional_size_buffer = 0;
+Index::DiskIO Index::disk_io;
 
 
 // Config Values, they will be set once and never again while the index is
