@@ -42,6 +42,8 @@ set(SOURCES
         app/Index/Index_Search.cpp
         app/Index/Index_Transaction.cpp
         app/Index/Index_Check.cpp
+        #Disk IO
+        app/Index/DiskIO/DiskIO.cpp
 
 
         # Indexer

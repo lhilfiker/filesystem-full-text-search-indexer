@@ -60,6 +60,10 @@ bool Index::DiskIO::map(const std::filesystem::path& index_path)
     Log::write(4, "Index::DiskIO::map: could not map. index path invalid.");
     return false;
   }
+  if (ec) {
+    Log::write(4, "Index::DiskIO::map: could not map. index path validation threw an error");
+    return false;
+  }
 
   // paths.index
   if (!map_file(mmap_paths, paths_size, (index_path / "paths.index").string())) {
@@ -102,4 +106,35 @@ bool Index::DiskIO::map(const std::filesystem::path& index_path)
   }
 
   is_mapped = true;
+  Log::write(1, "Index::DiskIO::map: mapped files successfully.");
+
+  return true;
+}
+
+bool Index::DiskIO::unmap()
+{
+  if (mmap_paths.is_mapped()) {
+    mmap_paths.unmap();
+  }
+  if (mmap_paths_count.is_mapped()) {
+    mmap_paths_count.unmap();
+  }
+  if (mmap_words.is_mapped()) {
+    mmap_words.unmap();
+  }
+  if (mmap_words_f.is_mapped()) {
+    mmap_words_f.unmap();
+  }
+  if (mmap_reversed.is_mapped()) {
+    mmap_reversed.unmap();
+  }
+  if (mmap_additional.is_mapped()) {
+    mmap_additional.unmap();
+  }
+
+  additional_mapped = false;
+  is_mapped = false;
+  Log::write(1, "Index::DiskIO::unmap: unmapped files successfully.");
+
+  return true;
 }
