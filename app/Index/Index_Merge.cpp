@@ -36,9 +36,7 @@ std::string Index::generate_new_additionals(index_combine_data& index_to_add, co
       if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
         0) {
         // If this will be the last one we will add 0.
-        additional_transaction_content += {
-          reinterpret_cast<const char*>(0), ADDITIONAL_ID_LINK_SIZE
-        };
+        additional_transaction_content += (ADDITIONAL_ID_LINK_SIZE, '\0');
         in_additional_counter = 0;
         break;
       }
@@ -54,9 +52,9 @@ std::string Index::generate_new_additionals(index_combine_data& index_to_add, co
   if (in_additional_counter != 0) {
     for (; in_additional_counter < ADDITIONAL_PATH_LINKS_AMOUNT;
            ++in_additional_counter) {
-      additional_transaction_content += {reinterpret_cast<const char*>(0), PATH_ID_LINK_SIZE};
+      additional_transaction_content += (PATH_ID_LINK_SIZE, '\0');
     }
-    additional_transaction_content += {reinterpret_cast<const char*>(0), ADDITIONAL_ID_LINK_SIZE};
+    additional_transaction_content += (ADDITIONAL_ID_LINK_SIZE, '\0');
   }
 
   return additional_transaction_content;
@@ -386,9 +384,10 @@ void Index::add_new_word(index_combine_data& index_to_add,
   }
 
   // convert to bytes and add insertion
-  for (size_t i = 0; i < REVERSED_ENTRY_SIZE; ++i) {
-    new_reversed.content.push_back(current_ReversedBlock.bytes[i]);
-  }
+  new_reversed.content = std::string(
+    reinterpret_cast<const char*>(current_ReversedBlock.bytes),
+    REVERSED_ENTRY_SIZE
+  );
   reversed_insertions.push_back(new_reversed);
 }
 
