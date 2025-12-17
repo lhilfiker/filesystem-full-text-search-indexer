@@ -16,7 +16,7 @@ void Index::DiskIO::set_word_separator(const size_t start_pos, const WORD_SEPARA
   std::memcpy(&mmap_words[start_pos], &separator, sizeof(WORD_SEPARATOR_TYPE));
 }
 
-char Index::DiskIO::get_char_of_word(size_t word_start_pos, int char_pos) const
+char Index::DiskIO::get_char_of_word(size_t word_start_pos, uint16_t char_pos) const
 {
   return mmap_words[word_start_pos +
     WORD_SEPARATOR_SIZE + char_pos];
