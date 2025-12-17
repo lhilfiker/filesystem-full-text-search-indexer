@@ -1,13 +1,8 @@
 #include "../index.h"
-#include "../../Helper/helper.h"
-#include "../../Logging/logging.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <string>
 
-#include "CliParser/cliparser.h"
-#include "CliParser/cliparser.h"
 // index types:
 // paths = 0, words = 1, words_f = 2, reversed = 3,
 // additional = 4, paths_count = 5

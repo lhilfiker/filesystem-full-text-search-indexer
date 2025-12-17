@@ -1,6 +1,4 @@
 #include "../index.h"
-#include "../../Helper/helper.h"
-#include "../../Logging/logging.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>

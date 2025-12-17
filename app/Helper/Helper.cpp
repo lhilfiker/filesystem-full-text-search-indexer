@@ -6,7 +6,7 @@
 
 size_t Helper::file_size(const std::filesystem::path& file_path)
 {
-  size_t size = -1;
+  size_t size = 0;
   std::error_code ec;
   size = std::filesystem::file_size(file_path, ec);
   if (ec) {

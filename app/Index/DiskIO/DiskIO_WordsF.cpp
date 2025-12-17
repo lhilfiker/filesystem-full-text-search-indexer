@@ -1,10 +1,5 @@
 #include "../index.h"
-#include "../../Helper/helper.h"
-#include "../../Logging/logging.h"
 #include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <string>
 
 std::vector<WordsFValue> Index::DiskIO::get_words_f() const
 {

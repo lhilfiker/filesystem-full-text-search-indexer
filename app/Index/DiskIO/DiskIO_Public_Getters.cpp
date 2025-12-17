@@ -1,10 +1,5 @@
 #include "../index.h"
-#include "../../Helper/helper.h"
-#include "../../Logging/logging.h"
-#include <cstring>
-#include <filesystem>
 #include <fstream>
-#include <string>
 
 
 size_t Index::DiskIO::get_paths_size() const

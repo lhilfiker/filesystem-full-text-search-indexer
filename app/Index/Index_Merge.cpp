@@ -36,7 +36,7 @@ std::string Index::generate_new_additionals(index_combine_data& index_to_add, co
       if (index_to_add.words_and_reversed[local_word_count].reversed.size() ==
         0) {
         // If this will be the last one we will add 0.
-        additional_transaction_content += (ADDITIONAL_ID_LINK_SIZE, '\0');
+        additional_transaction_content += std::string(ADDITIONAL_ID_LINK_SIZE, '\0');
         in_additional_counter = 0;
         break;
       }
@@ -52,9 +52,9 @@ std::string Index::generate_new_additionals(index_combine_data& index_to_add, co
   if (in_additional_counter != 0) {
     for (; in_additional_counter < ADDITIONAL_PATH_LINKS_AMOUNT;
            ++in_additional_counter) {
-      additional_transaction_content += (PATH_ID_LINK_SIZE, '\0');
+      additional_transaction_content += std::string(PATH_ID_LINK_SIZE, '\0');
     }
-    additional_transaction_content += (ADDITIONAL_ID_LINK_SIZE, '\0');
+    additional_transaction_content += std::string(ADDITIONAL_ID_LINK_SIZE, '\0');
   }
 
   return additional_transaction_content;
@@ -310,7 +310,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
   const size_t word_length =
     index_to_add.words_and_reversed[local_word_count].word.length();
 
-  std::string content = {reinterpret_cast<const char*>(word_length), WORD_SEPARATOR_SIZE};
+  auto content = std::string(reinterpret_cast<const char*>(&word_length), WORD_SEPARATOR_SIZE);
   content += index_to_add.words_and_reversed[local_word_count].word;
 
   // when we call this function, on_disk_count is right before the words starts.
@@ -618,7 +618,8 @@ int Index::merge(index_combine_data& index_to_add)
           if (disk_io.get_path_count(on_disk_id) !=
             new_path_count) {
             // if it is different we create a transaction to correct it.
-            std::string count_overwrite_content = *reinterpret_cast<std::string*>(&new_path_count);
+            std::string count_overwrite_content = std::string(reinterpret_cast<const char*>(&new_path_count),
+                                                              sizeof(uint32_t));
             Transaction count_to_overwrite_path_transaction{
               {
                 {
