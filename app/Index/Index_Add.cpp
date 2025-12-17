@@ -71,7 +71,7 @@ int Index::add_new(index_combine_data& index_to_add)
 
   // paths_count
   // write the word count as 4 bytes values each to disk.
-  file_location = 1;
+  file_location = 0;
   for (size_t i = 0; i < index_to_add.paths_count.size(); ++i) {
     disk_io.set_path_count(i + 1, index_to_add.paths_count[i]);
     // +1 because path_ids start from 1 and here we start from 0.
