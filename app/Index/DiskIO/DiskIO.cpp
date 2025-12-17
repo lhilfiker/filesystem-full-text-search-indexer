@@ -13,7 +13,7 @@ Index::DiskIO::DiskIO()
     , words_f_size(0)
     , reversed_size(0)
     , additional_size(0)
-    , additional_mapped(0)
+    , additional_mapped(false)
     , is_mapped(false)
     , is_locked(false)
 {

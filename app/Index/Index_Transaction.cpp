@@ -257,7 +257,7 @@ int Index::execute_transactions()
                                    : CONFIG_INDEX_PATH /
                                    "paths_count.index")))),
              current_header->content_length);
-      disk_io.map(CONFIG_INDEX_PATH); // mapping handles size updates internally al
+      disk_io.map(CONFIG_INDEX_PATH); // mapping handles size updates internally already
       Log::write(
         1, "Index: Transaction: Resize operation completed for index " +
         std::to_string(current_header->index_type) + " and size: " +

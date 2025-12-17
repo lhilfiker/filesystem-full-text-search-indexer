@@ -352,7 +352,7 @@ void Index::add_new_word(index_combine_data& index_to_add,
     }
   }
   if (index_to_add.words_and_reversed[local_word_count].reversed.size() == 0) {
-    // If we have added all new links we don't need to set an additinal id.
+    // If we have added all new links we don't need to set an additional id.
     current_ReversedBlock.ids.additional[0] = 0;
   }
   else {
@@ -947,7 +947,7 @@ int Index::merge(index_combine_data& index_to_add)
   // thing. When we add custom words_f length then we can make a better
   // implementation that is faster and saves memory and space.
   Transaction words_f_new{{{0, 2, 0, 0, 1, ((8 + WORDS_F_LOCATION_SIZE) * 26)}}, ""};
-  words_f_new.content.reserve(((8 + WORDS_F_LOCATION_SIZE) * 26));
+  words_f_new.content.resize(((8 + WORDS_F_LOCATION_SIZE) * 26));
   uint64_t all_size = 0;
   uint64_t all_id_change = 0;
   for (int i = 0; i < 26; ++i) {

@@ -351,7 +351,7 @@ Index::search_word_list(std::vector<std::pair<std::string, bool>>& search_words,
   return results;
 }
 
-// return am unordered map of ID and path string.
+// return an unordered map of ID and path string.
 std::unordered_map<PATH_ID_TYPE, std::string>
 Index::id_to_path_string(std::vector<search_path_ids_return>& path_ids)
 {
