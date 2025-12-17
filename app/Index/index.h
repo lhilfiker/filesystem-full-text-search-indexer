@@ -15,29 +15,27 @@
 // Index/Index.cpp
 class Index
 {
-private:
   class DiskIO
   {
-  private:
     mio::mmap_sink mmap_paths;
     mio::mmap_sink mmap_paths_count;
     mio::mmap_sink mmap_words;
     mio::mmap_sink mmap_words_f;
     mio::mmap_sink mmap_reversed;
     mio::mmap_sink mmap_additional;
-    size_t paths_size;
-    size_t paths_count_size;
-    size_t words_size;
-    size_t words_f_size;
-    size_t reversed_size;
-    size_t additional_size;
-    bool additional_mapped;
+    size_t paths_size = 0;
+    size_t paths_count_size = 0;
+    size_t words_size = 0;
+    size_t words_f_size = 0;
+    size_t reversed_size = 0;
+    size_t additional_size = 0;
+    bool additional_mapped = false;
 
-    bool is_mapped;
-    bool is_locked;
+    bool is_mapped = false;
+    bool is_locked = false;
 
     bool map_file(mio::mmap_sink& target_mmap, size_t& target_size, const std::string& source_path);
-    bool sync_file(mio::mmap_sink& target_mmap);
+    bool sync_file(mio::mmap_sink& target_mmap) const;
     mio::mmap_sink* get_target_mmap(uint8_t target_index);
 
   public:
@@ -87,7 +85,6 @@ private:
                          size_t length);
   };
 
-private:
   static DiskIO disk_io;
 
   static bool is_config_loaded;
@@ -110,7 +107,6 @@ private:
   static std::filesystem::path CONFIG_INDEX_PATH;
   static uint16_t CONFIG_LOCK_ACQUISITION_TIMEOUT;
 
-private:
   static void check_files();
   static void resize(const std::filesystem::path path_to_resize,
                      const size_t size);

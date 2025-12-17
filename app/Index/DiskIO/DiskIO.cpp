@@ -6,20 +6,10 @@
 #include <fstream>
 #include <string>
 
-Index::DiskIO::DiskIO()
-  : paths_size(0)
-    , paths_count_size(0)
-    , words_size(0)
-    , words_f_size(0)
-    , reversed_size(0)
-    , additional_size(0)
-    , additional_mapped(false)
-    , is_mapped(false)
-    , is_locked(false)
-{
-}
 
-bool Index::DiskIO::sync_file(mio::mmap_sink& target_mmap)
+Index::DiskIO::DiskIO() = default;
+
+bool Index::DiskIO::sync_file(mio::mmap_sink& target_mmap) const
 {
   std::error_code ec;
   target_mmap.sync(ec);
