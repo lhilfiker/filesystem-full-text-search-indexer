@@ -24,5 +24,5 @@ std::string Index::DiskIO::get_path(const size_t start_pos, const uint16_t lengt
 
 void Index::DiskIO::set_path(const size_t start_pos, const std::string& path, const uint16_t length)
 {
-  std::memcpy(&mmap_paths[start_pos], path.data(), length);
+  std::memcpy(&mmap_paths[start_pos], &path[0], length);
 }

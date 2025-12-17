@@ -32,13 +32,30 @@ bool Index::DiskIO::sync_file(mio::mmap_sink& target_mmap)
 
 bool Index::DiskIO::sync_all()
 {
-  // Because sync may be called anytime, we will not check if the operation failed.
-  sync_file(mmap_paths);
-  sync_file(mmap_paths_count);
-  sync_file(mmap_words);
-  sync_file(mmap_words_f);
-  sync_file(mmap_reversed);
-  sync_file(mmap_additional);
+  if (!sync_file(mmap_paths)) {
+    Log::write(4, "Index::DiskIO::sync_all: syncing failed for one file.");
+    return false;
+  }
+  if (!sync_file(mmap_paths_count)) {
+    Log::write(4, "Index::DiskIO::sync_all: syncing failed for one file.");
+    return false;
+  }
+  if (!sync_file(mmap_words)) {
+    Log::write(4, "Index::DiskIO::sync_all: syncing failed for one file.");
+    return false;
+  }
+  if (!sync_file(mmap_words_f)) {
+    Log::write(4, "Index::DiskIO::sync_all: syncing failed for one file.");
+    return false;
+  }
+  if (!sync_file(mmap_reversed)) {
+    Log::write(4, "Index::DiskIO::sync_all: syncing failed for one file.");
+    return false;
+  }
+  if (!sync_file(mmap_additional)) {
+    Log::write(4, "Index::DiskIO::sync_all: syncing failed for one file.");
+    return false;
+  }
   return true;
 }
 

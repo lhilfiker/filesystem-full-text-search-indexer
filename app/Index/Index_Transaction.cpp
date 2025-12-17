@@ -297,7 +297,7 @@ int Index::execute_transactions()
       0) {
       // sync only if it was not a move operation or 5000 move
       // operations happend
-      if (disk_io.sync_all() == 1) {
+      if (!disk_io.sync_all()) {
         Log::error(
           "Error when syncing indexes to disk. Exiting Program to save "
           "data. Please restart to see if the issue continues.");

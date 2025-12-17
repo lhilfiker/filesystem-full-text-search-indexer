@@ -57,7 +57,7 @@ int Index::add_new(index_combine_data& index_to_add)
 
   // write all paths to disk with a offset in beetween.
   for (const std::string& path : index_to_add.paths) {
-    size_t path_length = path.length();
+    const size_t path_length = path.length();
     disk_io.set_path_separator(file_location, path_length);
     file_location += 2;
     disk_io.set_path(file_location, path, path_length);
@@ -71,9 +71,9 @@ int Index::add_new(index_combine_data& index_to_add)
 
   // paths_count
   // write the word count as 4 bytes values each to disk.
-  file_location = 0;
+  file_location = 1;
   for (size_t i = 0; i < index_to_add.paths_count.size(); ++i) {
-    disk_io.set_path_count(file_location + 1, index_to_add.paths_count[i]);
+    disk_io.set_path_count(i + 1, index_to_add.paths_count[i]);
     // +1 because path_ids start from 1 and here we start from 0.
     file_location += 4;
   }
