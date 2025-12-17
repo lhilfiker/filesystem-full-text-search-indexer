@@ -22,7 +22,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     return false;
   }
   if (is_mapped == false) {
-    map();
+    disk_io.map(CONFIG_INDEX_PATH);
   }
 
   // Acquire Lock (even though we don't write anything we don't want to the
@@ -49,13 +49,8 @@ bool Index::expensive_index_check(const bool verbose_output)
   char disk_first_char = 'a';
   std::string previous_word = "";
 
-  while (words_check_size < words_size) {
-    // read the one byte word separator.
-    WordSeperator word_sep;
-    for (uint8_t i = 0; i < WORD_SEPARATOR_SIZE; ++i) {
-      word_sep.bytes[i] = mmap_words[words_check_size + i];
-    }
-    WORD_SEPARATOR_TYPE word_seperator = word_sep.seperator;
+  while (words_check_size < disk_io.get_words_size()) {
+    WORD_SEPARATOR_TYPE word_seperator = disk_io.get_word_separator(words_check_size);
     if (word_seperator <= 0) {
       // can't be 0 or lower than 0. index corrupt most likely
       Log::write(4, "Index: Check: Word Seperator is 0 or lower. This can not "
@@ -67,7 +62,7 @@ bool Index::expensive_index_check(const bool verbose_output)
       return false;
     }
 
-    if (words_check_size + word_seperator >= words_size) {
+    if (words_check_size + word_seperator >= disk_io.get_words_size()) {
       Log::write(4, "Index: Check: Word Seperator would go over words index.");
       if (verbose_output) {
         std::cout
@@ -77,11 +72,9 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
 
     // check if new words_f
-    if (disk_first_char <
-      mmap_words[words_check_size +
-        WORD_SEPARATOR_SIZE]) {
+    if (disk_first_char < disk_io.get_char_of_word(words_check_size, 0)) {
       // + WORD_SEPARATOR_SIZE because of the word separator
-      disk_first_char = mmap_words[words_check_size + WORD_SEPARATOR_SIZE];
+      disk_first_char = disk_io.get_char_of_word(words_check_size, 0);
       words_f_comparison[disk_first_char - 'a'] = {
         .location = words_check_size + WORD_SEPARATOR_SIZE, .id = words_check_count
       };
@@ -89,7 +82,7 @@ bool Index::expensive_index_check(const bool verbose_output)
 
     std::string current_word = "";
     for (int i = 0; i < word_seperator; ++i) {
-      char c = mmap_words[words_check_size + WORD_SEPARATOR_SIZE + i];
+      char c = disk_io.get_char_of_word(words_check_size, i);
       if (c < 'a' || c > 'z') {
         // Invalid. TODO: allow customising the range
         Log::write(4, "Index: Check: Char is not a-z. Invalid for a word char.");
@@ -116,7 +109,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     words_check_size +=
       word_seperator + WORD_SEPARATOR_SIZE;
   }
-  if (words_check_size != words_size) {
+  if (words_check_size != disk_io.get_words_size()) {
     Log::write(4, "Index: Check: Word size does not match up with counted size.");
     if (verbose_output) {
       std::cout
@@ -129,7 +122,7 @@ bool Index::expensive_index_check(const bool verbose_output)
   // 1. Validate size
   // 2. Compare values to previously created one (if our is 0 just validate it is the same as the next non zero)
 
-  if (words_f_size != (8 + WORDS_F_LOCATION_SIZE) * 26) {
+  if (disk_io.get_words_f_size() != (8 + WORDS_F_LOCATION_SIZE) * 26) {
     Log::write(4, "Index: Check: Words_f size is wrong.");
     if (verbose_output) {
       std::cout
@@ -139,12 +132,7 @@ bool Index::expensive_index_check(const bool verbose_output)
   }
 
   // copy words_f into memory
-  std::vector<WordsFValue> words_f(26);
-  for (int i = 0; i < 26; ++i) {
-    std::memcpy(&words_f[i].bytes[0],
-                &mmap_words_f[i * (8 + WORDS_F_LOCATION_SIZE)],
-                (8 + WORDS_F_LOCATION_SIZE));
-  }
+  std::vector<WordsFValue> words_f = disk_io.get_words_f();
 
   if (words_f[0].id != 0 || words_f[0].location != 0) {
     Log::write(4, "Index: Check: Word_f: location and/or id for letter a is not 0 which is invalid.");
@@ -199,21 +187,15 @@ bool Index::expensive_index_check(const bool verbose_output)
   uint64_t paths_check_count = 0;
   uint16_t next_path_end = 0; // if 0 the next 2 values are the header.
 
-  while (paths_check_size < paths_size) {
-    if (paths_check_size + 1 < paths_size) {
+  while (paths_check_size < disk_io.get_paths_size()) {
+    if (paths_check_size + 1 < disk_io.get_paths_size()) {
       // we read 1 byte ahead for the offset to prevent
       // accessing invalid data. The index format would allow it
       // but it could be corrupted and not detected.
-      PathOffset path_offset;
-      // we read the offset so we know how long the path is and where the next
-      // path starts.
-      path_offset.bytes[0] = mmap_paths[paths_check_size];
-      ++paths_check_size;
-      path_offset.bytes[1] = mmap_paths[paths_check_size];
-      next_path_end = path_offset.offset;
-      ++paths_check_size;
+      next_path_end = disk_io.get_path_separator(paths_check_size);
+      paths_check_size += 2;
       if (!(paths_check_size + next_path_end <
-        paths_size + 1)) {
+        disk_io.get_paths_size() + 1)) {
         Log::write(4, "Index: Check: Paths index too small to read next path.");
         if (verbose_output) {
           std::cout
@@ -237,7 +219,7 @@ bool Index::expensive_index_check(const bool verbose_output)
   // Paths count
   // 1. Just make sure the size is 4 * amount of paths
 
-  if (paths_count_size != paths_check_count * 4) {
+  if (disk_io.get_paths_count_size() != paths_check_count * 4) {
     Log::write(4, "Index: Check: Paths count size is not valid.");
     if (verbose_output) {
       std::cout
@@ -252,8 +234,8 @@ bool Index::expensive_index_check(const bool verbose_output)
   // 3. Read reversed, make sure no duplicate path ids are found and all path ids are valid. Also make sure there are no gaps
   // 4. Read additional and make sure it's valid. Keep track of all additionals. Do the same for each path id in additional as in reversed and follow all additionals
 
-  if (reversed_size % REVERSED_ENTRY_SIZE != 0 ||
-    additional_size
+  if (disk_io.get_reversed_size() % REVERSED_ENTRY_SIZE != 0 ||
+    disk_io.get_additional_size()
     % ADDITIONAL_ENTRY_SIZE != 0) {
     Log::write(4, "Index: Check: Reversed and/or Additional size is invalid.");
     if (verbose_output) {
@@ -262,7 +244,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     }
     return false;
   }
-  if (reversed_size != words_check_count * REVERSED_ENTRY_SIZE) {
+  if (disk_io.get_reversed_size() != words_check_count * REVERSED_ENTRY_SIZE) {
     Log::write(4, "Index: Check: Reversed size does not match up with amounts of words.");
     if (verbose_output) {
       std::cout
@@ -283,9 +265,7 @@ bool Index::expensive_index_check(const bool verbose_output)
     bool found_path = false;
     bool found_empty = false;
 
-    ReversedBlock* disk_reversed = reinterpret_cast<ReversedBlock*>(
-      &mmap_reversed[reversed_check_count * REVERSED_ENTRY_SIZE]);
-
+    ReversedBlock* disk_reversed = disk_io.get_reversed_pointer(reversed_check_count);
     for (PATH_ID_TYPE i = 0; i < REVERSED_PATH_LINKS_AMOUNT;
          ++i) {
       if (disk_reversed->ids.path[i] == 0) {
@@ -333,7 +313,7 @@ bool Index::expensive_index_check(const bool verbose_output)
         }
         return false;
       }
-      if ((current_additional * ADDITIONAL_ENTRY_SIZE) > additional_size) {
+      if ((current_additional * ADDITIONAL_ENTRY_SIZE) > disk_io.get_additional_size()) {
         Log::write(4, "Index: Check: Additional linked id is invalid.");
         if (verbose_output) {
           std::cout
@@ -352,8 +332,7 @@ bool Index::expensive_index_check(const bool verbose_output)
 
       used_additional_ids.insert(current_additional);
 
-      AdditionalBlock* disk_additional = reinterpret_cast<AdditionalBlock*>(
-        &mmap_additional[(current_additional - 1) * ADDITIONAL_ENTRY_SIZE]);
+      AdditionalBlock* disk_additional = disk_io.get_additional_pointer(current_additional);
 
       for (PATH_ID_TYPE i = 0; i < ADDITIONAL_PATH_LINKS_AMOUNT;
            ++i) {

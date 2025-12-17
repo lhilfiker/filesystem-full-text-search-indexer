@@ -12,15 +12,16 @@
 #include <vector>
 
 // Helper/Helper.cpp
-class Helper {
+class Helper
+{
 private:
   static const std::array<char, 256> conversion_table;
   static const std::unordered_map<char, char> special_chars;
 
 public:
-  static int file_size(const std::filesystem::path &file_path);
-  static std::string file_extension(const std::filesystem::path &path);
-  static void convert_char(char &c);
+  static size_t file_size(const std::filesystem::path& file_path);
+  static std::string file_extension(const std::filesystem::path& path);
+  static void convert_char(char& c);
 };
 
 #endif

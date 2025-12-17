@@ -19,7 +19,8 @@ bool Index::read_only = true;
 // This indicates if the index is readonly or not. It is readonly if the index
 // is not locked or when index is locked but not by us.
 
-int Index::lock_status(bool initialize) {
+int Index::lock_status(bool initialize)
+{
   // This will check for the presence of the lock file.
   // return values are -1 for not initialized, 0 for locked but readonly, 1 for
   // unlocked and readonly and 2 for locked and not read-only
@@ -77,10 +78,10 @@ int Index::lock_status(bool initialize) {
     }
     // sleep for 1 second to allow the other program to unlock
     Log::write(1, "Index: lock: could not lock this time because another "
-                  "program is holding the lock. Waiting one second to try "
-                  "again until configured amount of retries.");
+               "program is holding the lock. Waiting one second to try "
+               "again until configured amount of retries.");
     std::this_thread::sleep_for(std::chrono::seconds(
-        1)); // to not utilize 100% cpu in the main process.
+      1)); // to not utilize 100% cpu in the main process.
   }
   // no lock file release.
   lock_update_sizes();
@@ -91,21 +92,15 @@ int Index::lock_status(bool initialize) {
   return 0;
 }
 
-void Index::lock_update_sizes() {
+void Index::lock_update_sizes()
+{
   // In case changes occured we update file sizes before returning lock status.
-  paths_size = Helper::file_size(CONFIG_INDEX_PATH / "paths.index");
-  paths_count_size = Helper::file_size(CONFIG_INDEX_PATH / "paths_count.index");
-  words_size = Helper::file_size(CONFIG_INDEX_PATH / "words.index");
-  words_f_size = Helper::file_size(CONFIG_INDEX_PATH / "words_f.index");
-  reversed_size = Helper::file_size(CONFIG_INDEX_PATH / "reversed.index");
-  additional_size = Helper::file_size(CONFIG_INDEX_PATH / "additional.index");
-
-  // unmap and remap
-  unmap();
-  map();
+  // We can do that by just calling the map function because it will automatically update the size.
+  disk_io.map(CONFIG_INDEX_PATH);
 }
 
-bool Index::lock(bool initialize) {
+bool Index::lock(bool initialize)
+{
   Log::write(1, "Index: lock: trying to acquire lock");
   int lock_status_cached = lock_status(initialize);
   if (lock_status_cached <= 0) {
@@ -114,10 +109,12 @@ bool Index::lock(bool initialize) {
                "Index: lock: Index not initialized or locked by other program");
 
     return false;
-  } else if (lock_status_cached == 2) {
+  }
+  else if (lock_status_cached == 2) {
     Log::write(1, "Index: lock: we already locked it.");
     return true; // already locked.
-  } else {
+  }
+  else {
     pid_t pid = getpid(); // current pid
     std::ofstream lock_file(CONFIG_INDEX_PATH / "index.lock");
     if (!lock_file) {
@@ -130,36 +127,41 @@ bool Index::lock(bool initialize) {
       Log::write(1, "Index: lock: successfully acquired the lock.");
 
       return true; // lock aquired.
-    } else {
+    }
+    else {
       Log::write(1, "Index: lock: created lock file but didn't get "
-                    "confirmation. did not acquire lock.");
+                 "confirmation. did not acquire lock.");
 
       return false; // some kind of error happend.
     }
   }
 }
 
-bool Index::unlock(bool initialize) {
+bool Index::unlock(bool initialize)
+{
   Log::write(1, "Index: unlock: trying to unlock");
   int lock_status_cached = lock_status(initialize);
   if (lock_status_cached <= 0) {
     // not initialized or locked by other proccess.
     Log::write(
-        2, "Index: unlock: Index not initialized or locked by other program");
+      2, "Index: unlock: Index not initialized or locked by other program");
 
     return false;
-  } else if (lock_status_cached == 1) {
+  }
+  else if (lock_status_cached == 1) {
     Log::write(1, "Index: unlock: we don't have an active lock.");
     return true; // not locked.
-  } else {
+  }
+  else {
     std::filesystem::remove(CONFIG_INDEX_PATH / "index.lock");
     Log::write(1, "Index: unlock: removed lock file.");
     if (lock_status(initialize) == 1) {
       return true;
-    } else {
+    }
+    else {
       Log::write(
-          1,
-          "Index: unlock: removed but still have the lock. Permission Error?");
+        1,
+        "Index: unlock: removed but still have the lock. Permission Error?");
 
       return false;
     }
@@ -167,7 +169,8 @@ bool Index::unlock(bool initialize) {
   return false;
 }
 
-bool Index::health_status() {
+bool Index::health_status()
+{
   // This will return wether or not the index is healthy. Meaning if it's
   // healthy you can search the Index. If it's not healthy you can't search it
   // because a first time add or transaction execution is in progress.
@@ -178,10 +181,11 @@ bool Index::health_status() {
   }
 
   if (std::filesystem::exists(CONFIG_INDEX_PATH / "firsttimewrite.info") ||
-      std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
-                              "transaction.list")) {
+    std::filesystem::exists(CONFIG_INDEX_PATH / "transaction" /
+      "transaction.list")) {
     return false;
-  } else {
+  }
+  else {
     return true;
   }
 }
