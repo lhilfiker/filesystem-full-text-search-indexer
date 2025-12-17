@@ -37,6 +37,7 @@ class Index
     bool map_file(mio::mmap_sink& target_mmap, size_t& target_size, const std::string& source_path);
     bool sync_file(mio::mmap_sink& target_mmap) const;
     mio::mmap_sink* get_target_mmap(uint8_t target_index);
+    size_t get_target_size(const uint8_t target_index) const;
 
   public:
     DiskIO();
