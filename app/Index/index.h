@@ -15,6 +15,7 @@
 // Index/Index.cpp
 class Index
 {
+public:
   class DiskIO
   {
     mio::mmap_sink mmap_paths;
@@ -84,8 +85,11 @@ class Index
                     size_t length);
     void copy_from_index(uint8_t source_index, mio::mmap_sink& target, size_t target_pos, size_t source_pos,
                          size_t length);
+
+    friend class DiskIOTest;
   };
 
+private:
   static DiskIO disk_io;
 
   static bool is_config_loaded;
