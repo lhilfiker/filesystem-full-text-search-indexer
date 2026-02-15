@@ -102,7 +102,33 @@ set(HEADERS
         app/lib/mio.hpp
 )
 
-add_executable(filesystem-indexer ${SOURCES} ${HEADERS})
+# All sources minus main.cpp — reused by the test binary so we avoid
+# linking two definitions of main().
+set(LIB_SOURCES ${SOURCES})
+list(REMOVE_ITEM LIB_SOURCES app/main.cpp)
+
+set(HEADERS
+        app/index_config.h
+        app/CliParser/cliparser.h
+        app/Config/config.h
+        app/Helper/helper.h
+        app/Index/index.h
+        app/Index/index_types.h
+        app/Indexer/indexer.h
+        app/Indexer/indexer_types.h
+        app/LocalIndex/localindex.h
+        app/LocalIndex/localindex_types.h
+        app/Logging/logging.h
+        app/Search/search.h
+        app/lib/mio.hpp
+)
+
+add_library(indexer-lib STATIC ${LIB_SOURCES} ${HEADERS})
+target_include_directories(indexer-lib PUBLIC app)
+target_link_libraries(indexer-lib PUBLIC Threads::Threads)
+
+add_executable(filesystem-indexer app/main.cpp)
+target_link_libraries(filesystem-indexer PRIVATE indexer-lib)
 
 set_target_properties(filesystem-indexer PROPERTIES
         BUILD_WITH_INSTALL_RPATH TRUE
@@ -137,6 +163,64 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
             $<$<CONFIG:Release>:-s>  # Strip symbols
     )
 endif ()
+
+
+# ─────────────────────────────────────────────────────────────────
+# Unit tests (Google Test)
+# ─────────────────────────────────────────────────────────────────
+option(BUILD_UNIT_TESTS "Build the unit-test binary" ON)
+
+if (BUILD_UNIT_TESTS)
+    # Try to find an installed GTest first; fall back to FetchContent.
+    find_package(GTest QUIET)
+
+    if (NOT GTest_FOUND)
+        message(STATUS "GTest not found locally — fetching via FetchContent")
+        include(FetchContent)
+        FetchContent_Declare(
+                googletest
+                GIT_REPOSITORY https://github.com/google/googletest.git
+                GIT_TAG v1.14.0
+        )
+        # Prevent GTest from overriding our compiler/linker settings
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif ()
+
+    enable_testing()
+
+    add_executable(unit-tests
+            tests/unit/test_diskio.cpp
+    )
+
+    target_include_directories(unit-tests PRIVATE app)
+
+    target_link_libraries(unit-tests
+            PRIVATE
+            indexer-lib
+            GTest::gtest
+            GTest::gtest_main
+    )
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(unit-tests PRIVATE
+                $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+                $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
+        )
+        target_link_options(unit-tests PRIVATE
+                $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+        )
+    endif ()
+
+    # Register with CTest so `ctest` works too
+    include(GoogleTest)
+    gtest_discover_tests(unit-tests)
+
+    message(STATUS "Unit tests: enabled (build target: unit-tests)")
+else ()
+    message(STATUS "Unit tests: disabled (pass -DBUILD_UNIT_TESTS=ON to enable)")
+endif ()
+
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
