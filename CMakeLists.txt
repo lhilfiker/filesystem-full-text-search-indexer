@@ -217,6 +217,24 @@ if (BUILD_UNIT_TESTS)
     gtest_discover_tests(unit-tests)
 
     message(STATUS "Unit tests: enabled (build target: unit-tests)")
+
+
+    option(ENABLE_COVERAGE "Enable gcov coverage instrumentation" OFF)
+
+    if (ENABLE_COVERAGE)
+        if (NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            message(FATAL_ERROR "Coverage requires GCC or Clang")
+        endif ()
+        message(STATUS "Coverage: enabled")
+
+        # Flags go on the library (all production code) and the test binary
+        target_compile_options(indexer-lib PRIVATE --coverage -O0 -fno-inline)
+        target_link_options(indexer-lib PUBLIC --coverage)
+
+        target_compile_options(unit-tests PRIVATE --coverage -O0 -fno-inline)
+        target_link_options(unit-tests PRIVATE --coverage)
+    endif ()
+
 else ()
     message(STATUS "Unit tests: disabled (pass -DBUILD_UNIT_TESTS=ON to enable)")
 endif ()

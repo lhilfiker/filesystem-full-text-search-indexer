@@ -1,0 +1,69 @@
+name: Code Coverage
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential lcov
+          # genhtml (part of lcov package) not needed — Codecov handles reporting
+
+      - name: Build with coverage instrumentation
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug \
+                -DBUILD_UNIT_TESTS=ON    \
+                -DENABLE_COVERAGE=ON     \
+                ..
+          make -j$(nproc) unit-tests
+
+      - name: Run unit tests
+        run: ./build/unit-tests --gtest_color=yes
+
+      - name: Collect coverage data
+        run: |
+          lcov --capture \
+               --directory build \
+               --output-file coverage.info \
+               --rc lcov_branch_coverage=1
+
+      - name: Remove noise from coverage data
+        # Exclude: GTest internals, C++ stdlib, system headers, mio (vendored),
+        # and main.cpp (not exercised by unit tests)
+        run: |
+          lcov --remove coverage.info \
+               '*/googletest/*'       \
+               '*/gtest/*'           \
+               '/usr/*'              \
+               '*/lib/mio.hpp'       \
+               '*/app/main.cpp'      \
+               --output-file coverage.info \
+               --rc lcov_branch_coverage=1
+
+      - name: Summarise coverage to the log
+        run: |
+          lcov --list coverage.info --rc lcov_branch_coverage=1
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.info
+          flags: unit-tests
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
