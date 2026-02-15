@@ -1,0 +1,39 @@
+name: Unit Tests
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+
+      - name: Build unit-tests (Debug + ASan/UBSan)
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_UNIT_TESTS=ON ..
+          make -j$(nproc) unit-tests
+
+      - name: Run unit tests
+        run: ./build/unit-tests --gtest_color=yes
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-failure
+          path: /tmp/diskio_test_*/
+          retention-days: 7
