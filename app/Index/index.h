@@ -89,6 +89,7 @@ public:
     friend class DiskIOTest;
   };
 
+private:
   static DiskIO disk_io;
 
   static bool is_config_loaded;
