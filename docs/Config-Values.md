@@ -55,6 +55,8 @@ Required paths - Both index_path and config_path_to_scan must be set (either in 
 | config_updated_files_only | true/false | true | Indexer | No |
 | config_threads_to_use | number of threads to use | 1 | Indexer | No |
 | config_local_index_memory | number in bytes | 50000 | Indexer | No |
+| config_min_word_length | number of letters it needs to be | 4 | Indexer & Search | No |
+| config_max_word_length | number of letters it can max to be | 230 | Indexer & Search | No |
 | config_min_log_level | 1(debug), 2(info), 3(warn), 4(critical) | 3 | Logger | No |
 | config_exact_match | true/false | false | Search | No |
 | config_min_char_for_match | integer | 4 | Search | No |

@@ -21,7 +21,9 @@ std::map<std::string, std::string> Config::internal_config{
     {"config_local_index_memory", "50000"},
     {"config_min_log_level", "3"},
     {"config_exact_match", "false"},
-    {"config_min_char_for_match", "4"}};
+    {"config_min_char_for_match", "4"},
+    {"config_min_word_length", "4"},
+    {"config_max_word_length", "230"}};
 
 void Config::update_value(std::pair<std::string, std::string> overwrite) {
   if (internal_config.count(overwrite.first) != 0) {
@@ -70,7 +72,9 @@ void Config::set() {
         internal_config["config_path_to_scan"],
         std::stoi(internal_config["config_threads_to_use"]),
         std::stoi(internal_config["config_local_index_memory"]),
-        internal_config["config_updated_files_only"] == "true" ? true : false);
+        internal_config["config_updated_files_only"] == "true" ? true : false,
+        std::stoi(internal_config["config_min_word_length"]),
+        std::stoi(internal_config["config_max_word_length"]));
     Log::save_config(std::stoi(internal_config["config_min_log_level"]));
     Search::save_config(
         internal_config["config_exact_match"] == "true" ? true : false,
