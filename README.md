@@ -1,3 +1,5 @@
+> **Archived.** This was a personal learning project and is no longer maintained. Not intended for production use. I've written a (long) blog post about it: https://lukas.hilfiker.dev/blog/filesystem-full-text-search-indexer/
+
 # filesystem-full-text-search-indexer
 
 A high-performance, multithreaded file indexer with custom binary storage format designed for minimal memory usage and maximum scalability. Features transaction-based updates with crash recovery, inter-process locking for data integrity, and support for millions of files. Includes a powerful boolean query language (AND, OR, NOT) with wildcard and exact matching capabilities, optimized search performance through alphabet jump tables, and configurable memory settings for different dataset sizes.
